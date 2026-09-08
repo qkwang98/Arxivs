@@ -1,0 +1,183 @@
+// The six exceptional one-dimensional semilinear groups.
+//
+// For K acting on V, the number considered here is the number of regular
+// K-orbits on V x V.  The programme examines every pair and uses its exact
+// stabiliser.  It also enumerates every conjugacy class of subgroups of
+// GammaL(1,q).  Thus every proper faithful irreducible primitive soluble
+// subgroup is included in the comparison.
+
+procedure RequireEqual(description, found, expected)
+    if found ne expected then
+        error description cat "\nexpected: " cat Sprint(expected)
+            cat "\nfound: " cat Sprint(found);
+    end if;
+end procedure;
+
+GammaL1 := function(q)
+    F := GF(q);
+    primeField := PrimeField(F);
+    V, coordinates := VectorSpace(F, primeField);
+    dimension := Dimension(V);
+    primitiveElement := PrimitiveElement(F);
+    p := Characteristic(F);
+    matrixRing := MatrixRing(primeField, dimension);
+
+    multiplicationEntries := &cat[
+        Eltseq(coordinates(((V.i) @@ coordinates) * primitiveElement))
+        : i in [1 .. dimension]
+    ];
+    frobeniusEntries := &cat[
+        Eltseq(coordinates(((V.i) @@ coordinates) ^ p))
+        : i in [1 .. dimension]
+    ];
+
+    multiplicationMatrix := matrixRing ! multiplicationEntries;
+    frobeniusMatrix := matrixRing ! frobeniusEntries;
+
+    for x in F do
+        vector := coordinates(x);
+        RequireEqual("multiplication by a primitive element",
+            vector * multiplicationMatrix,
+            coordinates(x * primitiveElement));
+        RequireEqual("the Frobenius automorphism",
+            vector * frobeniusMatrix, coordinates(x ^ p));
+    end for;
+
+    G := MatrixGroup<dimension, primeField |
+        multiplicationMatrix, frobeniusMatrix>;
+
+    RequireEqual("the order of GammaL(1," cat Sprint(q) cat ")",
+        Order(G), (q - 1) * dimension);
+    return G;
+end function;
+
+// This function is used only after irreducibility has been established.  If
+// an irreducible group of degree d is imprimitive, a block of dimension r has
+// an orbit of length d/r, and the spaces in that orbit have direct sum equal
+// to the natural module.  Conversely, any orbit with these two properties is
+// a system of imprimitivity.  OrbitsOfSpaces lists every orbit on subspaces,
+// so the test is exhaustive.
+IsLinearlyPrimitive := function(K)
+    d := Degree(K);
+    if d eq 1 then
+        return true;
+    end if;
+
+    for blockDimension in [1 .. d div 2] do
+        if d mod blockDimension eq 0 then
+            numberOfBlocks := d div blockDimension;
+            for spaceOrbit in OrbitsOfSpaces(K, blockDimension) do
+                if spaceOrbit[1] eq numberOfBlocks then
+                    orbit := Orbit(K, spaceOrbit[2]);
+                    if #orbit ne numberOfBlocks then
+                        error "inconsistent subspace-orbit length";
+                    end if;
+
+                    sumOfSpaces := spaceOrbit[2];
+                    for U in orbit do
+                        sumOfSpaces := sumOfSpaces + U;
+                    end for;
+                    if Dimension(sumOfSpaces) eq d then
+                        return false;
+                    end if;
+                end if;
+            end for;
+        end if;
+    end for;
+    return true;
+end function;
+
+NumberRegularPairOrbits := function(K)
+    V := RSpace(K);
+    regularPoints := 0;
+    for v in V do
+        for w in V do
+            if Order(Stabilizer(K, <v, w>)) eq 1 then
+                regularPoints +:= 1;
+            end if;
+        end for;
+    end for;
+
+    if regularPoints mod Order(K) ne 0 then
+        error "the number of regular points is not divisible by the group order";
+    end if;
+    return regularPoints div Order(K);
+end function;
+
+SemilinearCase := recformat<
+    q,
+    numberRegularPairOrbits,
+    qualifyingClasses,
+    properClasses>;
+
+cases := [
+    rec<SemilinearCase |
+        q := 2, numberRegularPairOrbits := 4,
+        qualifyingClasses := 1, properClasses := 0>,
+    rec<SemilinearCase |
+        q := 3, numberRegularPairOrbits := 4,
+        qualifyingClasses := 2, properClasses := 1>,
+    rec<SemilinearCase |
+        q := 4, numberRegularPairOrbits := 1,
+        qualifyingClasses := 2, properClasses := 1>,
+    rec<SemilinearCase |
+        q := 8, numberRegularPairOrbits := 2,
+        qualifyingClasses := 2, properClasses := 1>,
+    rec<SemilinearCase |
+        q := 9, numberRegularPairOrbits := 3,
+        qualifyingClasses := 3, properClasses := 2>,
+    rec<SemilinearCase |
+        q := 16, numberRegularPairOrbits := 3,
+        qualifyingClasses := 6, properClasses := 5>
+];
+
+for specification in cases do
+    G := GammaL1(specification`q);
+    qualifyingClassCount := 0;
+    properClassCount := 0;
+    fullGroupValue := -1;
+    smallProperValues := [];
+
+    for subgroupRecord in Subgroups(G) do
+        K := subgroupRecord`subgroup;
+        if IsSoluble(K) and IsIrreducible(K) then
+            primitive := IsLinearlyPrimitive(K);
+
+            if primitive then
+                qualifyingClassCount +:= 1;
+                value := NumberRegularPairOrbits(K);
+                if Order(K) eq Order(G) then
+                    fullGroupValue := value;
+                else
+                    properClassCount +:= 1;
+                    if value lt 5 then
+                        Append(~smallProperValues, <Order(K), value>);
+                    end if;
+                end if;
+            end if;
+        end if;
+    end for;
+
+    qText := Sprint(specification`q);
+    RequireEqual("qualifying subgroup classes for q = " cat qText,
+        qualifyingClassCount, specification`qualifyingClasses);
+    RequireEqual("proper qualifying subgroup classes for q = " cat qText,
+        properClassCount, specification`properClasses);
+    RequireEqual("regular orbits on V x V for GammaL(1," cat qText cat ")",
+        fullGroupValue, specification`numberRegularPairOrbits);
+    RequireEqual(
+        "proper classes with fewer than five regular orbits on V x V for q = "
+            cat qText,
+        smallProperValues, []);
+
+    printf "q = %o: %o qualifying subgroup classes, %o proper; ",
+        specification`q, qualifyingClassCount, properClassCount;
+    printf "GammaL(1,q) has %o regular orbits on V x V, and every ",
+        fullGroupValue;
+    print "proper qualifying class has at least 5 such orbits.";
+end for;
+
+print "For q = 2, 3, 4, 8, 9 and 16 the numbers of regular orbits on "
+    cat "V x V for GammaL(1,q) are 4, 4, 1, 2, 3 and 3, respectively; "
+    cat "every proper qualifying subgroup class has at least 5 such orbits.";
+quit;

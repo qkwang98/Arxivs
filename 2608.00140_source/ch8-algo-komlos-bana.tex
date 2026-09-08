@@ -1,0 +1,526 @@
+
+\chapter{Algorithmic Banaszczyk's bound for Koml\'os}
+\label{ch:algo-komlos-bana}
+%The original proof of Banaszczyk's result, that we saw in Chapter \ref{ch:bana-proof}, d
+
+\chaptermark{Algorithmic Koml\'os}
+
+Let $\mat$ be an instance of the Koml\'{o}s problem (Problem~\ref{prob:komlos}), i.e., a matrix all of whose columns have $\ell_2$ norm at most $1$.
+Recall that %in Theorem \ref{thm:komlos-bana}, 
+applying Banaszczyk's Theorem \ref{thm:bana} with $K = c [-1,1]^m$ with $c \approx \sqrt{\log 2m}$ so that $\gamma^m(K)\geq 1/2$, directly implies that $\disc(\mat) \lesssim \sqrt{\log 2m})$. However, the proof of Theorem~\ref{thm:bana} in Chapter~\ref{ch:bana-proof} does not give an efficient algorithm to find a coloring satisfying this bound.
+
+We now describe an efficient algorithm to compute such a coloring.
+%in Theorem \ref{thm:komlos-bana}. 
+%This corresponds to the case where the convex body $K$ in Theorem \ref{thm:bana}   is a scaling of the $\ell_\infty$ ball $[-1,1]^m$.
+%where $c = O(\sqrt{\log m})$ is chosen to ensure that its Gaussian measure is at least $1/2$.
+This algorithm is based on using a discrete Brownian motion random walk process, similar to those in Chapter~\ref{ch:partial}, but using a stronger semidefinite program to guide the random walk. 
+Later, in Chapter~\ref{ch:gram-schmidt}, we will see yet another algorithm called the Gram-Schmidt Walk, based on a different approach, that in fact works for general convex bodies $K$, and allows us to make Theorem \ref{thm:bana} fully algorithmic.
+
+\section{Preliminaries}
+Recall that in the Koml\'os problem, we are given an $m\times n$ matrix $\mat$, where each column $j\in [n]$ has squared $\ell_2$ norm $\sum_{i=1}^m \mat(i,j)^2\leq 1$. In other words, we have $\|\mat\|_{1\to 2} \le 1$.
+By Remark \ref{rem:bana-komlos-trick}, we can assume that $n \leq m \leq n^2$, so that $\log n \approx \log m$.
+As usual, we use $i$ and $j$ to index the rows and columns, and use $v_i$ to denote the $i$-th row of $\mat$.
+
+% So far, the algorithmic partial coloring methods discussed in Chapter \ref{}, give an efficient procedure to find $O(\log n)$ discrepancy colorings.
+Our goal is to show the following.
+\begin{theorem}
+There is a randomized polynomial time algorithm such that, for any $m\times n$ matrix $\mat$ all of whose columns have $\ell_2$ norm at most $1$, the algorithm finds a coloring $x \in \{-1,1\}^n$ with discrepancy $\|\mat x\|_\infty \lesssim  \sqrt{\log 2n}$.
+\end{theorem}
+%describe an efficient algorithm that achieves the $O(\log^{1/2} n)$ bound, improving upon  algorithmic $O(\log n)$ bounds from Chapter \ref{ch:partial-alg}. 
+Before describing the algorithm, we give some intuition.
+
+\smallskip
+
+%\medskip
+%\noindent {\bf Problematic Large Rows.} 
+Given the matrix $\mat$, we call a row $v_i$, $i\in [m]$, {\em large} if $\|v_i\|^2_2  \geq 4$, and {\em small} otherwise.
+Intuitively, the difficulty of the problem is essentially due to large rows. In particular, if all the rows are small, a random coloring already works,  as for any row $i$ we have that $\E [\langle v_i,x \rangle^2] =  \|v_i\|^2_2 \lesssim 1$, and standard concentration bounds directly give that $|\langle v_i, x\rangle | \lesssim 
+\sqrt{\log 2n}$  for all rows $v_i$ with high probability.  
+
+ This suggests that a reasonable algorithm should try to carefully cancel out the discrepancy for large rows while ensuring that the coloring looks random for small rows.
+ 
+
+ 
+ \paragraph {A Natural Algorithm that Fails.} We start by describing a very natural candidate algorithm, and showing a bad  example where it fails. This example will be instructive to understand, and it will also suggest a natural fix.
+ 
+Consider the following algorithm. We start initially with the coloring $x_0=0^n$. At time $t=1,2,\ldots$, (as usual) we update the coloring $x_{t-1}$ to $x_{t} = x_{t-1} + \Delta x_t$, where  $\Delta x_t$  is some tiny random increment %while ensuring that $x_t \in [-1,1]^n$ and that $\Delta x_t$ is only 
+supported on coordinates  that are not yet fixed at time $t$, and chosen as follows. 
+
+Let $n_t$ denote the number of active (not yet fixed) coordinates at $t$.
+By averaging, there are at most $n_t/4$ large rows (restricted to the active coordinates), and
+let $W_t$ be the subspace orthogonal to these rows. Suppose we pick $\Delta x_t$ randomly in $W_t$. %Note that $\dim(W_t) \geq  3n_t/4$.
+%is orthogonal to all large rows $i$ (restricted to coordinates in $n_t$) and  
+
+ Clearly, in this algorithm every row incurs zero discrepancy as long as it is large. Moreover, as $\dim(W_t)\geq 3n_t/4$, intuitively one would expect that the walk still looks sufficiently random, and thus, with high probability, any row only incurs $O(\sqrt{\log n})$ discrepancy once it becomes small (as under a fully random coloring). 
+
+% In fact, this is essentially what the Lovett-Meka algorithm does --- it takes a (tiny) random step in the subspace orthogonal to the large rows (and also bad small rows with a large $\Omega(1)$ discrepancy). However, at some point, too many small rows become bad, and so it gets stuck at some partial coloring.
+% But iterating this to get a full coloring ends up
+% losing an overall $O(\log n)$ factor.
+
+% Suppose instead that we only required our algorithm to walk (randomly) in the subspace orthogonal to the large rows at any given time. Then, algorithm will never get stuck\footnote{At any time $t$, the subspace has dimension at least $3n_t/4$.} until it reaches a full coloring. As the walk is random in the subspace, one may reasonably hope that now 
+% %the coloring looks random-like to 
+% each small row incurs only $O(\sqrt{\log n})$ discrepancy.
+
+\paragraph{An Instructive Bad Example.} Unfortunately, a serious problem with this idea is that constraining the walk to lie in the subspace $W_t$ can create arbitrary correlations between the active coordinates, leading to high discrepancy.
+Consider the following example.
+
+Suppose $v_1$ is a small row supported on $k\ll n$ coordinates (for concreteness, say, $\mat(1,j)=k^{-1/2}$ for $j \in[k]$ and $0$ otherwise). Let $W$ be the subspace orthogonal to the large rows. Now suppose $W$ is such that every vector $v \in W$ must satisfy $v(1) = v(2) = \cdots = v(k)$. But then, any update $\Delta x \in W$ must have $\Delta x(1)= \cdots = \Delta x(k)$, and hence updating $\Delta x(1)$ by $\pm \eps$ will incur discrepancy $\ip{v_1, \Delta x}  =\pm k \cdot k^{-1/2} \eps = \pm k^{1/2} \eps$. This should be contrasted with the case where the $\Delta x(i)$ are i.i.d. $\pm \eps$, where $\ip{v_1, \Delta x} \approx \pm k^{1/2} \cdot k^{-1/2} \eps = \pm \eps$.
+
+Before reading on,
+the reader may find it instructive to think about how one can  handle this example, even if the subspace $W$ is chosen adversarially as above. 
+
+
+\allowdisplaybreaks
+\section{Algorithm}
+
+%\medskip
+%\noindent {\bf Overview.}
+In the example above, the correlations for the row $v_1$ can be handled by also setting $\Delta x(1)=0$ (and thus also $\Delta x(2)=\cdots =\Delta x(k) = 0$). 
+
+However, it is not immediately clear how to address this problem in general. First, there could be multiple bad rows $v_i$ with coordinates correlated in arbitrary ways. Moreover, imposing additional constraints on $\Delta x$ to fix the currently bad rows can create further correlations and additional bad rows that need to be fixed again and so on. 
+%to {\em kill} the correlations for row $a_1$. 
+
+
+Interestingly, it turns out that there always exist 
+good update directions $\Delta x$ that are
+
+\smallskip 
+
+(i) orthogonal to all large rows, and 
+
+(ii) still look {\em random} (or better) in every direction.
+
+\smallskip 
+
+Moreover, these directions can be computed efficiently using a semidefinite program (SDP). 
+ We now describe this SDP, stated below in a slightly more general setting than we need for our algorithm. We describe the overall algorithm, which will be similar to that in Section~\ref{sec:vec-herdisc}. We then analyze it in Section \ref{subsubsec:analysis_Banaszczyk}.
+\subsection{SDP Formulation}
+\label{subsec:sdp_formulation}
+
+%Once we fix $W_t$, we will first apply \Cref{thm:sub-isotropic-SDP_strong} to obtain the PSD matrix $U_t$ such that $\Tr(U_t) \geq n_t/6$. .  
+%\medskip
+%\noindent{\bf An SDP for the random walk.}
+%We describe a general formulation, that will be invoked with various parameters choices later on.
+
+ Let $W \subset \R^h$ be any subspace with dimension $\dim(W) \le \delta h$. 
+Consider the following SDP with the variable $U \in \R^{h\times h}$, and  with some scalar parameters $0\leq \kappa, \eta \leq 1$.
+\begin{align}
+ \text{(SDP)} \qquad   \langle ww^\top, U \rangle           &= 0                                          && \text{for all } w \in W  \label{sdp:orthog}\\
+    \langle e_je_j^\top, U \rangle                               &\leq 1                                         && \text{for all } j \in [h] \label{sdp:jj} \\
+    \tr(U)                                &\geq \kappa h                       \label{sdp:trace}         \\
+    U                                     &\preceq \frac{1}{\eta} \diag(U)              \label{sdp:isotropic}\\
+    % E_sUE_s^\top                          &\preceq \frac{r_s}{\eta_s} \diag(E_s U E_s^\top) && \text{for all } s \in [q] \label{sdp:pairwise-disc}\\
+    U                                     &\succeq 0 \label{sdp:psd}
+\end{align}
+Here, $e_1,\ldots,e_h$ are the standard coordinate directions in $\R^h$, and $\diag(U)$ is the diagonal matrix we get from zeroing out all non-diagonal entries of $U$.
+It is clear that this SDP can be solved in time polynomial in $h$.\footnote{In particular, for constraint \eqref{sdp:orthog}, one can pick an arbitrary basis $w_1,\ldots,w_{\delta h}$ for $W$ and set $\langle w_i w_i^T,U\rangle =0$ for each $i \in [\delta h]$. This ensures that $\|U^{1/2}w_i\|_2=0$ so that $U^{1/2}w_i ={\bf 0}$ for each $i$, and thus by linearity $U^{1/2}w =\bf{0}$ for all $w\in W$.}
+To understand the constraints in this SDP, fix some feasible solution $U$ and consider the random vector $u =U^{1/2} g$ where $g \sim N(0,I_h)$. Clearly, $u$ has mean $\E[u]=0$ and covariance $\E[uu^\top]=U$. Let us think of $u$ as the coloring update  (ignoring the scaling). 
+The constraints $\eqref{sdp:orthog}$ ensure that $\langle u,w\rangle=0 $ for all vectors $w\in W$, as  
+\[\langle u,w\rangle = \langle U^{1/2} g,w \rangle = \langle g,U^{1/2} w \rangle  =0.\] 
+constraints \eqref{sdp:jj} ensure that $\E[u(j)^2]\leq 1$ for all coordinates $j \in [h]$, as \[\E[u(j)^2] = \E[ \langle uu^T, e_je_j^T  \rangle] =  \langle U, e_je_j^T\rangle  \leq 1.\] 
+For $\kappa >0$, the constraint \eqref{sdp:trace} rules out the trivial solution $U={\bf 0}$.
+
+\medskip
+
+\noindent {\bf Random-Like Coloring Update.} 
+The constraint \eqref{sdp:isotropic} is more interesting. Notice that 
+ it is equivalent to saying that \[\theta^T U \theta \leq (1/\eta)\, \theta^T \diag (U) \theta\] for all vectors $\theta = (\theta(1),\ldots,\theta(h)) \in \R^h$.
+ 
+ As $\theta^T U \theta =\E[\langle \theta, u \rangle ^2]$, this says that \[\E\left[\langle \theta, u \rangle ^2 \right] = \E \Big[ \Big(\sum_{j=1}^h \theta(j) u(j)\Big)^2\Big] \leq \frac{1}{\eta} \sum_{j=1}^h \theta(j)^2\, \E[u(j)^2].\]
+Notice that if we had $\eta=1$ and an equality above, then this is the same as saying that the random variables $u(1),\ldots,u(h)$ are pairwise independent. In our algorithm, we will set $\eta = 1/4$, so intuitively \eqref{sdp:isotropic} should be viewed as saying that the ``coloring update'' $u$ is almost pairwise independent.
+
+
+We need the following result about the feasibility of this SDP.
+ We will prove this later in
+ Section \ref{subsec:sdp_feasibility}.
+% given by \eqref{sdp:orthog}-\eqref{sdp:psd}.
+
+\begin{theorem}\label{thm:sdp_feasibility}(SDP Feasibility) 
+For any subspace $W$ of $\R^h$ of dimension at most $\delta h$, the SDP given by \eqref{sdp:orthog}-\eqref{sdp:psd} is feasible
+whenever $\delta + \kappa + \eta \leq 1$. 
+\end{theorem}
+
+
+\subsection{The Algorithm}
+\label{subsubsec:alg_bana}
+Let $\mat$ be the input matrix.
+Fix a small step size $\gamma = 1/n^2$  and let $\delta = 1/n$. 
+ Let $x_{t-1}$ be the coloring at the end of time step $t-1$ of the algorithm, and define $F_{t} = \{j: |x_{t-1}(j)| > 1-\delta\}$ to be the set of ``fixed'' coordinates at the end of time $t-1$ (or equivalently at the beginning of time $t$). We let $\act_t = [n]\setminus F_t$ be the set of active, i.e., unfixed coordinates.
+
+Initialize $x_0(j) =0$ for $j\in [n]$
+and $F_0= \emptyset$. 
+Let $n_t := n-|F_t| = |\act_{t}|$.
+At each time step $t$, we will only update coordinates in $\act_t$.
+%we view $x_t$ and the rows of $A$ as vectors in $\R^{N_{t-1}}$. 
+%To avoid  clutter, we also abuse the notation slightly and write $\R^{n_t}$ for $\R^{\text{Alive}_{t-1}}$.
+%We can now describe the algorithm.
+
+
+
+
+\medskip 
+
+ \noindent {\bf Algorithm:} At each time step $t=1,2,\ldots$, repeat  until $n_t=0$.
+
+
+
+
+%\item Let $(p,q)$ denote the current phase at time $t$.
+ 
+%This SDP is feasible as setting $v_i \cdot v_j =\mathcal{X}(i) \mathcal{X}(j)$, where $\mathcal{X}$ is the minimum discrepancy coloring of the set system restricted to $A(t-1)$ is a valid solution
+%Construct $u^{t}= \in \mathbb{R}^n$ as follows:
+
+
+
+
+
+
+
+
+\begin{enumerate}
+\item Call a row $i$ \emph{large} (at time $t$)  if $\sum_{j \in \act_t} \mat(i,j)^2 \geq 4$. Let $W_t$ denote the subspace spanned by all the large rows. All rows that are not large are \emph{small}.
+    \item Solve the SDP \eqref{sdp:orthog}-\eqref{sdp:psd} with variable $U_t \in \R^{\act_t \times \act_t}$, the subspace $W = W_t \subseteq \R^{\act_t}$, $h=n_t$ and $\kappa = \eta = 1/4$.  
+ 
+     Let $\Delta x_t = \gamma U_t^{1/2} g_t$, where $g_t \sim N(0,I_{\act_t})$. 
+     
+     Update $x_t = x_{t-1} + \Delta x_t$.
+\end{enumerate}
+
+\noindent Let $T$ be the (random) time at which the algorithm terminates. The final coloring is given by $\col(i) = \sign(\col_T(i))$.
+
+
+
+\section{Analysis} 
+\label{subsubsec:analysis_Banaszczyk}
+We first show that the SDP is always feasible at each time $t$, and that the algorithm runs in polynomial time. Then we bound the discrepancy.
+
+\medskip 
+\noindent 
+{\bf Feasibility.}
+Fix some time $t$. As $\sum_i \mat(i,j)^2\leq 1$ for each column $j$,  summing over the active columns gives $\sum_{j \in \act_t}\sum_i \mat(i,j)^2\leq |\act_t|= n_t$. So by averaging there can be at most $n_t/4$ large rows, and  $\dim(W_t) \leq n_t/4$ (and thus $\delta\leq 1/4$) in the SDP constraint \eqref{sdp:orthog}. (This argument is analogous to the proof of Lemma~\ref{lm:ch2-bf-counting}.)
+As we set $\kappa=\eta=1/4$, we have that $\delta + \kappa + \eta \leq 1$, and thus by Theorem \ref{thm:sdp_feasibility} the SDP is feasible.
+
+The algorithm also terminates with high probability in polynomial time, as at each time $t$, the squared norm
+\[\E[\|x_t\|^2] = \E[\|\col_{t-1}\|^2] + \gamma^2 \Tr(U_t) \geq \E[\|x_{t-1}\|^2] + \gamma^2\]  rises  in expectation by at least $\gamma^2$, and is bounded by $n$ since, with high probability, $|x_t(j)| \le 1$ for all time steps $t$ and coordinates $j$.
+
+ \medskip
+%\noindent
+% {\bf Bounding Discrepancy.} 
+%lies in the subspace $W_t$, we have $v_t \perp x_t$, and thus $\|x_t\|^2=t$ as discussed earlier and the algorithm eventually terminates and is well-defined. 
+%
+%\medskip 
+We now bound the discrepancy.
+\begin{theorem}
+\label{thm:alg-komlos-bana}
+  With high probability,  $\|\mat\col\|_\infty \lesssim \sqrt{\log 2n}$.   
+\end{theorem}
+Notice that we only need to bound the discrepancy from the time a row becomes small. 
+Indeed, for any row $i$ that is large at time $t$, the vector $v_i$ always lies in the subspace $W_t$. Thus any row incurs $0$ discrepancy as long as it is large.
+
+
+%state in a slightly more general form for use later on.
+
+\medskip
+\noindent {\bf Random processes with negative drift.} 
+We first state a
+useful concentration inequality for super-martingales with negative drift.
+\begin{lemma}\label{fact:freedman_conc}
+Let $\{Z_t: t = 0,1, \cdots\}$ be a real-valued random process with increments $\Delta Z_t := Z_t - Z_{t-1}$, where %$Z_0$ is deterministic, and 
+there exists an $\alpha> 0$ such that, for all $t$, with probability 1, $|\alpha \Delta Z_t| \leq 1$, and %\footnote{Strictly speaking, this appears in \cite{Ban24} with $M=1$. But the version here follows directly by scaling $\Delta Z_t$ (and noting that the condition $\E_{t-1}[\Delta Z_t] \leq - \delta \E_{t-1}[\Delta Z_t^2]$ is non-homogeneous in $\Delta Z_t$).} 
+\[
+\E_{t-1}[\Delta Z_t] \leq - \alpha\, \E_{t-1}[(\Delta Z_t)^2].
+\] Here $\E_{t-1}[\cdot]$ denotes the conditional expectation $\E[\cdot | Z_1, \cdots, Z_{t-1}]$. Then for all $\xi \geq 0$, we have that   
+$
+\Pr[ Z_t - Z_0 > \xi ] \leq \exp(- \alpha \xi).$
+%\end{fact}
+ %For our purposes $M$ will be $O(\sqrt{dt}) = 1/\poly(n)$ and hence arbitrarily small.
+\end{lemma}
+% We will prove Theorem \ref{fact:freedman_conc} in Section \ref{sec:freedman}. Let us first see how this implies Lemma \ref{thm:alg-komlos-bana}.
+\begin{proof}%(Theorem \ref{fact:freedman_conc})
+By Markov's inequality,
+\[ \Pr[Z_t - Z_0 \geq \xi ]  = \Pr[\exp(\alpha (Z_t-Z_0)) \geq \exp(\alpha \xi)] \leq \frac{\E[\exp(\alpha (Z_t-Z_0))] }{\exp(\alpha \xi)}.\]
+So, it suffices to show that $\E[ \exp(\alpha (Z_t-Z_0)) ]  \leq 1$. 
+%As $Z_0$ is deterministic, it suffices to show that $ \E[\exp(\alpha Z_t)] \leq  \exp(\alpha Z_0)$. 
+Now,
+%Let $\theta>0$ be a real number to be determined later. Then using Markov's inequality,
+% \begin{equation}
+% \label{markov}
+%  \Pr[Y_T-Y_0\ge \lambda] \le \Pr[\eee^{\theta (Y_T-Y_0)}\ge \eee^{\theta \lambda}] \le \frac{\E[\eee^{\theta (Y_T-Y_0)}]}{\eee^{\theta\lambda}}
+%  \end{equation}
+\begin{align*}
+\E_{t-1}\left[\exp(\alpha (Z_t-Z_0))\right] = &  %\exp(\alpha Z_{t-1})\E_{t-1}\left[\exp(\alpha(Z_t-Z_{t-1}))\right] 
+  \exp(\alpha (Z_{t-1}-Z_0))\E_{t-1}\left[\exp(\alpha \Delta Z_t)\right] \\
+ \le &  \exp(\alpha (Z_{t-1}-Z_0)) \E_{t-1}[1+\alpha \Delta Z_t + (\alpha \Delta Z_t)^2] \\
+%  \le & \exp(\alpha Z_{t-1})\exp\left((e^{ \alpha} -\alpha^2 - \alpha-1 )\E_{t-1}\left[(\Delta Z_t)^2\right]\right) \\
+  \leq & \exp(\alpha (Z_{t-1}-Z_0)). \qquad 
+\end{align*}
+Here the first inequality uses that $\alpha |\Delta Z_t|\leq 1$ and $e^y \leq 1 + y + y^2$ for $ |y| \leq 1$, and the second that 
+ $\E_{t-1}[\Delta Z_t] \leq -\alpha \E_{t-1}[(\Delta Z_t)^2]$.
+
+% \begin{align*}
+% &\E_{t-1}\left[\exp(\alpha Z_t)\right] =  %\exp(\alpha Z_{t-1})\E_{t-1}\left[\exp(\alpha(Z_t-Z_{t-1}))\right] 
+%   \exp(\alpha Z_{t-1})\E_{t-1}\left[\exp(\alpha \Delta Z_t)\right] \\
+%  \le &  \exp(\alpha Z_{t-1}) \exp\left( \alpha \E_{t-1}[\Delta Z_t] +(e^{ \alpha} -\alpha-1 )\E_{t-1}[(\Delta Z_t)^2]\right) \\
+%   \le & \exp(\alpha Z_{t-1})\exp\left((e^{ \alpha} -\alpha^2 - \alpha-1 )\E_{t-1}\left[(\Delta Z_t)^2\right]\right) \\
+%   \leq & \exp(\alpha Z_{t-1})   \qquad \tag{as $e^y \leq 1 + y + y^2$ for $ |y| \leq 1$,}
+% \end{align*}
+% where the first inequality uses Lemma \ref{lem:prel1}
+% and 
+The result now follows by the law of iterated expectations.
+\end{proof}
+
+
+\paragraph{Proof of Theorem \ref{thm:alg-komlos-bana}.}
+%
+% \begin{lemma}
+% \label{lem:algo_bana}
+% Let $y_t \in \R^n$ be a random process for $t \in [0,T]$ with increments $\Delta y_t = v_t$, where $\E[v_t]=0 \in \R^n$ and $\E[v_t v_t^\top] \preceq O(1) \cdot  \diag(\E[v_t v_t^\top])$. Suppose $T = n^{O(1)}$. Then for any vector $a \in \mathbb{R}^n$, with probability at least $1 - 1/\poly(n)$,
+% \[
+% \big|\langle a, y_T - y_0 \rangle \big| 
+% %\leq O(\sqrt{\eta \log n}) \cdot \Big(\sum_{i=1}^n a(i)^2 (1 - x_0(i)^2)  \Big)^{1/2} 
+% \leq O(\|a\|_2 \sqrt{\log n}) .
+% \]
+% \end{lemma}
+%
+%\begin{proof}
+Fix some row $i$. Let $t_i$ be the time when it first becomes small, and 
+let $\theta$ denote the row $v_i$ restricted to the coordinates that are alive at $t_i$ (and set to $0$ otherwise). Note that $\|\theta\|^2_2 \leq 4$. 
+Our goal is to show that
+$|\langle \theta,x_T - x_{t_i} \rangle | \lesssim \sqrt{\log 2n}$, with high probability.
+%\leq O(\sqrt{\eta \log n}) \cdot \Big(\sum_{i=1}^n a(i)^2 (1 - x_0(i)^2)  \Big)^{1/2} 
+ %where $T$ is the (random) time when the algorithm terminates. 
+
+%By rescaling $a$, we may assume without loss of generality that $\|a\|_2 = 1$. 
+\smallskip
+ 
+Let us write $\theta = b + s$, where $b$ contains the big entries of $\theta$ with magnitude at least $1/\sqrt{\log 2n}$, with the other entries set to $0$,
+%i.e., $a_b(j) = a(j) \cdot \mathbf{1}(|a(j)| \geq 1/\sqrt{\log n})$,
+and $s$ consists of the rest of the entries, with the big entries set to $0$. 
+%\smallskip
+%\noindent \textbf
+\smallskip 
+
+%{\em Discrepancy of Big Entries.} 
+The discrepancy due to $b$ is trivial to bound. As $b$ has big entries and norm $\|b\|_2 \leq \|\theta\|_2 \le 2$, it can have at most $4 \log 2n$ non-zero entries. By the Cauchy-Schwarz inequality,
+\[
+\big|\langle b, x_T - x_{t_i} \rangle \big| \leq \|b\|_2 \cdot \Big(\sum_{j: b(j) \neq 0} (x_T(j) - x_{t_i}(j))^2\Big)^{1/2} \lesssim \sqrt{\log 2n}.
+\]
+%\noindent {\bf  Small entries:}
+
+\medskip
+We now focus on bounding the discrepancy of $s$. 
+
+\noindent {\bf Regularized Discrepancy.}
+To do this, we will apply Lemma \ref{fact:freedman_conc} to the {\em regularized discrepancy} of the row $s$, defined as
+%At time $t$, let $G_t := $ denote the {\em energy} of $s$,
+\[
+Z_t := \langle s, x_t \rangle + \beta \sum_{j=1}^n s(j)^2 (1 - x_t(j)^2), 
+\]
+where we set $\beta :=\sqrt{\log 2n}$. 
+
+$Z_t$ consists of two components: the discrepancy of $s$, and the ``energy'' term $\beta \sum_{j=1}^n s(j)^2 (1 - x_t(j)^2)$, which quantifies how far the colors of coordinates that contribute to the discrepancy are from $\{-1,+1\}$.
+Intuitively, $Z_t$ is a good proxy for the discrepancy of $s$ at time $t$. Moreover, it has the nice property that one can ``charge'' the increase in discrepancy to the decrease in energy. We show these properties next.
+
+As $\sum_j s(j)^2 \leq \|\theta\|^2 \leq 4$ and $1-x_t(j)^2 \geq 0$ for all $j\in [n]$,  
+\[\langle s, x_t \rangle  \leq Z_t \leq \langle s, x_t \rangle + 4 \beta,\]
+$Z_t$ then tracks the actual discrepancy of $s$ to within $O(\beta) = O(\sqrt{\log n})$, by our choice of $\beta$. 
+%Moreover,  $G_t \leq 1$ as $\|a_s\|_2 \leq 1$ and $y_t \in [-1,1]^n$. So intuitively, $Z_t$ should be viewed as a good proxy and an upper bound for discrepancy.
+\medskip
+
+\noindent {\bf Showing the Negative Drift.} 
+Next, we claim that $\Delta Z_t$ satisfies the negative drift condition in Lemma \ref{fact:freedman_conc} with $\alpha = \Omega(\beta)$. 
+Indeed, as $x_t = x_{t-1} + \Delta x_t$, and writing $x_t(j)^2 =  x_{t-1}(j)^2 + 2 \Delta x_t (j) x_{t-1}(j) + \Delta x_t(j)^2$, a direct computation gives
+\begin{align} \label{eq:dZ_t}
+\Delta Z_t = \langle s - 2 \beta x_{t-1} \circ s^2, \Delta x_t \rangle  - \beta \langle s^2, (\Delta x_t)^2 \rangle,
+\end{align} 
+where we use $s^2$ and $\Delta x_t^2$ to denote the vector with entries $s(j)^2$ and  $(\Delta x_t(j))^2$ respectively, and $x_{t-1} \circ s^2$ the vector with entries $x_{t-1}(j) s(j)^2$. 
+
+Let us now consider $\E[\Delta Z_t]$ and $\E[(\Delta Z_t)^2]$.
+As $\E[\Delta x_t]=0$, we have 
+\begin{equation}
+    \label{eq:sdp-komlos-disc-0}\E[\Delta Z_t] = - \beta \,\, \E \langle s^2, \Delta x_t^2 \rangle.
+\end{equation}
+%\qquad \text{(as $\E[\Delta x_t]=0$)}  
+Next as $\Delta x_t = \gamma U_t^{1/2} g$, and ignoring $O(\gamma^3)$ terms as $\gamma$ is tiny,\footnote{As the algorithm runs for $\tilde{O}(1/\gamma^2)$ time steps with high probability, the total contribution of these terms over all time steps can be trivially bounded by $o(1)$.} we have
+%Moreover, $\E[(\Delta Z_t)^2$ can be upper bounded as 
+\begin{align}
+\E[(\Delta Z_t)^2] 
+& = \E  \langle s - 2 \beta x_{t-1} \circ s^2, \Delta x_t \rangle^2  \nonumber \\
+& \lesssim \E  \langle (s - 2 \beta x_{t-1} \circ s^2)^2, \Delta x_t^2 \rangle \label{eq:sdp-komlos-disc-1}\\
+& \lesssim \E \langle s^2, \Delta x_t^2 \rangle.\label{eq:sdp-komlos-disc-2}
+%\leq O(1/\beta) \cdot (- \E[d Y_t]) ,
+\end{align}
+The first inequality \eqref{eq:sdp-komlos-disc-1} uses that for any vector $v$, we have
+\begin{equation} \E [\langle v,\Delta x_t\rangle^2] \lesssim \E[\langle v^2, \Delta x_t^2\rangle].
+\label{eq:sdp-komlos-bana-nice-eq}
+\end{equation}
+This follows as $\E[\Delta x_t \Delta x_t^\top] = \gamma^2 U$, and so the SDP constraint \eqref{sdp:isotropic} implies that
+$\E[\Delta x_t \Delta x_t^\top]  \preceq O(1) \cdot \diag(\E[\Delta x_t \Delta x_t^\top])$. 
+This immediately implies \eqref{eq:sdp-komlos-bana-nice-eq}.
+The inequality \eqref{eq:sdp-komlos-disc-2} uses that   $|2 \beta x_{t-1}(j) s(j)^2| \lesssim|s(j)|$, which follows as $|s(j)| \leq 1/\sqrt{\log2n}$, $\beta = \sqrt{\log2n}$  and $ |x_{t-1}(j)| \leq 1$ for each coordinate $j$.
+
+% \begin{align} \label{eq:bana_cross_term}
+% |2 \beta y_t(j) a_s(j)^2| \leq |a_s(j)| \cdot 2 \sqrt{\log n} /\sqrt{\log n} = O(|a_s(j)|).
+% \end{align}
+%  %and the second moment of $dZ_t$ can be bounded as
+% Thus
+Together, \eqref{eq:sdp-komlos-disc-0} and \eqref{eq:sdp-komlos-disc-2} give that, for some $\alpha = \Omega(\beta)$, \[\E[\Delta Z_t] \leq  -\alpha\E[(\Delta  Z_t)^2].\] 
+
+\medskip
+\noindent {\bf Bounding the discrepancy.}
+Applying Lemma \ref{fact:freedman_conc} with $\alpha = \Omega(\beta)$ and $\xi = \Theta(\beta^{-1} \log n) $ gives 
+%with high probability,
+\[
+\Pr[Z_T - Z_{t_i} \geq \xi] = \exp(-\alpha \xi ) = 1/\poly(n). 
+\]
+As $\xi = O(\sqrt{\log2n})$ by our choice of $\beta$, this implies that $Z_T \leq Z_{t_i} + O(\sqrt{\log n})$  with high probability.
+As
+$\langle s, x_T \rangle \leq Z_T$ 
+%(as $G_T \geq 0$), 
+and $Z_{t_i} = O(\beta)$ (as $\langle v_i,x_{t_i}\rangle=0$, since $v_i$ was large until time $t_i$, and hence the updates $\Delta x_t$ were orthogonal to it), this implies that
+%= \langle a_s, y_T \rangle + \eta \sum_j a_s(j)^2 (1 - y_T(j)^2)\geq ,
+$
+\langle s, x_T - x_{t_i} \rangle = O(\sqrt{\log n})$. This proves the result. \qedhere
+%Combing the discrepancy bounds for big and small entries completes the proof of the lemma. 
+%\end{proof}
+
+% \Cref{lem:algo_bana} 
+% implies that with high probability, the discrepancy of each row, from the time it becomes small, is at most $O(\sqrt{\log n})$. This gives Banaszczyk's bound for the Koml\'os problem. 
+
+
+
+
+
+
+% \section{The Sub-Martingale Inequality}
+% \label{sec:freedman}
+%We now prove Theorem \ref{fact:freedman_conc}.
+% We first need a standard fact.
+% \begin{lemma}
+% \label{lem:prel1}
+% Let $X$ be a random variable satisfying $X\le 1$. Then \[\E[\exp(\lambda X)] \le \exp\left(\lambda \E[X] +  (e^\lambda -\lambda-1 )\E[X^2]\right)\] for all $\lambda >0$.\end{lemma}
+% \begin{proof}
+% % We first claim that for $\lambda \geq 0$ and any $x \leq 1$, it holds that  $\eee^{\lambda x} \leq 1+ \lambda x +   (\eee^{\lambda} -\lambda-1 )x^2$. This follows as for any $t \geq 0$, $\eee^{tx}$ is non-decreasing in $x$, and hence the double integral
+% % \[\int_0^\lambda \int_0^s \eee^{tx} dt ds =  \int_0^\lambda \frac{\eee^{tx}-1}{x} dt = \frac{\eee^{\lambda x} - \lambda x -1}{x^2},\]
+% % is also non-decreasing with $x$.
+% % Here we set this to $\lambda^2/2$ for $x=0$. 
+% % and hence that
+% % \[   \frac{\eee^{tx} - tx -1}{x^2}  \leq  \]
+% Let $f(\lambda,x) = (e^{\lambda x} - \lambda x - 1)/x^2$, where we set $f(\lambda,0)=\lambda^2/2$. It is easily verified that 
+% $f(\lambda,x)  = \int_0^\lambda \int_0^s \exp(tx) dt\, ds.$
+
+% As $\exp(tx)$ is increasing in $x$ for all $t> 0$, this implies that $f(\lambda,x)$ is also increasing in $x$, and thus $f(\lambda,x) \leq f(\lambda,1)$ for all $x \leq 1$. So 
+% \[e^{\lambda x} = 1 + \lambda x +  f(\lambda,x) x^2  \leq 1 + \lambda x  + f(\lambda,1)x^2 = 1 + \lambda x +   (e^{\lambda} -\lambda-1 )x^2.\]
+% Taking expectations gives
+% $\E[e^{\lambda X}]  \leq  1+\lambda\E[ X]+(e^{\lambda} -\lambda-1 )\E [X^2]$. As $1+x \leq e^x$ for all $x \in \R$, this gives
+% \[ \E[e^{\lambda X}] \leq \exp \left(\lambda \E[X] +(e^{ \lambda} -\lambda-1 )\E [X^2]\right). \qedhere\]
+% \end{proof}
+
+
+\section{SDP Feasibility}
+\label{subsec:sdp_feasibility}
+We now prove Theorem \ref{thm:sdp_feasibility}. We first state two useful facts.
+
+
+\begin{lemma}
+\label{col1matr}
+Given any $m\times n$ matrix $M$ with columns $m_j$ satisfying $\|m_j\|_2\le 1$ for all $j\in[n]$ and $\beta\in(0,1]$, there exists a subspace $S \subseteq \mathbb{R}^n$ such that (i) $\dim(S)\ge (1-\beta)n $ and (ii) $\forall y\in S$, $\|My\|_2^2 \le (1/\beta)\|y\|_2^2$.
+\end{lemma}
+\begin{proof}
+Let $M=\sum_{i=1}^n \sigma_i p_i q_i^T$ by the singular value decomposition of $M$, with singular values $0\le \sigma_1\le\dots\le\sigma_n$ and $\{p_i : i\in [n]\}, \{q_i : i\in [n]\}$ are the two sets of orthonormal  vectors.
+Then,
+\[
+\sum_{i=1}^n\sigma_i^2 =\textrm{Tr}[\sum_{i=1}^n \sigma_i^2 q_iq_i^T]=\textrm{Tr}[M^TM]=\sum_{i=1}^n \|m_i\|_2^2 \le n
+\]
+So at least $(1-\beta)n$ of the $\sigma_i^2$s have value at most $1/\beta$, and thus $\sigma_1^2\le\dots\le\sigma^2_{(1-\beta)n} \le 1/\beta$.
+Let $S=\textrm{span}\{q_1,\dots,q_{(1-\beta)n}\}$. For $y\in S$,
+\begin{align*}
+\|My\|_2^2 & =  \|\sum_{i\leq n} \sigma_ip_iq_i^T y\|_2^2 
+  =   \|\sum_{i \leq (1-\beta)n} \sigma_ip_iq_i^T y\|_2^2 \nonumber\\
+ & =  \sum_{i\leq (1-\beta)n} \sigma_i^2 (q_i^Ty)^2  \leq    \frac{1}{\beta}\sum_{i\leq (1-\beta)n}(q_i^Ty)^2 \le \frac{1}{\beta}\|y\|_2^2
+\end{align*}
+where the third equality uses that the $p_i$ are orthonormal, and the last step uses that the $q_i$ are orthonormal.
+\end{proof}
+
+\begin{lemma}
+\label{diagdom}
+Given an $n\times n$ PSD matrix $G$ and $\beta\in(0,1]$, there exists a subspace $S\subseteq \mathbb{R}^n$ satisfying (i) $\dim(S)\ge (1-\beta) n$
+and (ii) $\forall y\in S$, $y^TGy\le (1/\beta) y^T\diag(G)y$.
+\end{lemma}
+\begin{proof}
+Let $U=G^{1/2}$. Then $G=U^TU$, and $w^TGw\le (1/\beta)w^T\diag(G)w$ is equivalent to
+\[ \|Uw\|_2^2\le (1/\beta)\|\diag(G)^{1/2}w\|_2^2.\]
+Let $N \subseteq [n]$ be the set of coordinates $i$ with $G_{ii} > 0$. For $i \notin N$, as $G_{ii}=0$, the $i^{th}$ column of $U$ must be identically zero, and we trivially have that  $\|Ue_i\|_2^2= \frac{1}{\beta}\|\diag(G)^{1/2}e_i\|_2^2=0.$
+
+As $\textrm{span}\{e_i:i\in N\}$ is orthogonal to the directions in $[n]\setminus N$, it 
+suffices to show that there is a $(1-\beta)|N|$ dimensional subspace $Z$ in $\textrm{span}\{e_i:i\in N\}$ such that $ \|Uy\|_2^2 \leq  (1/\beta)  \|\diag(G)^{1/2}y\|_2^2$ for each $y \in Z$. Then we can simply return the overall subspace $Z \oplus \textrm{span}\{e_i: i \in [n]\setminus N\}$ which has dimension $(1-\beta)|N| + (n-|N|) \geq (1-\beta)n$.
+
+So let us assume that $N=[n]$, so that  $G_{ii} > 0$ for all $i\in N$ and $\diag(G)$ is invertible.
+Let $\widetilde{U}=U \diag(G)^{-1/2} $. The $\ell_2$-norm of each column in $\widetilde{U}$ is $1$, and by Lemma \ref{col1matr}, there is a subspace $\widetilde{S}$ of dimension at least $(1-\beta)|N|$ such that $\|\widetilde{U}\widetilde{y}\|_2^2 \leq  \frac{1}{\beta} \|\widetilde{y}\|_2^2$ for each $\widetilde{y}\in \widetilde{S}$.
+Setting $y=\diag(G)^{-1/2}\widetilde{y}$ gives
+ \[ \|U y \|_2^2 =  \|\widetilde{U}\tilde{y}\|_2^2 \leq (1/\beta) \|\widetilde{y}\|_2^2 = (1/\beta) \|\diag(G)^{1/2} y\|_2^2, \]  
+and $S = \{\diag(G)^{-1/2}\widetilde{y}: \widetilde{y}\in \widetilde{W}\}$ gives the desired subspace. 
+\end{proof}
+We can now prove Theorem \ref{thm:sdp_feasibility}.
+\begin{proof}(Theorem \ref{thm:sdp_feasibility})
+Consider the following SDP
+\begin{equation}
+\label{eq:sdp_primal} \tag{Primal SDP}
+\begin{aligned}
+    \max \quad & \Tr(X) \\
+    s.t. \quad & X \cdot ww^\top = 0 \ , && \text{for all } w \in W ,\\
+    & X \cdot e_i e_i^\top \leq 1 \ , &&\text{for all } i \in [h] , \\
+    & X \preceq \frac{1}{\eta} \diag(X) , \\
+    & X \succeq 0 .
+\end{aligned}
+\end{equation}
+We will show the optimal value of \eqref{eq:sdp_primal} is at least $\kappa h$.
+
+\smallskip
+\noindent 
+We do so by considering the dual SDP. 
+Let $\gamma_w \in \R$, $\alpha_i \geq 0$, $H \succeq 0$ be the Lagrangian multipliers for the constraints of \eqref{eq:sdp_primal}. 
+Note that $H \in \R^{h\times h}$.
+Then the dual SDP is given by 
+\begin{align}
+\label{eq:sdp_dual} 
+%\tag{Dual SDP}
+%\begin{aligned}
+& \min \quad \sum_{i \in [h]} \alpha_i   \qquad  \tag{Dual SDP} \\
+& s.t. \sum_{w \in W} \gamma_w ww^\top + \sum_{i \in [h]} \alpha_i e_i e_i^\top + H - \frac{1}{\eta} \diag(H)  \succeq I, \label{eq:dual-sdp-komlos} \\
+& \quad H \succeq 0, \gamma_w \in \R, \ \text{and } \alpha_i \geq 0 \text{ for all } i \in [h] .\nonumber 
+%\end{aligned}
+\end{align}
+We will show that {\em every} feasible solution to \eqref{eq:sdp_dual} must have objective value at least $\kappa h$.
+By strong duality,\footnote{Strictly speaking, to apply strong duality for SDPs one needs that the dual have some solution strictly in its interior. In our case this is easily verified by choosing, say, $\gamma_w=0$ for all $w$, $\alpha_i=2/\eta$ for all $i$ and $H=I$.  } this would imply that \eqref{eq:sdp_primal} must have a solution with value at least $\kappa h$.
+
+\medskip
+\noindent {\bf Every dual solution has large value.}
+Fix some solution $(\gamma,H,\alpha)$ to \eqref{eq:sdp_dual}.
+By Lemma \ref{diagdom} applied to the matrix $H$, there exists some subspace $S \subset \R^h$ with $\dim(S) \geq (1 - \eta) h$, such that \[y^\top H y \leq (1/\eta) y^\top \diag(H) y \qquad \text{ for all vectors $y \in S$}.\]
+
+Consider the subspace $S_{\mathsf{neg}} := W^\perp \cap S$. Then
+as  $\dim(W^\perp)\geq (1-\delta) h$ and $\dim(S) \geq (1 - \eta) h$, we have that $\dim(S_{\mathsf{neg}}) \geq \big (1 - \delta - \eta  \big) h \geq \kappa h$, where we use that $\delta + \kappa + \eta \leq 1$. Moreover,  
+for any vector  $y \in S_{\mathsf{neg}}$, 
+\begin{align} \label{eq:neg_subspace_SDP}
+& y^\top \Big( \sum_{w \in W} \gamma_w ww^\top + H - \frac{1}{\eta} \diag(H) \Big) y \nonumber \\  
+& = y^\top (  H - \frac{1}{\eta} \diag(H) ) y  \leq 0 .
+\end{align}
+Consider some orthonormal set of vectors $v_1, \cdots, v_{\kappa h} \subset S_{\mathsf{neg}}$.
+As $(\gamma,H,\alpha)$ is a feasible dual solution, it satisfies \eqref{eq:dual-sdp-komlos}. Now, taking the trace inner product with  $\sum_{ j \in [\kappa h]} v_jv_j^T$  on both sides of \eqref{eq:dual-sdp-komlos}, and using \eqref{eq:neg_subspace_SDP} gives that 
+%plugging these vectors into the constraint of \eqref{eq:sdp_dual} and using the above inequality gives
+\begin{align}
+\label{eq:key-sdp-komlos-bana-alg}
+ \left\langle\sum_{j \in [\kappa h]}  v_j v_j^\top, \sum_{i \in [h]} \alpha_i e_i e_i^\top \right\rangle\geq \left\langle \sum_{j \in [\kappa h]} v_j v_j^\top, I\right\rangle = \kappa h.
+\end{align}
+As $\sum_{j \in [\kappa h]} v_j v_j^\top \preceq I$, we have $\sum_{j \in [\kappa h]} \langle v_j v_j^\top ,  e_ie_i^\top \rangle \leq 1$ for each $i \in [h]$, and thus \eqref{eq:key-sdp-komlos-bana-alg} implies have that  the dual objective
+$\sum_{i \in [h]} \alpha_i  \geq \kappa h$.
+%we have that  and the second inequality follows from \eqref{eq:neg_subspace_SDP} and the constraint of \eqref{eq:sdp_dual}.
+%This shows that \eqref{eq:sdp_dual} has value at least $\kappa h$, which proves the theorem. 
+\end{proof}
+
+\section{Bibliographic Notes}
+Theorem \ref{thm:alg-komlos-bana} was first proved by Bansal, Dadush and Garg in \cite{BDG16}. However, the original proof was more complicated, and our exposition here is substantially simpler and is based on the ideas in \cite{BansalG17}. 
+
+Several alternate ways to prove Theorem \ref{thm:alg-komlos-bana} have also been discovered since then, using a variety of different algorithmic ideas.
+In particular, Levy, Ramadas and Rothvoss \cite{LevyRR17} gave a deterministic algorithm based on a nice application of the multiplicative updatie method. More recently, Bansal, Laddha and Vempala  \cite{BansalLV22} gave an algorithm using the barrier function methods, and Pesenti and Vladu \cite{PesentiV23} gave another algorithm based on regularization. Both these algorithms are also deterministic. 

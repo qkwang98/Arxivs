@@ -1,0 +1,85 @@
+\section{Introduction}
+
+A combinatorial circuit is any circuit that maps inputs to outputs without retaining internal state.
+These circuits have many important application, such as in complexity theory~\cite{Vollmer1982}, hardware design~\cite{HarrisWeste2010}, and quantum program compilation~\cite{CrossJavadiAbhari2022}.
+This wide range of applications has motivated the formal mathematical study of combinatorial circuits.
+One early approach to this problem was to view combinatorial circuits as string diagrams in a monoidal category~\cite{Hotz1965}.
+This approach has seen wide acceptance in the field of quantum program design and analysis~\cite{HeunenVicary2019}.
+In this model, each gate is a morphism $G: n \to m$ with $n$ input wires and $m$ output wires.
+If the number of outputs from a gate $G$ matches the number of inputs to a gate $H$, then $H \circ G$ denotes the circuit obtained by connecting the outputs of $G$ to the inputs of $H$.
+Given any two gates $G$ and $H$, $G \otimes H$ denotes the circuit obtained by placing $G$ and $H$ side-by-side without any of their inputs connecting.
+In other words, $( \circ )$ denotes sequential composition and $( \otimes )$ denotes parallel composition.
+Given a set $\Sigma$ of gates, $F( \Sigma )$ denotes the family of circuits obtained from the gates in $\Sigma$.
+These circuits form a \emph{free monoidal category}.
+Their semantic interpretation is then given by a \emph{monoidal functor} $\sem{-}: F( \Sigma ) \to \mathcal{D}$ where $\mathcal{D}$ denotes the semantic domain.
+It is easy to show that $\sem{-}$ is fully determined by where it sends the gates in $\Sigma$, as is expected of combinatorial circuits.
+This perspective on combinatorial circuits has had many successes, such as providing decision procedures for the equality of certain classes of classical circuits~\cite{Lafont2003}, and optimization procedures for certain classes of quantum circuits~(see~\cite{Backens2021} for an introduction).
+
+In most quantum circuit semantics, $\mathcal{D}$ is taken to be the category of linear transformations between some class of spaces.
+However, with the advent of quantum machine learning, this approach is no longer sufficient.
+As in classical machine learning, a quantum machine learning model is a tensor network (i.e., a circuit) with one or more free parameters from some continuous space~(see~\cite{HugginsPatil2019}).
+To see why this is challenging, consider a simple quantum machine learning model with two parameters $\{ p_1, p_2 \}$ which can be used to instantiate Pauli-$Z$ rotations denoted by the gate $R_Z( - ): 1 \to 1$.
+For example, $R_Z( p_1 )$ and $R_Z( p_1 + p_2 )$ are both instantiations of the gate $R_Z( - )$.
+Following the standard semantics, $\sem{R_Z( p_1 )}$ and $\sem{R_Z( p_1 + p_2)}$ should correspond to the following continuous maps with domain $\mathbb{R}^2$.
+\begin{align*}
+    \sem{R_Z( p_1 )}( x, y ) &=
+    \begin{bmatrix}
+        e^{-ix/2} & 0 \\
+        0 & e^{ix/2}
+    \end{bmatrix}
+    &
+    \sem{R_Z( p_1 + p_2 )}( x, y ) &=
+    \begin{bmatrix}
+        e^{-i(x+y)/2} & 0 \\
+        0 & e^{i(x+y)/2}
+    \end{bmatrix}
+\end{align*}
+One would then expect that $R_Z( p_1 )$ and $R_Z( p_1 + p_2 )$ compose as follows.
+\begin{equation*}
+    \sem{R_Z( p_1 ) \star R_Z( p_1 + p_2 )}( x, y )
+    =
+    \begin{bmatrix}
+        e^{-ix/2} & 0 \\
+        0 & e^{ix/2}
+    \end{bmatrix}
+    \begin{bmatrix}
+        e^{-i(x+y)/2} & 0 \\
+        0 & e^{i(x+y)/2}
+    \end{bmatrix}
+\end{equation*}
+It should be noted that this new composition is neither the composition of continuous functions, nor the composition of linear functions.
+Instead, this composition is best understood as: (1) copying the parameters; (2) providing a copy of the parameters to each function; (3) composing the resulting linear maps.
+This composition has appeared ad-hoc in many prior works~\cite{JeandelPerdrix2018,MillerBakewell2020,XuLi2022,PehamBurgholzer2023,HongHuang2024}.
+In an extended abstract~\cite{Wesley2025}, we noted that vector spaces are enriched over topological spaces, and that this enrichment explains why the construction is well-defined.
+However, the underlying properties of enriched categories which make this construction possible have yet to be studied.
+
+One alternative approach to parameterized quantum circuits is that of linear dependent type theory.
+In~\cite{FuKishida2022}, it was shown that set-theoretic parameters could be introduced to a quantum programming language without violating the linearity of the language.
+Moreover, the parameters could be used to parameterize not only the family of morphisms, but also their domains and codomains.
+However, these parameters were introduced freely, meaning that the set of parameters would have no internal structure.
+This means that the semantic model could not enforce that every quantum circuit is a continuous function, as required by quantum machine learning.
+Moreover, when the parameter spaces are taken to be topological spaces, then the topology of the spaces can be used to encode additional functional requirements through the type system.
+For example, if a gate $G( p )$ is parameterized by the space $\mathbb{R} / (2\pi \mathbb{Z} )$, then $\sem{G( p )}( x )$ must have period of at most $2\pi$, which cannot be enforced through the types in a purely set-theoretic model of parameters.
+
+More fundamentally, the model of linear dependent type theory given in~\cite{FuKishida2022} does not account for the new sequential composition found in the motivating example.
+In principle, the parameters could be copied and passed along each time two parameterized gates are composed.
+However, given a fixed set of named parameters, there should never exist a case in which the composition is performed without first copying the parameters.
+For this reason, the present paper looks for a new notion of parameterization which encodes the natural choices for sequential and parallel composition.
+Since the parameterized families of maps go from parameter objects in some category $\mathcal{V}$ to hom-sets in some category $\mathcal{C}$, then it is clear that $\mathcal{C}$ must be enriched over $\mathcal{V}$.
+Given this enrichment, it can then be asked what is necessary for the new sequential and parallel composition to be well-defined.
+These questions turn out to be interesting not only from the perspective of parameterized quantum circuits, but also from the perspective of enriched category theory.
+
+This new notion of parameterization also provides new insights into traditionally well-understood constructions in quantum computing.
+For example, controlled operations can be understood as an instance of this new notion of parameterization.
+Intuitively, the control qubits can be thought of as linear parameters, which are used to multiplex between the operations performed on the target qubits.
+Since the control qubits are not modified during this procedure, then in some sense they are never consumed, and will persist after the controlled operation is finished.
+Alternatively, we can think of the control qubit being copied in some linear way, with only the copy being consumed during the operation.
+This new point-of-view is not only insightful, but allows for many well-known circuit relations to be re-obtained in a more structured manner.
+This construction is in line with the comonoidal view of quantum control found in~\cite{HeunenVicary2019}.
+
+The rest of this paper is structured as follows:
+\cref{Sect:Background} briefly reviews the background required to read this paper;
+\cref{Sect:Motivation} provides motivation for the paper through the study of quantum circuits with parameterized rotations (e.g., ansatz circuits);
+\cref{Sect:Construction} outlines a generalized construction for parameterized categories, which is shown to have nice categorical properties and immediate applications to quantum information;
+\cref{Sect:CartMon} studies the special case of parameterization over Cartesian monoidal categories, in which all objects in $\mathcal{V}$ can be seen as classical parameters (e.g., they can be copied and discarded);
+\cref{Sect:Closed} studies the special case of self-enrichment as a generalization of control functors.

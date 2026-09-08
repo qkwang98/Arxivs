@@ -1,0 +1,1979 @@
+% This chapter presents unpublished joint work with Reid Barton \cite{barton2026}.
+Many categories, such as $\Top$ and $\Cat$,
+are not locally Cartesian closed,
+but still have certain exponentiable objects and morphisms
+\cite{niefield1982, giraud1964}.
+\begin{definition}[Exponentiable map]\label{def:exp-map}
+  Let $\CC$ be a category with pullbacks.
+  A morphism $f : Y \to X$ in $\CC$ is \emph{exponentiable}
+  when the pullback functor $f^* : \CC / X \to \CC / Y$
+  has a right adjoint $\Pi_f : \CC / Y \to \CC / X$.
+  The functor $\Pi_f$ is called the \emph{pushforward along $f$}.
+\end{definition}
+However, for analysing models of type theory,
+it is important to have a more fine-grained condition of being exponentiable
+relative to a class of maps $\RR$ in a category $\CC$.
+
+For models of MLTT,
+such conditions have been considered in \cite{taylor1987} and \cite{joyal2017},
+in the form of $\pi$-clans (using the terminology of \cite{joyal2017}).
+Uemura introduced categories with representable maps (CwRs) \cite{uemura2023}
+for models of MLTT in a lex category (finite limit category).
+Exponentiability conditions for $\pi$-clans are in some ways more restrictive than the
+theory of exponentiable morphisms --
+the example of $\Cat$ and $\Top$ are lost.
+At the same time,
+it introduces certain closure conditions on pushforwards --
+that pushforwards preserve morphisms in the $\pi$-clan,
+key to identifying a class of type families in a model.
+On the other hand, the above definition of exponentiability (used in CwRs)
+captures when a class of maps is exponentiable with respect to \emph{all maps},
+which can recover some of examples in $\Cat$ and $\Top$,
+but does not subsume the theory of $\pi$-clans
+(since not all $\pi$-clans are lex)
+This notion of exponentiability says nothing about the
+preservation of certain morphisms upon application
+of the pushforward functor.
+
+Here, we consider morphisms that are only exponentiable with respect to
+a class of maps.
+Our setting not only subsumes the
+definitions of exponentiability in lex categories and $\pi$-clans,
+but also provides a new framework for understanding exponentiability conditions for (op)fibrations in $\Cat$,
+open and closed embeddings in $\Top$,
+tidy and \'etale maps of topological spaces and toposes,
+and Kan fibrations in simplicial sets $\sSet$,
+to name but a few examples.
+This work will focus on applying this theory to
+produce a study of $\Cat$ in terms of \emph{algebraic type theory},
+which is the focus of \Cref{sec:cat-as-types}.
+% From these considerations,
+% we can glean a new kind of dependent type theory
+% with models in $\Cat$, $\Top$ and so on.
+% This is the focus 
+
+\section{Preclans}
+
+The class of maps with respect to which we consider exponentiability conditions
+are required to satisfy certain basic conditions,
+which have been considered in various different contexts.
+Paul Taylor introduced the notion of \emph{display maps}
+for the semantics of Martin-L\"of Type theory,
+which could be required to satisfy various extra conditions,
+each corresponding to a particular type-theoretic notion
+\cite{taylor1987}.
+Andr\'e Joyal called a particular combination of those conditions
+a \emph{clan} \cite{joyal2017}.
+For the sake of having a short name,
+we introduce another abbreviation,
+consistent with the ``clan'' nomenclature.
+
+\begin{definition}\label{def:preclan}
+  A \emph{preclan} $(\CC,\RR)$ consists of a category $\CC$,
+  and a class of morphisms $\RR$ in $\CC$
+  -- which we call $\RR$-maps -- such that 
+  \begin{itemize}
+    \item $\RR$ is stable under pullback,
+      i.e. pullbacks of $\RR$-maps along all morphisms exist and are $\RR$-maps.
+    \item All isomorphisms are in $\RR$.
+    \item $\RR$ is closed under composition.
+  \end{itemize}
+  A \emph{preclan morphism} 
+  $F : (\CC, \RR) \to (\CC', \RR')$ is a functor
+  $F : \CC \to \CC'$ that
+  \begin{itemize}
+    \item sends $\RR$-maps to $\RR'$-maps and
+    \item preserves pullbacks of $\RR$-maps,
+    meaning that for any $\RR$-map $A \to X$
+    and any map $Y \to X$,
+    the canonical comparison map
+    $F (A \times_X Y) \to F A \times_{F X} F Y$
+    is an isomorphism.
+  \end{itemize}
+\end{definition}
+Preclans, preclan morphisms,
+and natural transformations naturally form a 2-category.
+
+If we also require that $\CC$ has a terminal object
+and that maps to terminal objects belong to $\RR$,
+then $(\CC,\RR)$ is a \emph{clan}.
+A \emph{clan morphism} is a preclan morphism between clans
+that also preserves the terminal object.
+
+The full subcategory of $\RR$-objects in a slice
+-- objects whose underlying map is an $\RR$-map -- is denoted by
+$\RR(X) \subseteq \CC / X$.
+
+Like locally Cartesian closed categories,
+preclans are meant to be somewhat type theoretic.
+We should therefore expect that each slice
+of a preclan is a preclan.
+There are in fact two candidates for slicing over an object $X$,
+one is $\CC / X$ and the other is $\RR(X)$.
+
+\begin{definition}
+  Let $(\CC, \RR)$ be a preclan.
+  \begin{itemize}
+  \item Given an object $X \in \CC$, the slice category $\CC / X$
+    has a preclan structure where the chosen class of maps consists of
+    morphisms in $\CC / X$ with an underlying morphism in $\RR$.
+    By slight abuse of notation, we denote this preclan by $(\CC/X, \RR)$.
+  \item The restriction of the above preclan structure to $\RR(X) \subseteq \CC/X$
+    defines a clan $(\RR(X), \RR)$.
+  \item
+    The category $\wCC$ of presheaves has a preclan structure $(\wCC, \wRR)$
+    \cite[Proposition 1.6.5]{joyal2017}.
+    Here, $\wRR$ consists of $\RR$-representable natural transformations:
+    natural transformations $A \to X$
+    such that for any representable object $Y \in \CC$ and map $f : Y \to X$,
+    there is an $\RR$-map $A' \to Y$ in $\CC$ representing the pullback
+    \[\begin{tikzcd}
+        {A'} \pbcorner & A \\
+        Y & X
+        \arrow[from=1-1, to=1-2]
+        \arrow["{\RR\text{-map}}"', from=1-1, to=2-1]
+        \arrow[from=1-2, to=2-2]
+        \arrow["f"', from=2-1, to=2-2]
+      \end{tikzcd}\]
+  \end{itemize}
+  For an object $X \in \CC$,
+  there are inclusions
+  \[
+    \RR(X) \,\subseteq\, \CC/X \,\subseteq\, \widehat{\CC/X} \simeq \wCC/X
+  \]
+  These form \emph{preclan embeddings}
+  $(\RR(X),\RR) \hookrightarrow \cdots \hookrightarrow (\wCC/X, \wRR)$
+  in that they are fully faithful preclan morphisms that reflect $\RR$-maps.
+  Furthermore, the Yoneda embedding induces an equivalence $\RR(X) \simeq \wRR(X)$,
+  as a representable natural transformation with representable codomain
+  also has representable domain.
+\end{definition}
+
+\begin{remark}
+  For $(\RR(X), \RR)$ to be a preclan, we needed that $\RR$ is closed under composition.
+  Pullbacks in $\CC / X$ are computed as pullbacks of the underlying maps in $\CC$.
+  Since the inclusion $\RR(X) \to \CC / X$
+  reflects pullbacks and $\RR$ is closed under composition,
+  the same is also true for $\RR(X)$.
+  Moreover, for $(\CC,\RR)$ satisfying only conditions
+  $(1)$ and $(2)$ from the definition of preclans,
+  $\RR$ is closed under composition if and only if
+  $(\RR(X),\RR)$ satisfies $(1)$.
+\end{remark}
+
+\begin{definition}\label{def:partial-right-adjoint}
+  A \emph{partial right adjoint} of a functor $L : \CC \to \DD$
+  consists of two full subcategories
+  $\partial\CC \hookrightarrow \CC$
+  and $\partial\DD \hookrightarrow \DD$,
+  a functor $\partial R : \partial \DD \to \partial \CC$,
+  and a hom-set bijection for all
+  $X \in \CC$ and $Y \in \partial\DD$
+  \[ \DD(L (X), Y) \iso \CC(X,\partial R (Y))\]
+  natural in both $X$ and $Y$.
+  We depict such a partial right adjoint in the following manner:
+  \[\begin{tikzcd}
+	\CC & {\partial\CC} \\
+	\DD & {\partial \DD}
+	\arrow[""{name=0, anchor=center, inner sep=0}, "L"', from=1-1, to=2-1]
+	\arrow[hook', from=1-2, to=1-1]
+	\arrow[""{name=1, anchor=center, inner sep=0}, "{\partial R}"', from=2-2, to=1-2]
+	\arrow[hook', from=2-2, to=2-1]
+	\arrow["{\dashv_\partial}"{description}, draw=none, from=0, to=1]
+  \end{tikzcd}\]
+\end{definition}
+
+For any $\RR$-map $f : Y \to X$ in a preclan $(\CC,\RR)$,
+we have a functor $f_! : \CC / Y \to \CC / X$
+between the slice categories given by composition with $f$,
+with pullback as a partial right adjoint
+\[\begin{tikzcd}
+{\CC / Y} & {\RR(Y)} \\
+{\CC / X} & {\RR(X)}
+\arrow[""{name=0, anchor=center, inner sep=0}, "{f_!}"', from=1-1, to=2-1]
+\arrow[hook', from=1-2, to=1-1]
+\arrow[""{name=1, anchor=center, inner sep=0}, "{f^*}"', from=2-2, to=1-2]
+\arrow[hook', from=2-2, to=2-1]
+\arrow["{\dashv_\partial}"{description}, draw=none, from=0, to=1]
+\end{tikzcd}\]
+
+\begin{proposition}\label{prop:beck-chevalley-left}
+  Let $f : Y \to X$ be an $\RR$-map in a preclan $(\CC,\RR)$.
+  Then $f_! : \CC / Y \to \CC / X$ restricts to a functor
+  $f_! : \RR(Y) \to \RR(X)$.
+  Consider the following pullback square.
+  \[
+  \begin{tikzcd}
+    {Y'} & Y \\
+    {X'} & X
+    \arrow["{s'}", from=1-1, to=1-2]
+    \arrow["{f'}"', from=1-1, to=2-1]
+    \arrow["\lrcorner"{anchor=center, pos=0.125}, draw=none, from=1-1, to=2-2]
+    \arrow["f", from=1-2, to=2-2]
+    \arrow["s"', from=2-1, to=2-2]
+  \end{tikzcd}
+  \]
+  The associated Beck--Chevalley transformation
+  $(f')_! (s')^* \to s^* f_!$ is a natural isomorphism.
+  \[
+  \begin{tikzcd}
+    \RR(Y') \ar[d, "f'_!"'] \ar[dr, phantom, "\cong"]  &
+    \RR(Y) \ar[l, "(s')^*"'] \ar[d, "f_!"] \\
+    \RR(X') & \RR(X) \ar[l, "s^*"']
+  \end{tikzcd}
+  \]
+\end{proposition}
+
+\section{The Beck--Chevalley condition}
+
+Variations of the following ``Beck--Chevalley condition''
+are typically considered when requiring a right adjoint to pullback.
+% In lex categories the ``Beck--Chevalley condition''
+% holds whenever the right adjoint to pullback exists,
+% making it a theorem, rather than a condition.
+% In models of MLTT with $\Pi$-types,
+% the ``Beck--Chevalley condition'' is automatically stable under pullback.
+% We will see that for us,
+% not all right adjoints satisfy the ``Beck--Chevalley condition'',
+% and sometimes Beck--Chevalley holds for $f$,
+% but not its pullbacks.
+
+\begin{definition} \label{def:beck-chevalley}
+  Let $f : Y \to X$ be a morphism in a preclan $(\CC,\RR)$.
+  We will say that the \emph{(pushforward) Beck--Chevalley condition}
+  holds at $f : Y \to X$ if for any pullback square
+   \[ \begin{tikzcd}
+        Y' \ar[r, "s'"] \ar[d, "f'"'] \pbcorner & Y \ar[d, "f"] \\
+        X' \ar[r, "s"] & X
+      \end{tikzcd} \]
+    the pullback functor
+    $(f')^* : \RR(X') \to \RR(Y')$
+    has a right adjoint $f'_* : \RR(Y') \to \RR(X')$,
+    and the associated Beck--Chevalley transformation
+    $s^* f_* \to (f')_* (s')^*$
+    is a natural isomorphism:
+    \[
+      \begin{tikzcd}
+        \RR(Y') \ar[d, "f'_*"'] \ar[dr, phantom, "\cong"]  &
+        \RR(Y) \ar[l, "(s')^*"'] \ar[d, "f_*"] \\
+        \RR(X') & \RR(X) \ar[l, "s^*"']
+      \end{tikzcd}
+    \]
+\end{definition}
+
+Unlike in locally Cartesian closed categories,
+the pushforward Beck--Chevalley condition does not follow
+from a Beck--Chevalley isomorphism $(s')_! (f')^* \iso f^* s_!$
+(like in \Cref{prop:beck-chevalley-left}) between left adjoints,
+because the left adjoint to pullback
+$s_! : \RR(X') \to \RR(X)$ may not even exist.
+Indeed, we will see in \Cref{ex:topos-etale} that the
+pushforward pushforward Beck--Chevalley condition
+does not hold for all maps, 
+even though we always have \Cref{prop:beck-chevalley-left}.
+
+% We provide an equivalent formulation
+% of the Beck--Chevalley condition
+% (henceforth we drop the word ``pushforward'').
+
+\begin{proposition} \label{prop:pra-defs}
+  Let $f : Y \to X$ be a morphism in a preclan $(\CC,\RR)$.
+  % (In particular $f^* : \RR(X) \to \RR(Y)$
+  % has a right adjoint $f_* : \RR(Y) \to \RR(X)$.)
+  The following conditions are equivalent
+  \begin{itemize}
+  \item
+    The pullback functor
+    $f^* : \wCC / X \to \wCC / Y$ between slices in the category of presheaves
+    has a partial right adjoint (\Cref{def:partial-right-adjoint})
+    $f_* : \RR(Y) \to \RR(X)$.
+    \[\begin{tikzcd}
+      \wCC / X & {\RR(X)} \\
+      \wCC / Y & {\RR(Y)}
+      \arrow[""{name=0, anchor=center, inner sep=0}, "f^*"', from=1-1, to=2-1]
+      \arrow[hook', from=1-2, to=1-1]
+      \arrow[""{name=1, anchor=center, inner sep=0}, "{f_*}"', dashed, from=2-2, to=1-2]
+      \arrow[hook', from=2-2, to=2-1]
+      \arrow["{\dashv_\partial}"{description}, draw=none, from=0, to=1]
+    \end{tikzcd}\]
+    
+    % This means that we have
+    % \[ \Hom_{\CC / Y}(f^* X', A) \iso \Hom_{\CC / X}(X', f_* A) \]
+    % natural in $X' \in (\CC / X)^\op$ and $A \in \RR(Y)$.
+    % In short, $f_* A$
+    % is universal among all objects in the slice $\CC / X$,
+    % rather than just the objects in $\RR(X)$.
+  \item
+    Using the Yoneda embedding $\CC \subseteq \wCC$,
+    the right adjoint $\Pi_f : \wCC/Y \to \wCC/X$
+    to pullback in presheaves $f^* : \wCC/X \to \wCC/Y$
+    sends $\RR(Y) \subseteq \wCC/Y$
+    into $\RR(X) \subseteq \wCC/X$.
+    \[\begin{tikzcd}
+      {\wCC / X} & {\RR(X)} \\
+      {\wCC / Y} & {\RR(Y)}
+      \arrow[hook', from=1-2, to=1-1]
+      \arrow["{\Pi_f}", from=2-1, to=1-1]
+      \arrow["{f_*}"', dashed, from=2-2, to=1-2]
+      \arrow[hook', from=2-2, to=2-1]
+    \end{tikzcd}\]
+  \end{itemize}
+\end{proposition}
+\begin{proof}
+  The partial right adjoint exists if and only if
+  for any $A \in \RR(Y)$ there exists an object $B \in \RR(X)$
+  and a natural isomorphism
+  \[ \wCC/Y (f^*(-),A) \iso \wCC/X((-),B)\]
+  between functors of type $(\wCC / X)^\op \to \Set$.  
+  This holds if and only if
+  there exists an object $B \in \RR(X)$ such that $\Pi_f A \iso B$,
+  if and only if $\Pi_f$ preserves $\RR$-objects.
+\end{proof}
+
+\begin{definition} 
+  We say the \emph{partial right adjoint condition}
+  holds at $f : Y \to X$ if
+  $f$ satisfies the equivalent conditions of
+  \Cref{prop:pra-defs}.
+\end{definition}
+
+If $\CC$ is lex then the partial right adjoint condition
+is equivalent to saying that the pullback
+$f^* : \CC / X \to \CC / Y$
+in $\CC$ has a partial right adjoint
+$f_* : \RR(Y) \to \RR(X)$.
+If, additionally, $f$ is exponentiable
+(\Cref{def:exp-map})
+then the partial right adjoint condition is also equivalent to saying that
+the right adjoint $\Pi_f : \CC/Y \to \CC/X$ sends $\RR(Y)$ into $\RR(X)$.
+The point is that although the functors
+$f^* : \CC / X \to \CC / Y$ and $\Pi_f : \CC/Y \to \CC/X$
+may not always exist,
+when they do exist,
+we can use them instead of their counterparts in $\wCC$.
+\[
+  \begin{tikzcd}
+	{\RR(Y)} & {\CC / Y} & {\wCC / Y} \\
+	{\RR(X)} & {\CC / X} & {\wCC / X}
+	\arrow[hook, from=1-1, to=1-2]
+	\arrow[""{name=0, anchor=center, inner sep=0}, "{f^*}"', shift right=3, from=1-1, to=2-1]
+	\arrow[hook, from=1-2, to=1-3]
+	\arrow[""{name=1, anchor=center, inner sep=0}, "{f^*}"', shift right=3, dashed, from=1-2, to=2-2]
+	\arrow[""{name=2, anchor=center, inner sep=0}, "{f^*}"', shift right=3, from=1-3, to=2-3]
+	\arrow[""{name=3, anchor=center, inner sep=0}, "{f_*}"', shift right=3, from=2-1, to=1-1]
+	\arrow[hook, from=2-1, to=2-2]
+	\arrow[""{name=4, anchor=center, inner sep=0}, "{\Pi_f}"', shift right=3, dashed, from=2-2, to=1-2]
+	\arrow[hook, from=2-2, to=2-3]
+	\arrow[""{name=5, anchor=center, inner sep=0}, "{\Pi_f}"', shift right=3, from=2-3, to=1-3]
+	\arrow["\dashv"{anchor=center}, draw=none, from=0, to=3]
+	\arrow["\dashv"{anchor=center}, draw=none, from=1, to=4]
+	\arrow["\dashv"{anchor=center}, draw=none, from=2, to=5]
+\end{tikzcd}\]
+
+Next, we show that the Beck--Chevalley condition is equivalent
+to the partial right adjoint condition.
+This was originally observed by Thomas Streicher,
+and can be found in \cite[Theorem 1.28]{streicher2012semantics}.
+However,
+our setting is different to Streicher's in a very subtle way.
+Streicher, following Paul Taylor,
+requires that $f$ itself is an $\RR$-map, whereas we do not.
+We will see that the Beck--Chevalley condition in our setting
+is \emph{not necessarily stable under pullback},
+unlike in Taylor's setting.
+The examples and \Cref{theorem:exponentiable}
+will show that throwing in pullback-stability for Beck--Chevalley
+actually produces a very natural notion of exponentiability.
+
+\begin{lemma} \label{lem:pullback-global-sections}
+  For $s : X' \to X$ and $A \in \RR(X)$, we have
+  $\Hom_{\CC/X}(X', A) \cong \Hom_{\RR(X')}(1_{X'}, s^* A)$.
+\end{lemma}
+\begin{proof}
+  Write $A = (A \xrightarrow{p} X)$.
+  The left side consists of maps $u : X' \to A$ with $pu = s$,
+  while the right side consists of sections of the pullback $s^* p : s^* A \to X'$.
+  It makes sense to write $\RR(X')$ on the right hand side
+  because both $1_{X'} : X' \to X'$ and $s^* p : s^* A \to X'$ are $\RR$-maps.
+\end{proof}
+
+\begin{proposition} \label{prop:beck-chevalley-defs}
+  Let $f : Y \to X$ be a morphism in a preclan $(\CC,\RR)$.
+  Then the Beck--Chevalley condition holds at $f$ if and only if
+  the partial right adjoint condition holds at $f$.
+\end{proposition}
+\begin{proof}
+  Since $\RR(X) \simeq \wRR(X)$,
+  the Beck--Chevalley condition holds at $f : Y \to X$
+  in $(\CC,\RR)$ if and only if the Beck--Chevalley condition holds at
+  $f : Y \to X$ in $(\wCC,\wRR)$.
+  Furthermore, since $\wCC$ is lex,
+  the partial right adjoint condition holds at $f : Y \to X$
+  in $(\CC,\RR)$
+  if and only if it holds at $\Pi_f : \wCC / X \to \wCC / Y$
+  has a partial right adjoint $f_* : \wRR(Y) \to \wRR(X)$.
+  Thus, in the following, we assume that $\CC$ is lex,
+  and prove that the Beck--Chevalley condition holds at $f$
+  if and only if $f^* : \CC / X \to \CC / Y$
+  has a partial right adjoint $f_* : \RR(Y) \to \RR(X)$.
+
+  ($\Rightarrow$)
+  We need to establish an isomorphism
+  $\Hom_{\CC/X}(X', f_* A) \cong \Hom_{\CC/Y}(f^* X', A)$
+  for any $(X' \xrightarrow{s} X) \in \CC/X$ and $(A \to Y) \in \RR(Y)$.
+  For $Z \in \CC$, write $\Gamma : \RR(Z) \to \Set$
+  for the ``global sections'' functor $\Gamma := \Hom_{\RR(Z)}(1_Z, -)$.
+  Let $(Y' \xrightarrow{s'} Y) := f^* (X' \xrightarrow{s} X) \in \CC/Y$,
+  with $f' : Y' \to X'$ the induced map,
+  so there is a pullback square as in (1).
+  Using \Cref{lem:pullback-global-sections},
+  \[
+    \Hom_{\CC/X}(X', f_* A)
+    = \Hom_{\RR(X')}(1_{X'}, s^* f_* A)
+    = \Gamma(s^* f_* A)
+  \]
+  and likewise
+  \begin{align*}
+    \Hom_{\CC/Y}(f^* X', A)
+    & = \Hom_{\RR(Y')}(1_{Y'}, (s')^* A) \\
+    & = \Hom_{\RR(Y')}((f')^* 1_{X'}, (s')^* A) \\
+    & = \Hom_{\RR(X')}(1_{X'}, f'_* (s')^* A) \\
+    & = \Gamma(f'_* (s')^* A)
+  \end{align*}
+  Condition (1) says that the natural map
+  $s^* f_* A \to f'_* (s')^* A$ is an isomorphism,
+  so we get an induced isomorphism
+  \[
+    \Hom_{\CC/X}(X', f_* A)
+    = \Gamma(s^* f_* A)
+    \cong \Gamma(f'_* (s')^* A)
+    = \Hom_{\CC/Y}(f^* X', A)
+  \]
+
+  ($\Leftarrow$)
+  Consider a pullback square of $f$ as shown below.
+  \[
+    \begin{tikzcd}
+      Y' \ar[r, "s'"] \ar[d, "f'"'] \pbcorner & Y \ar[d, "f"] \\
+      X' \ar[r, "s"] & X
+    \end{tikzcd}
+  \]
+  Let $A \in \RR(Y)$.
+  We must give a natural isomorphism $s^* f_* A \cong (f')_* (s')^* A \in \RR(X')$.
+  We will do this by showing that $s^* f_* A$ represents
+  the functor $\Hom_{\CC/Y'}((f')^*(-), (s')^*A)$ on $\CC/X'$.
+  Indeed,
+  \begin{align*}
+    \Hom_{\CC/Y'}((f')^*(-), (s')^*A)
+    & \cong \Hom_{\CC/Y}((s')_!(f')^*(-), A) \\
+    & \cong \Hom_{\CC/Y}(f^* s_!(-), A) \\
+    & \cong \Hom_{\CC/X}(s_!(-), f_* A) \\
+    & \cong \Hom_{\CC/X'}({-}, s^* f_* A)
+  \end{align*}
+  In the second step, we used the two pullbacks lemma
+  ($f$ has all pullbacks).
+  In the remaining steps, we used the facts that
+  $(s')^*$, $f_*$, $s^*$ are partial right adjoints
+  to $s'_!$, $f^*$, $s_!$ respectively.
+\end{proof}
+
+By the proposition, the Beck--Chevalley condition and the partial right adjoint condition
+are equivalent.
+However, we will continue to use two different names
+because it is often easier
+to check or apply one condition over the other.
+
+\begin{remark}
+  For the Beck--Chevalley condition,
+  we have not needed that $\RR$ is closed under composition,
+  since we have not needed the preclan structure $(\RR(X),\RR)$.
+\end{remark}
+
+\section{Exponentiability}
+\begin{theorem} \label{theorem:exponentiable}
+  Let $(\CC,\RR)$ be a preclan and $f : Y \to X$ a morphism in $\CC$.
+  The following are equivalent.
+  \begin{enumerate}
+  \item
+    The Beck--Chevalley condition (\labelcref{def:beck-chevalley})
+    holds at every pullback of $f$ in the preclan $(\CC,\RR)$
+    (whenever such pullbacks exist).
+  % \item 
+  %   The Beck--Chevalley condition holds at every pullback of
+  %   (the image of) $f$ in the preclan ($\wCC,\wRR$).
+  \item
+    The slice pushforward in presheaves $\Pi_f : (\wCC/Y, \wRR) \to (\wCC/X, \wRR)$
+    is a preclan morphism.
+  \end{enumerate}
+  
+  If $\CC$ is lex and $f$ is an exponentiable morphism
+  (\Cref{def:exp-map}),
+  (2) can be rephrased as saying that
+  the slice pushforward $\Pi_f : (\CC/Y, \RR) \to (\CC/X, \RR)$ is a preclan morphism.
+\end{theorem}
+
+Before proving the theorem,
+we provide our main definitions,
+as well as some lemmas and remarks.
+
+\begin{definition} \label{def:exponentiable}
+  We say $f$ is \emph{$\RR$-exponentiable}
+  if it satisfies the equivalent conditions in \Cref{theorem:exponentiable}.
+  We write $\Exp_\RR$ for the class of $\RR$-exponentiable maps in $\CC$.
+\end{definition}
+
+By condition (1), $\RR$-exponentiable morphisms
+are stable under pullback.
+Condition (2) says that $\Pi_f : (\wCC/Y, \wRR) \to (\wCC/X, \wRR)$
+not only sends $\RR(Y) \subseteq \wCC / Y$ into $\RR(X) \subseteq \wCC / X$,
+as in the statement of \Cref{prop:beck-chevalley-defs},
+but also preserves all $\RR$-maps in
+$\RR(Y)$ and $\CC / Y$, which are subcategories of $\wCC/Y$.
+Hence, assuming condition (2),
+we have that the pushforward $f_* : (\RR(Y), \RR) \to (\RR(X), \RR)$
+is a preclan morphism,
+making it a partial right adjoint 
+to pullback $f^* : (\wCC/X, \RR) \to (\wCC /Y, \RR)$
+in the $2$-category of preclans.
+  \[\begin{tikzcd}
+    (\wCC / X, \wRR) & {(\RR(X), \RR)} \\
+    (\wCC / Y, \wRR) & {(\RR(Y), \RR)}
+    \arrow[""{name=0, anchor=center, inner sep=0}, "f^*"', from=1-1, to=2-1]
+    \arrow[hook', from=1-2, to=1-1]
+    \arrow[""{name=1, anchor=center, inner sep=0}, "{f_*}"', from=2-2, to=1-2]
+    \arrow[hook', from=2-2, to=2-1]
+    \arrow["{\dashv_\partial}"{description}, draw=none, from=0, to=1]
+  \end{tikzcd}\]
+
+As we explain in \Cref{sec:example},
+condition~(1) is closely related to the
+various notions of a map being ``proper''.
+Anel and Weinberger \cite{anel2024} consider such conditions
+in a different setting where the ``coefficients'' may not be given by
+a full subcategory $\RR(-)$ of the slice $\CC/(-)$
+(and when $\CC$ is lex, though this is minor).
+In the language of comprehension categories \cite{jacobs1993},
+their $\RR$ is a comprehension category over $\CC$
+whereas ours is a \emph{full} one.
+When both settings coincide,
+their ``proper maps'' are our $\RR$-exponentiable maps,
+stated via a pullback stable Beck-Chevalley condition.
+The equivalence (1) $\Leftrightarrow$ (3) in \Cref{prop:beck-chevalley-defs} 
+says that when both settings coincide,
+their ``strict proper maps'' are the same as ``proper maps''.
+% It seems that at least some of this theory works without the assumption
+% of being fully faithful;
+% we leave such considerations to future work.
+
+\begin{definition}\label{def:double-preclan}
+  Let $(\CC,\RR)$ be a preclan
+  and $\HH$ a class of maps in $\CC$.
+  We say that $\HH$ is $\RR$-exponentiable when all the
+  maps in $\HH$ are $\RR$-exponentiable.
+
+  If $(\CC,\HH)$ is also a preclan, $\HH$ is $\RR$-exponentiable
+  and $\RR$ is $\HH$-exponentiable,
+  then we will say that the combination
+  $(\CC,\RR,\HH)$ is a $\tau$-\emph{preclan}.
+\end{definition}
+
+Naturally, if both $(\CC,\RR)$ and $(\CC,\HH)$
+are clans then we would call the
+combination a $\tau$-\emph{clan}.
+Examples of $\tau$-preclans can be found in \Cref{ex:top-opens} and
+\Cref{ex:categories-and-fibrations}.
+
+\begin{definition}\label{def:pi-preclan}
+  We call $(\CC, \RR)$ a $\pi$-\emph{preclan}
+  if all $\RR$-maps are $\RR$-exponentiable.
+\end{definition}
+
+This is close to Paul Taylor's definition of a
+display map category with dependent products \cite{taylor1987},
+and recovers what Andr\'e Joyal calls a $\pi$-clan \cite{joyal2017}
+when $(\CC,\RR)$ is a clan.
+
+\begin{remark}[Counterexamples]\label{rmk:counterexample} 
+  Exponentiable maps in a lex category
+  need not be $\RR$-exponentiable
+  (see \Cref{ex:categories-and-fibrations}).
+  Conversely, $\RR$-exponentiable maps need not be exponentiable
+  with respect to all maps, either.
+  Consider the $\pi$-clan $(\CC,\RR)$, where 
+  $\CC$ is the category of contexts
+  (the syntactic category)
+  for Martin-L\"of Type Theory with
+  $\Unit$-types, $\Sigma$-types, and $\Pi$-types
+  and $\RR$ is the class of type families.
+  In fact, in this example, the category $\CC$ is not even lex,
+  so that the class of all maps does not even produce a clan.
+  
+  One might wonder why the definition of an $\RR$-exponentiable morphism
+  requires the Beck--Chevalley condition for all pullbacks of $f$,
+  rather than just for $f$ itself.
+  % Experience with examples and applications shows that
+  % forcing the class of $\RR$-exponentiable maps to be pullback-stable
+  % leads to a more useful notion.
+  We have the following implications:
+  \[
+    \begin{tikzcd}
+      \text{$f : Y \to X$ is $\RR$-exponentiable}
+      \ar[d, Rightarrow, "\text{\,(\textit{i})}"] \\
+      {\begin{array}{c}
+        \text{$f$ satisfies Beck--Chevalley and $f_* : (\RR(Y), \RR) \to (\RR(X), \RR)$ is a preclan morphism}
+      \end{array}}
+      \ar[d, Rightarrow, "\text{\,(\textit{ii})}"] \\
+      \text{$f$ satisfies Beck--Chevalley}
+      \ar[d, Rightarrow, "\text{\,(\textit{iii})}"] \\
+      \text{$f^* : \RR(X) \to \RR(Y)$ has a right adjoint $f_* : \RR(Y) \to \RR(X)$}
+    \end{tikzcd}
+  \]
+  In general, none of these implications is reversible.
+  We provide counterexamples for (\textit{i}), (\textit{ii}) and (\textit{iii})
+  respectively in \Cref{ex:top-opens}, \Cref{ex:top-open-maps}
+  and \Cref{ex:topos-etale}.
+\end{remark}
+
+We now turn to the proof of \Cref{theorem:exponentiable}.
+In the proof,
+we will need to analyse the functorial action of $\Pi_f : \wCC/Y \to \wCC/X$ on morphisms.
+To do so, we will reintroduce \cite[Lemmas 2.3.1 and 2.3.2]{joyal2017}
+in the following.
+First, recall that for any functor
+$F : \CC \to \DD$ and object $X \in \CC$,
+there is an induced functor between slices, denoted by
+\[ F / X : \CC / X \to \DD / F X\]
+which acts on objects and morphisms on the slice by
+applying $F$ to the underlying morphisms in $\CC$.
+
+\begin{lemma}[{\cite[Lemma~2.3.1 + dual]{joyal2017}}] \label{lem:adjoints-of-slice-functors}
+  Suppose we have an adjunction $L \dashv R : \CC \to \DD$
+  and an object $X \in \CC$.
+  We denote the component of the counit at $X$ as
+  $\epsilon : L R X \to X$.
+  Then there is an adjunction $\epsilon_! \circ L / R X \dashv R / X$,
+  depicted below.
+
+  On the other hand, suppose we have an object $Y \in \DD$
+  and the component $\eta : Y \to R L Y$ of the unit at $Y$
+  has pullbacks along all maps,
+  so that we have a functor $\eta^* : \DD / R L Y \to \DD / Y$.
+  Then there is a dual adjunction $L / Y \dashv \eta^* \circ R / L Y$.
+  \[ \begin{tikzcd}
+    \CC &&& {\CC / X} && {\CC / L Y} \\
+    && {\CC / L R X} &&&& {\DD / R L Y} \\
+    \DD &&& {\DD / R X} && {\DD / Y}
+    \arrow[""{name=0, anchor=center, inner sep=0}, "R", shift left=3, from=1-1, to=3-1]
+    \arrow[""{name=1, anchor=center, inner sep=0}, "{{R / X}}", from=1-4, to=3-4]
+    \arrow["{R / L Y}", from=1-6, to=2-7]
+    \arrow["{{\epsilon_!}}", from=2-3, to=1-4]
+    \arrow["{\eta^*}", from=2-7, to=3-6]
+    \arrow[""{name=2, anchor=center, inner sep=0}, "L", shift left=3, from=3-1, to=1-1]
+    \arrow["{{L / R X}}", from=3-4, to=2-3]
+    \arrow[""{name=3, anchor=center, inner sep=0}, "{L / Y}", from=3-6, to=1-6]
+    \arrow["\dashv"{description}, draw=none, from=2-3, to=1]
+    \arrow["\dashv"{description}, draw=none, from=2, to=0]
+    \arrow["\dashv"{description}, draw=none, from=3, to=2-7]
+  \end{tikzcd} \]
+\end{lemma}
+\begin{proof}
+  For the first adjunction,
+  let $(a : A \to R X) \in \DD / R X$ and $(b : B \to X) \in \CC / X$.
+  A map $t$ in $\CC / X (\epsilon_! \circ L / R X (A), B)$
+  corresponds to a diagram in $\CC$
+  \[ \begin{tikzcd}
+    {L A} & B \\
+    {L R X} & X
+    \arrow["t", dashed, from=1-1, to=1-2]
+    \arrow["{L a}"', from=1-1, to=2-1]
+    \arrow["b", from=1-2, to=2-2]
+    \arrow["\epsilon"', from=2-1, to=2-2]
+  \end{tikzcd} \]
+  which transposes along the adjunction $L \dashv R$
+  to a diagram in $\DD$
+  \[ \begin{tikzcd}
+    A & RB \\
+    {R X} & {R X}
+    \arrow["{\tilde{t}}", dashed, from=1-1, to=1-2]
+    \arrow["a"', from=1-1, to=2-1]
+    \arrow["Rb", from=1-2, to=2-2]
+    \arrow[equals, from=2-1, to=2-2]
+  \end{tikzcd} \]
+  This is precisely a morphism
+  $\tilde{t}$ in $\DD / R X (A, R / Z (B))$.
+  One can verify that this bijection is natural in both $A$ and $B$.
+  
+  For the second adjunction,
+  let $A \in \DD / Y$ and $B \in \CC / L Y$.
+  A map $t$ in $\CC / L Y (L / Y (A), B)$
+  corresponds to a diagram in $\CC$,
+  depicted below with its transpose along $L \dashv R$ in $\DD$.
+  \[ \begin{tikzcd}
+    {L A} & B && A & RB \\
+    {L Y} & {L Y} && Y & {R L Y}
+    \arrow["t", dashed, from=1-1, to=1-2]
+    \arrow["{L a}"', from=1-1, to=2-1]
+    \arrow["b", from=1-2, to=2-2]
+    \arrow["{\tilde{t}}", dashed, from=1-4, to=1-5]
+    \arrow["a"', from=1-4, to=2-4]
+    \arrow["Rb", from=1-5, to=2-5]
+    \arrow[equals, from=2-1, to=2-2]
+    \arrow["\eta"', from=2-4, to=2-5]
+  \end{tikzcd} \]
+  The transpose is a morphism in
+  \[\DD / R L Y (\eta_! (A), R / L Y (B)) \cong \DD / Y (A, \eta^* \circ R / L Y)\]
+  This provides the required natural bijection.
+\end{proof}
+
+It is well known that
+exponentiable morphisms are stable under pullback 
+(see \cite[Section 2.1]{weber2015} for example,
+which uses Dubuc's adjoint triangle theorem \cite{dubuc2006}).
+In the following,
+we construct the pushforward functor $\Pi_{f'}$ associated
+with a pullback $f'$ of an exponentiable morphism~$f$.
+
+\begin{lemma} \label{lem:pushforward-along-pullback}
+  Consider an exponentiable morphism $f : Y \to X$
+  in a lex category $\CC$.
+  Consider a morphism $s : X' \to X$ and its pullback along $f$.
+  \[\begin{tikzcd}
+    {Y'} & {X'} & {\Pi_f Y'} \\
+    Y & X
+    \arrow["{{{f'}}}", from=1-1, to=1-2]
+    \arrow["{{{s'}}}"', from=1-1, to=2-1]
+    \arrow["\lrcorner"{anchor=center, pos=0.125}, draw=none, from=1-1, to=2-2]
+    \arrow["{{{\eta}}}", from=1-2, to=1-3]
+    \arrow["s"', from=1-2, to=2-2]
+    \arrow["{{{\Pi_f s'}}}", from=1-3, to=2-2]
+    \arrow["f"', from=2-1, to=2-2]
+  \end{tikzcd}\]
+  where $\eta : X' \to \Pi_f Y'$ denotes the unit of the adjunction
+  $f^* \dashv \Pi_f$ at $(s : X' \to X)$.
+  Then the composition $\Pi_{f'} := \eta^* \circ \Pi_f / Y'$
+  is right adjoint to the pullback functor
+  $(f')^* : \CC / X' \to \CC / Y'$.
+  \[ \begin{tikzcd}
+    {\CC / Y'} & {\CC / \Pi_f Y'} & {\CC / X'}
+    \arrow["{\Pi_f / Y'}", from=1-1, to=1-2]
+    \arrow["{\Pi_{f'}}"', bend right, from=1-1, to=1-3]
+    \arrow["{\eta^*}", from=1-2, to=1-3]
+  \end{tikzcd} \]
+\end{lemma}
+\begin{proof}
+  The left adjoint of $\eta^* \circ \Pi_f / Y'$
+  is $f^* / X' : \CC / X' \to \CC / Y'$,
+  by \Cref{lem:adjoints-of-slice-functors}.
+  Clearly $(f')^* \cong f^* / X'$, as required. 
+\end{proof}
+
+Now suppose that we also have $g : Z \to Y$.
+Then the pushforward $\Pi_f$ induces a functor
+$\Pi_f / Z : \CC / Z \to \CC / \Pi_f Z$ on slices,
+which we can calculate using the following lemma.
+
+\begin{lemma}[{\cite[Lemma~2.3.2]{joyal2017}}] \label{lem:pullback-morphism-action}
+  Suppose $f : Y \to X$ is an exponentiable morphism
+  in a lex category $\CC$,
+  and $g : Z \to Y$.
+  Consider the diagram
+  \[\begin{tikzcd}
+    Z & {Y \times_X \Pi_f Z} & {\Pi_f Z} \\
+    & Y & X
+    \arrow["g"', from=1-1, to=2-2]
+    \arrow["{\epsilon}"', from=1-2, to=1-1]
+    \arrow["{f'}", from=1-2, to=1-3]
+    \arrow[from=1-2, to=2-2]
+    \arrow["\lrcorner"{anchor=center, pos=0.125}, draw=none, from=1-2, to=2-3]
+    \arrow["{\Pi_f g}", from=1-3, to=2-3]
+    \arrow["f"', from=2-2, to=2-3]
+  \end{tikzcd}\]
+  where $\epsilon : Y \times_X \Pi_f Z \to Z$
+  is the counit of the adjunction $f^* \dashv \Pi_f$ at $(g : Z \to Y)$.
+  Then there is a canonical natural isomorphism
+  $\Pi_f/Z \iso \Pi_{f'} \circ \epsilon^*$.
+  \begin{equation} \label{diag:pullback-morphism-action}
+    \begin{tikzcd}
+      {\CC / Z} & {\CC / \big( Y \times_X \Pi_f Z \big)} & {\CC / \Pi_f Z}
+      \arrow["{{\epsilon^*}}", from=1-1, to=1-2]
+      \arrow["{{\Pi_{f'}}}", from=1-2, to=1-3]
+      \arrow["{{\Pi_f/Z}}"', from=1-1, to=1-3, bend right]
+    \end{tikzcd}
+  \end{equation}
+\end{lemma}
+\begin{proof}
+  It suffices to construct an isomorphism between their left adjoints.
+  The left adjoint of $\Pi_f / Z$ is computed as
+  $\epsilon_! \circ f^* / \Pi_f Z$ by \Cref{lem:adjoints-of-slice-functors}.
+  By definition,
+  \[f^* / \Pi_f Z \iso (f')^* : \CC / \Pi_f Z \to \CC / \big( Y \times_X \Pi_f Z \big)\]
+  By composing adjunctions $\epsilon_! \dashv \epsilon^*$ and $(f')^* \dashv \Pi_{f'}$
+  we see that $\epsilon_! \circ (f')^* \dashv \Pi_{f'} \circ \epsilon^*$.
+\end{proof}
+
+It follows from \Cref{lem:pullback-morphism-action} that we have a canonical isomorphism
+\begin{equation} \label{eq:type-theoretic-axiom-of-choice}
+  f_* \circ A_! \iso (f_* A)_! \circ f'_* \circ \epsilon^* 
+\end{equation}
+This is called the \emph{distributivity law} in \cite{gambino2013}
+(for $\Pi$-types and $\Sigma$-types).
+It could also be called the \emph{type theoretic axiom of choice}.
+In an informal type theoretic syntax, one could render it as follows.
+\[
+  \prod_{x : X} \sum_{y : Y(x)} A(y) \iso \sum_{f : \Pi_{X} Y} \prod_{x : X} A(f x)
+\]
+
+\begin{lemma}\label{lem:BC-iff-BC-in-presheaves}
+  Let $(\CC,\RR)$ be a preclan and $f : Y \to X$ a morphism in $\CC$.
+  The following are equivalent.
+  \begin{itemize}
+  \item
+    The Beck--Chevalley condition holds at every pullback of
+    $f$ in the preclan $(\CC,\RR)$
+    (whenever such pullbacks exist).
+  \item 
+    The Beck--Chevalley condition holds at every pullback of
+    (the image of) $f$ in the preclan ($\wCC,\wRR$).
+  \end{itemize}
+\end{lemma}
+\begin{proof}
+  ($\Rightarrow$)
+  Suppose the partial right adjoint condition
+  holds at every pullback of $f$ in $(\CC,\RR)$.
+  Consider a pullback of $f$ in $\wCC$
+  \[
+    \begin{tikzcd}
+      Y' \ar[r, "t"] \ar[d, "f'"'] \pbcorner & Y \ar[d, "f"] \\
+      X' \ar[r, "s"] & X \rlap{\, .}
+    \end{tikzcd}
+  \]
+  Note that $X'$ and $Y'$ in $\wCC$ may not be representable.
+  Since $\wCC$ is locally Cartesian closed,
+  it suffices to show that $\Pi_{f'} : \wCC / Y' \to \wCC / X'$
+  sends $\wRR(Y')$ into $\wRR(X')$
+  (this is a simplification of condition (3) in \Cref{prop:beck-chevalley-defs}).
+  Let $q : A \to Y'$ be in $\wRR(Y')$
+  and write $r := \Pi_{f'}(q)$.
+  To check that $r$ belongs to $\wRR$,
+  let $u : \widetilde X \to X'$ be a map with $\widetilde X \in \CC$;
+  we must check that $u^*(r)$ is a morphism of $\CC$ that belongs to $\RR$.
+
+  \[
+    \begin{tikzcd}[row sep=small, column sep=small]
+      %JH: with =small it looked like \tilde{f} is a label for another arrow
+      %RB: I decided we didn't really need those "back" arrows anyways
+      u^* A \ar[rd, "u^*(q)"'] & & A \ar[rd, "q"'] \\
+      & \widetilde Y \ar[rr] \ar[dd, "\tilde f"'] \pbcorner & &
+      Y' \ar[rr, "t"] \ar[dd, "f'"'] \pbcorner & & Y \ar[dd, "f"] \\
+      u^*(\Pi_{f'} A) \ar[rd, "u^*(r)"'] & &
+      \Pi_{f'} A \ar[rd, "r"'] & & \hphantom{B} \\
+      & \widetilde X \ar[rr, "u"] & &
+      X' \ar[rr, "s"] & & X
+    \end{tikzcd}
+  \]
+
+  As shown above, write $\widetilde f : \widetilde Y \to \widetilde X$
+  for the pullback $u^*(f')$.
+  Since $u^* : \wCC / X' \to \wCC / \widetilde X$ preserves pushforwards,
+  the morphism $u^*(r)$ is isomorphic to $\Pi_{\tilde f}(u^*(q))$.
+  Now as $q \in \wRR$ and $\widetilde Y \in \CC$,
+  the map $u^*(q)$ belongs to $\RR$.
+  The composition $su : \widetilde X \to X$ is a morphism of $\CC$,
+  so the morphism $\widetilde f : \widetilde Y \to \widetilde X$
+  is a pullback of $f$ in $\CC$ (in particular, $\widetilde Y \in \CC$).
+  By the hypothesis on $f$, then,
+  the object $u^*(r) \cong \Pi_{\tilde f}(u^*(q))$ of $\wCC/\widetilde X$
+  belongs to $\RR(\widetilde X)$.
+  Thus, every pullback of $r$ to a representable $\widetilde X$
+  produces a morphism in $\RR$, so $r \in \wRR$.
+  
+  ($\Leftarrow$)
+  Now suppose the partial right adjoint condition
+  holds at every pullback of $f$ in $(\wCC,\wRR)$.
+  Consider a pullback
+  \[
+    \begin{tikzcd}
+      Y' \ar[r, "t"] \ar[d, "f'"'] \pbcorner & Y \ar[d, "f"] \\
+      X' \ar[r, "s"] & X
+    \end{tikzcd}
+  \]
+  of $f$ in $\CC$.
+  We must show that $\Pi_{f'} : \wCC / Y' \to \wCC / X'$
+  sends $\RR(Y')$ into $\RR(X')$
+  (condition (3) in \Cref{prop:beck-chevalley-defs}).
+  Since the image of the given pullback
+  is still a pullback in $\wCC$,
+  our assumption says that $\Pi_{f'} : \wCC / Y' \to \wCC / X'$
+  sends $\wRR(Y')$ into $\wRR(X')$.
+  We conclude by recalling that
+  $\RR(Z) \simeq \wRR(Z)$ for any $Z$ in $\CC$.
+\end{proof}
+
+\begin{proposition}\label{prop:lex-exponentiable}
+  Let $(\CC,\RR)$ be a preclan such that
+  $\CC$ is lex and $f : Y \to X$
+  an exponentiable morphism in $\CC$.
+  The following are equivalent
+  \begin{itemize}
+  \item
+    The Beck--Chevalley condition holds at every pullback of
+    $f$ in the preclan $(\CC,\RR)$.
+  \item
+    The slice pushforward in presheaves $\Pi_f : (\CC/Y, \RR) \to (\CC/X, \RR)$
+    is a preclan morphism.
+  \end{itemize}
+\end{proposition}
+\begin{proof}
+  % We use
+  % the partial right adjoint condition
+  % rather than the Beck--Chevalley condition.
+
+  ($\Rightarrow$)
+  Suppose $\CC$ is lex, $f : Y \to X$ is exponentiable, and
+  the partial right adjoint condition holds at every pullback of $f$.
+  We must show that $\Pi_f : \CC / Y \to \CC / X$ is a preclan morphism.
+  Note that $\Pi_f : \CC / Y \to \CC / X$ is a right adjoint,
+  thus it preserves all pullbacks.
+  It remains to show that for any $\RR$-map $h : A \to Z$ over $Y$,
+  \[\begin{tikzcd}
+    A & Z & Y & X
+    \arrow["h", from=1-1, to=1-2]
+    \arrow["g", from=1-2, to=1-3]
+    \arrow["f", from=1-3, to=1-4]
+  \end{tikzcd}\]
+  the pushforward $\Pi_f h : \Pi_f A \to \Pi_f Z$
+  is also an $\RR$-map.
+
+  By \Cref{lem:pullback-morphism-action},
+  we can analyse $\Pi_f h$ by viewing $h : A \to Z$ as an object in $\CC / Z$.
+  In our case we can further view $h : A \to Z$ as an object in $\RR(Z)$
+  and use that $\Pi_{f'}$ restricts to $f'_*$,
+  extending \cref{diag:pullback-morphism-action}.
+  \[\begin{tikzcd}
+    {\RR(Z)} & {\RR(Y \times_X \Pi_f Z)} & {\RR(\Pi_f Z)} \\
+    {\CC / Z} & {\CC / \big( Y \times_X \Pi_f Z \big)} & {\CC / \Pi_f Z}
+    \arrow["{\epsilon^*}", from=1-1, to=1-2]
+    \arrow[from=1-1, to=2-1]
+    \arrow["{f'_*}", from=1-2, to=1-3]
+    \arrow[from=1-2, to=2-2]
+    \arrow[from=1-3, to=2-3]
+    \arrow["{\epsilon^*}", from=2-1, to=2-2]
+    \arrow["{\Pi_{f'}}", from=2-2, to=2-3]
+    \arrow["{\Pi_f/Z}", from=2-1, to=2-3, bend right]
+  \end{tikzcd}\]
+  Hence $\Pi_f h$ can be viewed as an object in $\RR(\Pi_f Z)$,
+  which is an $\RR$-map in $\CC$:
+  \[
+    \Pi_f h
+    \,\iso\, \Pi_{f'} \, \epsilon^* \, h
+    \,\iso\, f'_* \, \epsilon^* \, h \,.
+  \]
+
+  ($\Leftarrow$)
+  Suppose $\CC$ is lex, $f : Y \to X$ is exponentiable,
+  and $\Pi_f : (\CC/Y,\RR) \to (\CC/X,\RR)$ is a preclan morphism.
+  Let $f' : Y' \to X'$ be a pullback of $f$
+  \[
+    \begin{tikzcd}
+      Y' \ar[r, "s'"] \ar[d, "f'"'] \pbcorner & Y \ar[d, "f"] \\
+      X' \ar[r, "s"] & X
+    \end{tikzcd}
+  \]
+  By \Cref{lem:pushforward-along-pullback} there is
+  a pullback functor
+  $\Pi_{f'} = \eta^* \circ \Pi_f / Y' : \CC / Y' \to \CC / X'$.
+  Since $\Pi_f$ is a preclan morphism,
+  $\Pi_f / Y'$ sends $\RR(X')$ into $\RR(\Pi_f Y')$.
+  Pullbacks always preserve $\RR$-maps,
+  so $\eta^*$ sends $\RR(\Pi_f Y')$ into $\RR(Y')$.
+  Hence $\Pi_{f'}$ sends $\RR(Y')$ into $\RR(X')$
+  and so the partial right adjoint condition holds at $f'$.
+\end{proof}
+
+We can now prove \Cref{theorem:exponentiable},
+by combining the previous propositions.
+
+\begin{proof}[Proof of \Cref{theorem:exponentiable}.]
+  Let $(\CC,\RR)$ be a preclan and $f : Y \to X$ a morphism in $\CC$.
+  The Beck--Chevalley condition holds at every pullback of
+  $f$ in the preclan $(\CC,\RR)$
+  if and only if 
+  it holds at every pullback of $f$ in $(\wCC,\wRR)$,
+  by \Cref{lem:BC-iff-BC-in-presheaves}.
+  The latter holds if and only if
+  the slice pushforward in presheaves $\Pi_f : (\wCC/Y, \wRR) \to (\wCC/X, \wRR)$
+  is a preclan morphism,
+  by \Cref{prop:lex-exponentiable}
+  and the fact that $\wCC$ is locally Cartesian closed.
+\end{proof}
+
+The usual definition of a $\pi$-(pre)clan follows.
+
+\begin{corollary} \label{cor:pi-preclan}
+  Let $(\CC, \RR)$ be a preclan.
+  The following are equivalent
+  \begin{enumerate}
+  \item
+    All $\RR$-maps are $\RR$-exponentiable,
+    i.e. $(\CC, \RR)$ is a $\pi$-preclan.
+  \item
+    The Beck--Chevalley condition holds at all $\RR$-maps.
+  \end{enumerate}
+  In this case, $\Pi_f : (\wCC / X, \RR) \to (\wCC / Y, \RR)$
+  is a preclan morphism for every $\RR$-map $f$,
+  and so is $\Pi_f : (\CC / X, \RR) \to (\CC / Y, \RR)$
+  when $\CC$ is lex and $f$ is exponentiable.
+\end{corollary}
+\begin{proof}
+  Since $\RR$-maps are stable under pullback,
+  a fact about all morphisms in $\RR$ is true if and only if
+  it is true for all pullbacks of morphisms in $\RR$.
+\end{proof}
+
+\begin{proposition} \label{prop:exp-clan}
+  If $(\CC,\RR)$ is a preclan
+  then $(\CC,\Exp_\RR)$ is also a preclan.
+\end{proposition}
+\begin{proof}
+  Pullbacks of $\RR$-exponentiable morphisms exist and
+  are still $\RR$-exponentiable by considering condition (1)
+  from the equivalent definitions of $\RR$-exponentiability.
+  If $f$ is an isomorphism, then the Beck--Chevalley condition holds trivially
+  at $f$ as well as its pullbacks, which are also isomorphisms.
+  If $g : Z \to Y$ and $f : Y \to X$ are both $\RR$-exponentiable,
+  then by condition (3)
+  \[\Pi_f \circ \Pi_g \iso \Pi_{f \circ g} : (\wCC/Z, \wRR) \to (\wCC/X, \wRR)\]
+  we see that $f \circ g$ is also $\RR$-exponentiable.
+\end{proof}
+
+The remainder of this section provides various lemmas
+about $\RR$-exponentiability that will be useful in the coming chapters.
+The first lemma \Cref{lem:stable-class-of-exponentiable-maps}
+makes it easier to check that a class of maps $\HH$ is $\RR$-exponentiable,
+using a more elementary condition.
+
+\begin{lemma}\label{lem:stable-class-of-exponentiable-maps}
+  Suppose $\HH$ is a class of maps that is stable under pullback,
+  and for every $f : Y \to X$ in $\HH$,
+  and every $\RR$-map $g : Z \to Y$, 
+  there is an $\RR$-map $p : P \to X$ satisfying the partial right adjoint
+  universal property of the pushforward:
+  \[ \CC / Y (f^* h, g) \iso \CC / X (h,p)\]
+  naturally for all $h$ in $\CC / X$.
+  Then $\HH$ is $\RR$-exponentiable.
+  \[\HH \subseteq \Exp_\RR\]
+\end{lemma}
+\begin{proof}
+  Let $f : Y \to X$ be in $\HH$.
+  By assumption on $\HH$, $f$ has all pullbacks.
+  The elementary condition is sufficient for constructing a
+  partial right adjoint $f_* : \RR(Y) \to \RR(X)$
+  for the pullback functor $f^* : \CC / X \to \CC / Y$.
+  \[\begin{tikzcd}
+    \CC / X & {\RR(X)} \\
+    \CC / Y & {\RR(Y)}
+    \arrow[""{name=0, anchor=center, inner sep=0}, "f^*"', from=1-1, to=2-1]
+    \arrow[hook', from=1-2, to=1-1]
+    \arrow[""{name=1, anchor=center, inner sep=0}, "{f_*}"', from=2-2, to=1-2]
+    \arrow[hook', from=2-2, to=2-1]
+    \arrow["{\dashv_\partial}"{description}, draw=none, from=0, to=1]
+  \end{tikzcd}\]
+  Since $\HH$ is stable under pullback,
+  the existence of the partial right adjoint also holds for all pullbacks of $f$.
+\end{proof}
+
+Like in \cite[Lemma 2.4.13]{joyal2017},
+we also provide versions of 
+\Cref{lem:pushforward-along-pullback}
+and \Cref{lem:pullback-morphism-action}
+for preclan (rather than a lex category).
+These lemmas aid in various computations
+involving the pushforward,
+which we make use of for the theory of polynomial functors in \Cref{sec:polynomials}.
+
+For a preclan morphism $F : (\CC, \RR) \to (\CC',\RR')$
+and $X \in \CC$,
+the action of $F$ on morphisms induces a functor
+\[F / X : \RR(X) \to \RR'(F X)\]
+Then for an $\RR$-map $f : X \to Y$
+we have $(F f)_! \circ F / X \iso F / Y \circ f_!$.
+\[
+  \begin{tikzcd}
+    {\RR(X)} & {\RR'(F X)} \\
+    {\RR(Y)} & {\RR'(F Y)}
+    \arrow["{F / X}", from=1-1, to=1-2]
+    \arrow["{f_!}"', from=1-1, to=2-1]
+    \arrow["{(F f)_!}", from=1-2, to=2-2]
+    \arrow["F / Y"', from=2-1, to=2-2]
+  \end{tikzcd}
+\]
+
+% In particular for 
+% \begin{definition}
+%   Let $c,d \in \CC$ and $F : (\RR(c), \RR) \to (\RR(d), \RR)$
+%   be a preclan morphism.
+%   For an object $X$ in $\RR(c)$,
+%   the action of $F$ on morphisms induces a functor
+%   \[F / X : \RR(X) \to \RR(F X)\]
+%   Writing $X_! : \RR(X) \to \RR(c)$ for the functor composing
+%   the map $X \to c$,
+%   it follows that the following square commutes.
+%   \[
+%   \begin{tikzcd}
+%     {\RR(X)} & {\RR(F X)} \\
+%     {\RR(c)} & {\RR(d)}
+%     \arrow["{F / X}", from=1-1, to=1-2]
+%     \arrow["{X_!}"', from=1-1, to=2-1]
+%     \arrow["{(F X)_!}", from=1-2, to=2-2]
+%     \arrow["F"', from=2-1, to=2-2]
+%   \end{tikzcd}
+%   \]
+% \end{definition}
+
+\begin{lemma}
+  Let $f : Y \to X$ be $\RR$-exponentiable,
+  and let $A$ be an object in $\RR(X)$,
+  which we pull back along $f$.
+  Consider the diagram
+  \[\begin{tikzcd}
+    {f^* A} & {A} & {f_* f^* A} \\
+    Y & X
+    \arrow["{{{f'}}}", from=1-1, to=1-2]
+    \arrow[from=1-1, to=2-1]
+    \arrow["\lrcorner"{anchor=center, pos=0.125}, draw=none, from=1-1, to=2-2]
+    \arrow["{{{\eta}}}", from=1-2, to=1-3]
+    \arrow[from=1-2, to=2-2]
+    \arrow["{{{f_* s'}}}", from=1-3, to=2-2]
+    \arrow["f"', from=2-1, to=2-2]
+  \end{tikzcd}\]
+  where $\eta : A \to f_* f^* A$ denotes the unit of the adjunction
+  $f^* \dashv f_*$ at $A$.
+  Then there is a canonical isomorphism 
+  ${f'_*} \iso \eta^* \circ f_* / f^* A$.
+  \[ \begin{tikzcd}
+    {\RR(f^* A)} & {\RR(f_* f^* A)} & {\RR(A)}
+    \arrow["{f_* / f^* A}", from=1-1, to=1-2]
+    \arrow["{{f'_*}}"', bend right, from=1-1, to=1-3]
+    \arrow["{\eta^*}", from=1-2, to=1-3]
+  \end{tikzcd} \]
+\end{lemma}
+\begin{proof}
+  Embedding everything into presheaves $\RR(A) \to \wCC / A$,
+  and noting that all functors commute with the embeddings,
+  the result follows from \cite[Lemma 1.13]{barton2026}.
+\end{proof}
+
+\begin{lemma}\label{lem:distributivity}
+  Let $f : Y \to X$ be $\RR$-exponentiable,
+  and let $A$ be an object in $\RR(Y)$.
+  Consider the diagram
+  \[\begin{tikzcd}
+    A & {f^* f_* A} & {f_* A} \\
+    & Y & X
+    \arrow[from=1-1, to=2-2]
+    \arrow["{\epsilon}"', from=1-2, to=1-1]
+    \arrow["{f'}", from=1-2, to=1-3]
+    \arrow[from=1-2, to=2-2]
+    \arrow["\lrcorner"{anchor=center, pos=0.125}, draw=none, from=1-2, to=2-3]
+    \arrow[from=1-3, to=2-3]
+    \arrow["f"', from=2-2, to=2-3]
+  \end{tikzcd}\]
+  where $\epsilon : f^* f_* A \to A$
+  is the counit of the adjunction $f^* \dashv f_*$ at $A$.
+  Then there is a canonical natural isomorphism
+  $f_*/A \iso {f'}_* \circ \epsilon^*$.
+  \[
+    \begin{tikzcd}
+      {\RR(A)} & {\RR(f^* f_* A)} & {\RR(f_* A)}
+      \arrow["{{\epsilon^*}}", from=1-1, to=1-2]
+      \arrow["{f'_*}", from=1-2, to=1-3]
+      \arrow["{f_*/A}"', from=1-1, to=1-3, bend right]
+    \end{tikzcd}
+  \]
+\end{lemma}
+\begin{proof}
+  Again,
+  embedding everything into presheaves $\RR(A) \to \wCC / A$,
+  the result follows from \cite[Lemma 1.14]{barton2026}.
+\end{proof}
+
+Like with \Cref{lem:pullback-morphism-action}, 
+it follows from \Cref{lem:distributivity} that we have a \emph{distributivity law}
+or \emph{type theoretic axiom of choice}
+(cf. \cite[Proposition 2.4.15]{joyal2017}).
+\begin{equation}
+  f_* \circ A_! \iso (f_* A)_! \circ f'_* \circ \epsilon^* 
+\end{equation}
+Again, in an informal type theoretic syntax, one could render it as follows.
+\[
+  \prod_{x : X} \sum_{y : Y(x)} A(y) \iso \sum_{f : \Pi_{X} Y} \prod_{x : X} A(f x)
+\]
+
+\begin{lemma}\label{lem:pushforward-preserves-maps}
+  Let $f : Y \to X$ be $\RR$-exponentiable.
+  Suppose $(\CC,\SS)$ is another preclan such that $\SS \subseteq \RR$
+  and $f$ is also $\SS$-exponentiable.
+  Then the pushforward functor
+  \[ f_* : (\RR(Y), \SS) \to (\RR(X), \SS)\]
+  is a preclan morphism.
+\end{lemma}
+\begin{proof}
+  The proof is similar to (1) $\Rightarrow$ (4) in the proof of \Cref{theorem:exponentiable}.
+  Being a right adjoint, $f_* : \RR(Y) \to \RR(X)$ preserves all pullback squares.
+  It remains to show that $f_*$ preserves $\SS$-maps.
+  Consider an $\SS$-map $h : A \to B$ over $Y$.
+  \[\begin{tikzcd}
+    A & B & Y & X
+    \arrow["h", from=1-1, to=1-2]
+    \arrow[from=1-2, to=1-3]
+    \arrow["f", from=1-3, to=1-4]
+  \end{tikzcd}\]
+  Recall the diagrams from \Cref{lem:distributivity}.
+  \[\begin{tikzcd}
+    B & {f^* f_* B} & {f_* B} \\
+    & Y & X
+    \arrow[from=1-1, to=2-2]
+    \arrow["{\epsilon}"', from=1-2, to=1-1]
+    \arrow["{f'}", from=1-2, to=1-3]
+    \arrow[from=1-2, to=2-2]
+    \arrow["\lrcorner"{anchor=center, pos=0.125}, draw=none, from=1-2, to=2-3]
+    \arrow[from=1-3, to=2-3]
+    \arrow["f"', from=2-2, to=2-3]
+  \end{tikzcd}
+  \quad \quad
+  \begin{tikzcd}
+    {\SS(B)} & {\SS(f^* f_* B)} & {\SS(f_* B)} \\
+    {\RR(B)} & {\RR(f^* f_* B)} & {\RR(f_* B)}
+    \arrow["{{{\epsilon^*}}}", from=1-1, to=1-2]
+    \arrow[from=1-1, to=2-1]
+    \arrow["{{f'_*}}", from=1-2, to=1-3]
+    \arrow[from=1-2, to=2-2]
+    \arrow[from=1-3, to=2-3]
+    \arrow["{{{\epsilon^*}}}", from=2-1, to=2-2]
+    \arrow["{{f_*/B}}"', bend right, from=2-1, to=2-3]
+    \arrow["{{f'_*}}", from=2-2, to=2-3]
+  \end{tikzcd}
+  \]
+  Although $A$ and $B$ in $\RR(Y)$ might not be in $\SS(Y)$,
+  $h : A \to B$ is an object in $\SS(B) \subseteq \RR(B)$,
+  and therefore we can compute
+  \[f_* h \iso f'_* \, \epsilon^* \, h\]
+  as an object in $\SS(f_* B) \subseteq \RR(f_* B)$,
+  making $f_* h$ an $\SS$-map.
+\end{proof}
+
+\section{Examples} \label{sec:example}
+
+\begin{example}
+  Let $\CC$ be a lex category
+  and let $\RR$ consist of all morphisms in $\CC$.
+  Then $(\CC,\RR)$ forms a clan.
+  Functors between slices always preserve $\RR$-maps,
+  making condition (4) of \Cref{theorem:exponentiable} trivial.
+  Thus, $\RR$-exponentiability reduces to
+  the standard notion of exponentiability of a morphism in a lex category.
+  In terms of the pullback-pushforward adjunction,
+  since $\RR(X) = \CC / X$ for all $X$,
+  the partial right adjoint to pullback $f^* : \CC / X \to \CC / Y$ becomes
+  an actual right adjoint $f_* = \Pi_f : \CC/Y \to \CC/X$.
+  % Conversely,
+  % any exponentiable morphism $f : Y \to X$ has a
+  % (global) pullback-pushforward adjunction,
+  % and $\Pi_f : \CC / Y \to \CC / X$ will preserve pullbacks --
+  % since it is a right adjoint -- and will preserve $\RR$-maps trivially.
+\end{example}
+
+\begin{example}[Topological spaces, open embeddings and closed embeddings]
+  \label{ex:top-opens}
+  Consider the category of topological spaces $\Top$.
+  We write $\OO$ for the class of open embeddings,
+  i.e. those maps homeomorphic to the inclusion of an open subset,
+  and $\HH$ for the class of closed embeddings,
+  i.e. those maps homeomorphic to the inclusion of a closed subset.
+  These form a $\tau$-preclan $(\Top,\OO,\HH)$ (\Cref{def:double-preclan}).
+
+  It is easy to check that embeddings and open embeddings form clans in $\Top$.
+  Writing $\Sub$ for the class of embeddings,
+  we can define a right adjoint to $f^* : \Sub(X) \to \Sub(Y)$ as follows.
+  For $U \subseteq Y$ a subspace,
+  let $(\forall f)(U) \subseteq X$ denote the subspace
+  \[\{\, x \in X \mid f(y) = x \Rightarrow y \in U \,\}\]
+  It is easy to see that $(\forall f)(U) \in \Top/X$
+  represents the functor $\Hom_{\Top/Y}(f^*(-), U)$.
+  \[ \begin{tikzcd}
+    {\Top / Y} & {\Sub(Y)} & {\OO(Y)} \\
+    {\Top / X} & {\Sub(X)} & {\OO(X)}
+    \arrow[from=1-2, to=1-1]
+    \arrow[""{name=0, anchor=center, inner sep=0}, "{\forall f}", shift left=3, from=1-2, to=2-2]
+    \arrow[hook', from=1-3, to=1-2]
+    \arrow["{f^*}", from=2-1, to=1-1]
+    \arrow[""{name=1, anchor=center, inner sep=0}, "{f^*}", shift left=3, from=2-2, to=1-2]
+    \arrow[from=2-2, to=2-1]
+    \arrow["{f^*}", from=2-3, to=1-3]
+    \arrow[hook', from=2-3, to=2-2]
+    \arrow["\dashv"{description}, draw=none, from=1, to=0]
+  \end{tikzcd} \]
+  
+  A map $f : Y \to X$ is $\OO$-exponentiable
+  if and only if it is universally closed
+  (all pullbacks of $f$ are closed).
+  Indeed, we show that
+  the partial right adjoint condition holds at $f : Y \to X$
+  if and only if $f$ is closed ($f$-image of a closed subset is closed):
+  the partial right adjoint condition holds at $f$
+  if and only if 
+  $\forall f : \Sub(Y) \to \Sub(X)$
+  sends $\OO(Y) \subseteq \Sub(Y)$ into $\OO(X) \subseteq \Sub(X)$,
+  i.e. if $U \subseteq Y$ is open then 
+  $(\forall f)(U) \subseteq X$ is open.
+  By passage to complements, this is the same as asking that the map $f$ is closed.
+  
+  By a dual argument,
+  the partial right adjoint condition with respect to the closed embeddings
+  $\HH$ holds at $f : Y \to X$
+  if and only if $f$ is an open map ($f$-image of an open subset is open).
+  Since open maps are stable under pullback (unlike closed maps; see below),
+  it follows that
+  $f$ is $\HH$-exponentiable if and only if
+  $f$ is an open map.
+  \[\OO \subseteq \{\text{open maps}\} = \Exp_\HH\]
+  Also, any closed embedding is universally closed.
+  \[\HH \subseteq \Exp_\OO\]
+  Thus, open embeddings and closed embeddings together
+  form a $\tau$-preclan $(\Top,\OO,\HH)$.
+
+  In general, a map $f : Y \to X$ is universally closed
+  if and only if it is closed and the preimage of any compact subset of $X$ is compact
+  \cite[Theorem 055R]{stacks-project}.
+  For maps between locally compact Hausdorff spaces,
+  the assumption that $f$ is closed can be omitted.
+  Depending on the source, the term ``proper'' can refer to being universally closed,
+  just the condition that preimages of compact subsets are compact,
+  or also include the condition that $f$ is separated.
+
+  We see that the Beck--Chevalley condition holding at $f$
+  does not imply that it holds at pullbacks of $f$,
+  since there are maps $f : Y \to X$ that are closed but not universally closed.
+  Consider $f : \N \to 1$.
+  Though $f$ is closed, the pullback $X \times \N \to X$ may not be closed.
+  An $\N$-indexed union of closed subsets $U_i$ of $X$ may not be closed,
+  but the disjoint union of the subsets $U_i \times \{i\}$ in $\N \times X$ is closed.
+  
+  We can also see that when the Beck--Chevalley condition holds at $f : Y \to X$,
+  the pushforward
+  \[f_* : (\OO(Y), \OO) \to (\OO(X), \OO)\]
+  is automatically a preclan morphism,
+  because all morphisms between objects of $\OO(X)$ are open embeddings.
+  This shows that the converse of (\textit{i}) in \Cref{rmk:counterexample}
+  is not true:
+  $f$ satisfies Beck–-Chevalley and $f_* : (\OO(Y), \OO) \to (\OO(X), \OO)$
+  is a preclan morphism, but $f$ is not $\OO$-exponentiable.
+\end{example}
+
+\begin{example}[Topological spaces and open maps]
+  \label{ex:top-open-maps}
+  Another choice of preclan structure $\RR$ on $\Top$
+  is the class of open maps.
+  In fact, this $(\Top, \RR)$ is a clan.
+  We use it to give an example of
+  a map $f : Y \to X$ that satisfies the Beck--Chevalley condition
+  but for which $f_* : (\RR(Y), \RR) \to (\RR(X), \RR)$ is not a preclan morphism.
+
+  Take the unique map $f : \N \to 1$,
+  where $\N$ has the discrete topology.
+  Since $\N$ is locally compact, $f$ is exponentiable \cite{niefield1982}.
+  Moreover, every map into $1$ (or $\N$ for that matter) is an open map,
+  so $\Pi_f : \Top/\N \to \Top/1 = \Top$ certainly sends $\RR(\N)$ into $\RR(1)$.
+  However, we claim that $f_* = \Pi_f$ does not preserve open maps.
+  Since the exponential $(-)^\N : \Top \to \Top$
+  factors as $(-)^\N = \Pi_f \circ f^*$,
+  and $f^* : \Top \to \Top / \N$ preserves open maps,
+  it suffices to show that
+  $(-)^\N = \Pi_f \circ f^*$ does not preserve open maps.
+  To see this,
+  take the open point $1$ in the Sierpinski space $\mathbb{S} = \{0 < 1\}$,
+  which gives us an open embedding $i : \{1\} \to \mathbb{S}$ by inclusion.
+  We want to show that \[i^\N : \{1\}^\N \to \mathbb{S}^\N\]
+  is not an open map,
+  by showing that the constant map $c_1 : \N \to \mathbb{S}$
+  at $1 \in \mathbb{S}$
+  is not an open point in $\mathbb{S}^\N$.
+
+  Recall that $\mathbb{S}^\N$ is given the Scott topology \cite{niefield1982};
+  in our case we can provide a basis for the Scott topology on $\mathbb{S}^\N$
+  where a basic open is of the form 
+  \[\{f : \Top(\N,\mathbb{S}) \st f(F) \subseteq \{1\} \}\]
+  for some finite set of naturals $F \subseteq \N$.
+  Suppose that the constant function $c_1$ were an open point in $\mathbb{S}^\N$.
+  Then we would have
+  \[ \{c_1\} = \bigcup_{i} \{f : \Top(\N,\mathbb{S}) \st f(F_i) \subseteq \{1\} \}\]
+  for some finite sets $F_i \subset \N$.
+  There is some $j$ such that $c_1 (F_j) \subseteq \{1\}$.
+  Consider the continuous map $g : \N \to \mathbb{S}$ that is constant at $1$
+  on $F_j$, and constant at $0$ elsewhere.
+  Then 
+  \[g \in \bigcup_{i} \{f : \Top(\N,\mathbb{S}) \st f(F_i) \subseteq \{1\} \}\]
+  is in the union of opens, but $g \ne c_1$.
+\end{example}
+
+\begin{example}[Simplicial sets and Kan fibrations]
+  \label{ex:sset-kan}
+  Consider the category of simplicial sets $\sSet$
+  with the Kan--Quillen model structure.
+  Writing $\RR$ for the Kan fibrations,
+  we have that $(\sSet, \RR)$ is a $\pi$-preclan \cite{joyal2017}.
+  Since $\sSet$ is locally Cartesian closed,
+  it is enough to check the ``Frobenius property'':
+  pushforwards of fibrations along fibrations are fibrations.
+
+  Whilst all fibrations are $\RR$-exponentiable,
+  not all $\RR$-exponentiable maps are fibrations
+  (an example is given below).
+  The following conditions on $f : Y \to X$ are equivalent
+  to $f$ being $\RR$-exponentiable.
+  \begin{enumerate}
+  \item
+    $f^* : \sSet/X \to \sSet/Y$ preserves weak equivalences,
+    i.e., in any ``two pullbacks'' diagram
+    \[
+      \begin{tikzcd}
+        Y'' \ar[r, "t'"] \ar[d, "f''"'] \pbcorner &
+        Y' \ar[r] \ar[d, "f'"'] \pbcorner & Y \ar[d, "f"] \\
+        X'' \ar[r, "t"] & X' \ar[r] & X
+      \end{tikzcd}
+    \]
+    if $t$ is a weak equivalence, then so is $t'$.
+    This is Rezk's definition of a \emph{sharp map} \cite{rezk1998}.
+  \item
+    Every pullback of $f$ is a homotopy pullback.
+  \item
+    $f^* \dashv \Pi_f$ is a Quillen adjunction.
+  \item
+    $\Pi_f : \sSet/Y \to \sSet/X$ preserves fibrations
+    ($f$ is $\RR$-exponentiable).
+  \item
+    $\Pi_f : \sSet/Y \to \sSet/X$ preserves fibrant objects
+    (the partial right adjoint condition holds at $f$).
+  \end{enumerate}
+
+  \begin{proof}
+    (1) $\Leftrightarrow$ (2) is
+    proven in \cite[Proposition 2.7]{rezk1998}.
+
+    (1) $\Leftrightarrow$ (3) $\Leftrightarrow$ (4).
+    The cofibrations of $\sSet$ are the monomorphisms,
+    which are stable under pullback.
+    Therefore, $f^*$ always preserves cofibrations
+    and by the adjunction, $\Pi_f$ always preserves trivial fibrations.
+    Furthermore,
+    $f^*$ preserves weak equivalences if and only if it preserves trivial cofibrations
+    if and only if $\Pi_f$ preserves fibrations.
+
+    (4) $\Rightarrow$ (5).
+    Preserving fibrations implies preserving fibrant objects.
+
+    (5) $\Rightarrow$ (1).
+    A map between cofibrant objects of any model category is a weak equivalence
+    just when it induces an isomorphism on
+    homotopy classes of maps into every fibrant object.
+    In $\sSet$ and its slices, we can use the product $A \times \Delta^1$
+    as the cylinder object to compute the (left) homotopy relation.
+    Let $A \in \sSet/X$, and $Z \in \sSet/Y$.
+    In addition to the adjunction
+    \[
+      \Hom_{/Y}(f^* A, Z) \cong \Hom_{/X}(A, \Pi_f Z),
+    \]
+    we also have
+    \[
+      \Hom_{/Y}(f^*(A) \times \Delta^1, Z) =
+      \Hom_{/Y}(f^*(A \times \Delta^1), Z) \cong \Hom_{/X}(A \times \Delta^1, \Pi_f Z),
+    \]
+    Therefore, when $Z$ is fibrant, $\Pi_f Z$ is also fibrant by (5)
+    and the adjunction isomorphism passes to homotopy classes of maps
+    \[
+      [f^* A, Z]_{/Y} \cong [A, \Pi_f Z]_{/X}.
+    \]
+    This isomorphism is natural in $A$.
+    So if $g : A \to B$ is a weak equivalence in $\sSet_{/X}$,
+    then 
+    \[g^* : [B, \Pi_f Z]_{/X} \to [A, \Pi_f Z]_{/X}\]
+    is an isomorphism for all fibrant $Z \in \sSet/X$,
+    and so is \[(f^*g)^* : [f^* B, Z]_{/Y} \to [f^* A, Z]_{/Y}\]
+    so $f^*g : f^* A \to f^* B$ is a weak equivalence.
+    This proves (1).
+  \end{proof}
+  
+  We provide an example of an $\RR$-exponentiable map that is not a fibration.
+  One can show that a weak equivalence $f : Y \to X$ is sharp
+  if and only if its pullback along
+  any nondegenerate simplex $\Delta^n \to X$ is again a weak equivalence,
+  if and only if the pullback (object) is weakly contractible.
+  The map $f : \Lambda^2_1 \to \Delta^1$
+  sending vertices $0$, $1$ to $0 \in \Delta^1$ and $2$ to $1 \in \Delta^1$
+  is sharp because $\Lambda^2_1$ and the fibres $(\Lambda^2_1)_0 \cong \Delta^1$,
+  $(\Lambda^2_1)_1 \cong \Delta^0$ are all weakly contractible.
+  However, this $f$ is not a fibration.
+\end{example}
+
+\begin{example}[Cartesian cubical sets and (unbiased) fibrations]
+  \label{ex:cSet-unbiased-fibrations}
+  For the following facts, we refer to \cite{awodey2026cartesian}.
+  Let $\cSet$ denote the category of Cartesian cubical sets.
+  Then the class of unbiased fibrations (henceforth just ``fibrations'')
+  $\RR$ provides a $\pi$-preclan structure
+  $(\cSet,\RR)$.
+  The cubical interval $I = y([1])$ is not a fibrant,
+  i.e. $I = y([1]) \to 1$ is not an $\RR$-map,
+  but $I = y([1]) \to 1$ is $\RR$-exponentiable.
+  It is not fibrant because the following open box in $I$ does not have a filler.
+  \[ \begin{tikzcd}
+    0 & 1 \\
+    0 & 0
+    \arrow[from=2-1, to=1-1]
+    \arrow[from=2-1, to=2-2]
+    \arrow[from=2-2, to=1-2]
+  \end{tikzcd} \]
+
+  To show that $I \to 1$ is $\RR$-exponentiable,
+  let us first note that exponentiating by $I$ preserves fibrations.
+  Let $f : A \to B$ be a fibration.
+  Consider the unique map $u : 0 \to I$
+  and the following ``pullback-hom'' diagram.
+  \[\begin{tikzcd}
+    {A^I} && \\
+    & \bullet & {A^0} \\
+    & {B^I} & {B^0}
+    \arrow["{u \Rightarrow f}", two heads, from=1-1, to=2-2]
+    \arrow["{A^u}", bend left, from=1-1, to=2-3]
+    \arrow["{f^I}"', bend right, from=1-1, to=3-2]
+    \arrow[from=2-2, to=2-3]
+    \arrow["\iso"', from=2-2, to=3-2]
+    \arrow["\lrcorner"{anchor=center, pos=0.125}, draw=none, from=2-2, to=3-3]
+    \arrow["\iso", from=2-3, to=3-3]
+    \arrow["{B^u}"', from=3-2, to=3-3]
+  \end{tikzcd}\]
+  Since $u : 0 \to I$ is a cofibration and $f : A \to B$ is a fibration,
+  $u \Rightarrow f : A^I \to \bullet$ is a fibration,
+  and so is $f^I : A^I \to B^I$ by the isomorphism.
+
+  Using this fact,
+  we can construct the pushforward of a fibration $f : X \to I$
+  along $I \to 1$ as follows
+  \[ \begin{tikzcd}
+    X & {\Pi_I f} & {X^I} \\
+    I & 1 & {I^I}
+    \arrow["f"', two heads, from=1-1, to=2-1]
+    \arrow[from=1-2, to=1-3]
+    \arrow[from=1-2, to=2-2]
+    \arrow["\lrcorner"{anchor=center, pos=0.125}, draw=none, from=1-2, to=2-3]
+    \arrow["{f^I}", two heads, from=1-3, to=2-3]
+    \arrow[from=2-1, to=2-2]
+    \arrow["{\tilde{\id}}"', from=2-2, to=2-3]
+  \end{tikzcd}\]
+  where $\tilde{\id} : 1 \to I^I$ is the adjoint transpose 
+  of the identity on $I$.
+  Then $\Pi_I f \to 1$ is a pullback of a fibration,
+  so is itself a fibration.
+
+  This example will be revisited in \Cref{sec:path-types},
+  to understand ``path types'' in $\cSet$.
+\end{example}
+
+% \begin{example}[Topological spaces and local homeomorphisms]
+%   \label{ex:top-local-homeo}
+%   Another preclan structure on topological spaces $(\Top,\RR)$ arises from
+%   taking $\RR$ to be local homeomorphisms.
+%   Local homeomorphisms over $X$ are equivalent to sheaves on $X$.
+%   \[ \RR(X) \simeq \Sh(X) \]
+%   For a continuous map $f : Y \to X$ there is always an adjunction
+%   \[ \begin{tikzcd}
+%     {\RR(Y)} & {\RR(X)}
+%     \arrow[""{name=0, anchor=center, inner sep=0}, "{f_*}"', shift right=2, from=1-1, to=1-2]
+%     \arrow[""{name=1, anchor=center, inner sep=0}, "{f^*}"', shift right=2, from=1-2, to=1-1]
+%     \arrow["\dashv"{anchor=center, rotate=-90}, draw=none, from=1, to=0]
+%   \end{tikzcd}\]
+%   where the right adjoint $f_* : \RR(Y) \to \RR(X)$
+%   is the direct image functor.
+  
+
+
+%   % This is closely related to the locale/($\infty$-)topos examples,
+%   % via the functor sending a topological space to
+%   % its underlying locale or sheaf ($\infty$-)topos.
+%   % As in those examples, $\RR(X)$ is equivalent to $\Sh(X)$ for each $X$
+%   % and in particular there is always a direct image functor
+%   %  right adjoint to $f^* : \RR(X) \to \RR(Y)$
+%   (but not necessarily satisfying the Beck--Chevalley condition).
+
+%   In this case, we have strict inclusions
+%   \[
+%     \text{proper maps}
+%     \subsetneq \text{$\RR$-exponentiable maps}
+%     \subsetneq \text{universally closed maps} \,.
+%   \]
+%   As in \cite[Theorem 055R]{stacks-project}, we use ``proper map'' to mean
+%   a map that is universally closed and separated.
+
+%   \begin{itemize}
+%   \item
+%     $\RR$-exponentiable maps are universally closed:
+%     For $X \in \Top$, the full subcategory $\OO(X) \subseteq \RR(X)$
+%     of open embeddings into $X$.
+%     is the subcategory of all subterminal objects of $\RR(X)$:
+%     those objects $U \in \RR(X)$ whose diagonal $U \to U \times U$ is an isomorphism.
+%     Note that in any preclan $(\CC, \RR)$,
+%     $\RR(X) \subseteq \CC/X$ is closed under finite products
+%     and therefore the condition of being subterminal
+%     is the same in $\RR(X)$ and in $\CC/X$.
+%     The pushforward and base change functors involved in the Beck--Chevalley condition
+%     all restrict to the full subcategories $\OO(-) \subseteq \RR(-)$,
+%     because they are right adjoints
+%     or partial right adjoints (respectively).
+%     Consequently, if $f$ satisfies the Beck--Chevalley condition with respect to $\RR(-)$,
+%     then $f$ will also satisfy it with respect to $\OO(-)$.
+%     By the previous example, this means that $f$ is universally closed.
+%   \item
+%     Proper maps are $\RR$-exponentiable:
+%     This is the proper base change theorem (for sheaves of sets in topology).
+%     Specifically, using $\RR(-) \simeq \Sh(-)$,
+%     \cite[Theorem 055R]{stacks-project} says that
+%     the Beck--Chevalley condition holds at $f$ if $f$ is proper.
+%     Proper maps are stable under pullback,
+%     so they are $\RR$-exponentiable.
+%   \item
+%     An $\RR$-exponentiable map which is not proper:
+%     Let $\S$ denote the Sierpinski space.
+%     The map $f : \S \to 1$ is not proper,
+%     but we claim it is $\RR$-exponentiable.
+
+%     Write $i : 1 \to \S$ for the inclusion of the closed (special) point of $\S$.
+%     We will use the locally posetal structure of $\Top$:
+%     for parallel maps $h_0$, $h_1 : A \to B$,
+%     we write $h_0 \le h_1$ if $h_0(a)$ is a specialization of $h_1(a)$
+%     (meaning $h_0(a) \in U \Rightarrow h_1(a) \in U$ for all open $U$)
+%     for each $a \in A$.
+%     A 2-cell $h_0 \le h_1$ determines
+%     an inequality $h_0^{-1} \le h_1^{-1} : \OO(B) \to \OO(A)$
+%     and so by left Kan extension
+%     a natural transformation $\alpha : h_0^* \to h_1^* : \Sh(B) \to \Sh(A)$.
+%     In particular, an adjunction $h \dashv k$ in $\Top$
+%     gives rise to an adjunction of geometric morphisms
+%     that identifies $k_*$ with $h^*$.
+%     In particular, $i \dashv f$ so $f_* : \Sh(\S) \to \Sh(1)$
+%     can be identified with $i^*$.
+%     Likewise, the product projection $g : X \times \S \to X$
+%     has a left adjoint $j = X \times i : X \to X \times \S$
+%     (the product is a 2-functor, because the 2-cells of $\Top$
+%     are detected by maps out of $\S$).
+%     Hence for the pullback square
+%     \[
+%       \begin{tikzcd}
+%         X \times \S \ar[r, "q"] \ar[d, "g"] & \S \ar[d, "f"] \\
+%         X \ar[r, "p"] \ar[u, bend left, "j"] & 1 \ar[u, bend left, "i"]
+%       \end{tikzcd}
+%     \]
+%     we have
+%     $p^* f_* = p^* i^* = j^* q^* = g_* q^*$,
+%     verifying the Beck--Chevalley condition at $f$.
+%     A similar argument handles a further pullback along a map $X' \to X$.
+%     We could replace $\S$ in this example
+%     by any other space with a focal (= initial) point.
+%   \item
+%     A universally closed map which is not $\RR$-exponentiable:
+%     We claim that if $f : Y \to 1$ is $\RR$-exponentiable,
+%     then the global sections functor $\Gamma = f_* : \Sh(Y) \to \Sh(1) = \Set$
+%     preserves filtered colimits.
+%     \cite[C3.4.1]{johnstone2002} gives an example of a space $Y$
+%     (two copies of $[0,1]$ glued along their common subspaces $(0,1)$)
+%     which is compact, but such that $\Gamma : \Sh(Y) \to \Set$
+%     does not preserve filtered colimits.
+
+%     Moerdijk and Vermeulen prove this in the setting of 1-topoi \cite{moerdijk2000}.
+%     That result cannot be applied directly here,
+%     because the Beck--Chevalley condition in topoi
+%     is a priori different from the one in topological spaces
+%     (not every topos comes from a topological space,
+%     and the products in the two categories may also differ).
+%     However, one can check that the proof also goes through in the category $\Top$.
+%     We omit the details for now.
+%   \end{itemize}
+% \end{example}
+
+
+% \begin{example}[Locales and etale maps]
+%   \label{ex:locale-etale}
+%   The category of locales $\Loc$, like $\Top$, has several clan structures.
+%   In particular, \Cref{ex:top-opens} has an analogy in this setting,
+%   where the open embeddings (open regular monomorphisms) $\OO$ form a clan,
+%   closed maps of locales are those that satisfy Beck-Chevalley \cite{vermeulen1994} $\OO$.
+  
+%   For a detailed account of proper maps of locales,
+%   see \cite{vermeulen1994}.
+%   We could 
+
+%   The category of locales and \'etale maps forms a preclan $(\Loc,\EE)$.
+%   Sheaves on a locale $X$ are equivalent to \'etale maps over $X$,
+%   such that for a geometric morphism of locales $f : Y \to X$,
+%   pullback $f^* : \EE(X) \to \EE(Y)$
+%   corresponds to an inverse image functor on sheaves
+%   $f^* : \Sh(X) \to \Sh(Y)$.
+%   \[ \begin{tikzcd}
+%     Y & {\Sh(Y)} & {\EE(Y)} & {\Loc / Y} \\
+%     X & {\Sh(X)} & {\EE(X)} & {\Loc / X}
+%     \arrow["f"', from=1-1, to=2-1]
+%     \arrow["\simeq"{description}, draw=none, from=1-2, to=1-3]
+%     \arrow[hook, from=1-3, to=1-4]
+%     \arrow["{f^*}", from=2-2, to=1-2]
+%     \arrow["{f^*}", from=2-3, to=1-3]
+%     \arrow["\simeq"{description}, draw=none, from=2-3, to=2-2]
+%     \arrow[hook, from=2-3, to=2-4]
+%     \arrow["{f^*}", from=2-4, to=1-4]
+%   \end{tikzcd} \]
+%   The geometric morphism $f : Y \to X$
+%   always produces a direct image functor $f_* : \Sh(Y) \to \Sh(X)$ on sheaves,
+%   which gives us a right adjoint to pullback of \'etale maps.
+%   \[ \begin{tikzcd}
+%     Y & {\Sh(Y)} & {\EE(Y)} & {\Loc / Y} \\
+%     X & {\Sh(X)} & {\EE(X)} & {\Loc / X}
+%     \arrow["f"', from=1-1, to=2-1]
+%     \arrow["\simeq"{description}, draw=none, from=1-2, to=1-3]
+%     \arrow[""{name=0, anchor=center, inner sep=0}, "{f_*}", shift left=2, from=1-2, to=2-2]
+%     \arrow[hook, from=1-3, to=1-4]
+%     \arrow[""{name=1, anchor=center, inner sep=0}, "{f_*}", shift left=2, dashed, from=1-3, to=2-3]
+%     \arrow[""{name=2, anchor=center, inner sep=0}, "{f^*}", shift left=2, from=2-2, to=1-2]
+%     \arrow[""{name=3, anchor=center, inner sep=0}, "{f^*}", shift left=2, from=2-3, to=1-3]
+%     \arrow["\simeq"{description}, draw=none, from=2-3, to=2-2]
+%     \arrow[hook, from=2-3, to=2-4]
+%     \arrow["{f^*}", from=2-4, to=1-4]
+%     \arrow["\dashv"{anchor=center}, draw=none, from=2, to=0]
+%     \arrow["\dashv"{anchor=center}, draw=none, from=3, to=1]
+%   \end{tikzcd}\]
+%   However, $f_* : \EE(Y) \to \EE(X)$ may not be a partial right adjoint to
+%   $f^* : \Loc/X \to \Loc/Y$;
+%   and even if it is, the same might not hold for pullbacks of $f$.
+%   To see this,
+
+%   % The condition that $f_* : \EE(Y) \to \EE(X)$ is a partial right adjoint
+
+%   % Locales, topoi and $\infty$-topoi each form preclans
+%   % whose $\RR$-maps are the etale geometric morphisms,
+%   % so that $\RR(X) \simeq \Sh(X)$ for each $X$.%
+%   % \footnote{
+%   %   The standard notation for topoi would identify a topos $X$
+%   %   and its category (logos) of sheaves $\Sh(X)$.
+%   % }
+%   % Write $(\Topos, \RR)$ for one of these three preclans.
+%   % which is the ``inverse image'' functor usually denoted by $f^*$.
+%   % The functor $f^*$ always has a right adjoint $f_* : \Sh(Y) \to \Sh(X)$,
+%   % the ``direct image''.
+
+%   A geometric morphism $f : Y \to X$ of $\infty$-topoi is called \emph{proper}
+%   if the Beck--Chevalley condition holds for every pullback of $f$
+%   \cite[Definition 7.3.1.4]{lurie2009}.
+%   This is then equivalent to our condition that $f$ is $\RR$-exponentiable.
+%   For locales and $1$-topoi, this is probably a theorem rather than the definition
+%   (and the terminology may be inconsistent [?]). 
+%   One justification for the terminology is the proper base change theorem (see below),
+%   some version of which holds in all these settings.
+% \end{example}
+
+\begin{example}[Topological spaces and \'etale maps]
+  \label{ex:topos-etale}
+  ``Proper maps'' provide a prototypical example of $\RR$-exponentiability.
+  They can be found in topological spaces, locales, 1-toposes,
+  and $\infty$-toposes, where $\RR$ is the class of \'etale maps.
+  These examples are very similar,
+  and share a lot of terminology that may not be consistent across the literature;
+  the word ``proper'' is used to mean various things
+  depending on the context.
+  For example, Lurie uses the word ``proper'' for \'etale-exponentiability
+  in $\infty$-toposes \cite[Definition 7.3.1.4]{lurie2009},
+  whereas Moerdijk and Vermeulen say ``tidy'' \cite[III Definition 1.2]{moerdijk2000proper}
+  or ``stable BCC'' (Beck--Chevalley condition) for \'etale-exponentiability in 1-toposes,
+  and reserve the word ``proper'' for a weaker condition.
+  To keep things precise,
+  in this example we will specifically consider \'etale maps
+  (also called local homeomorphisms)
+  of topological spaces.
+  
+  The category of topological spaces with the class of
+  \'etale maps $(\Topos,\EE)$ forms a clan,
+  such that \'etale maps over $X$ are
+  equivalent to sheaves on $X$
+  \[\EE(X) \simeq \Sh(X)\]
+  for each topos $X$ \cite[Section II.6]{maclane2012}.
+  For a continuous map $f : Y \to X$,
+  the pullback $f^* : \Topos/X \to \Topos/Y$ preserves \'etale maps
+  and so restricts to $f^* : \EE(X) \to \EE(Y)$,
+  which corresponds to the ``inverse image'' functor $f^* : \Sh(X) \to \Sh(Y)$
+  under the equivalence.
+  There is also a ``direct image''
+  functor $f_* : \Sh(Y) \to \Sh(X)$, right adjoint to
+  the inverse image $f^*  : \Sh(X) \to \Sh(Y)$.
+  This gives us a right adjoint to the pullback $f^* : \EE(X) \to \EE(Y)$
+  of \'etale maps.
+  \[ \begin{tikzcd}
+    Y & {\Sh(Y)} & {\EE(Y)} & {\Top / Y} \\
+    X & {\Sh(X)} & {\EE(X)} & {\Top / X}
+    \arrow["f"', from=1-1, to=2-1]
+    \arrow["\simeq"{description}, draw=none, from=1-2, to=1-3]
+    \arrow[""{name=0, anchor=center, inner sep=0}, "{f_*}", shift left=2, from=1-2, to=2-2]
+    \arrow[hook, from=1-3, to=1-4]
+    \arrow[""{name=1, anchor=center, inner sep=0}, "{f_*}", shift left=2, dashed, from=1-3, to=2-3]
+    \arrow[""{name=2, anchor=center, inner sep=0}, "{f^*}", shift left=2, from=2-2, to=1-2]
+    \arrow[""{name=3, anchor=center, inner sep=0}, "{f^*}", shift left=2, from=2-3, to=1-3]
+    \arrow["\simeq"{description}, draw=none, from=2-3, to=2-2]
+    \arrow[hook, from=2-3, to=2-4]
+    \arrow["{f^*}", from=2-4, to=1-4]
+    \arrow["\dashv"{anchor=center}, draw=none, from=2, to=0]
+    \arrow["\dashv"{anchor=center}, draw=none, from=3, to=1]
+  \end{tikzcd}\]
+  However, $f_* : \EE(Y) \to \EE(X)$ may not satisfy Beck--Chevalley;
+  and even if it does, the same might not hold for pullbacks of $f$.
+  Hence, the converse of $\textit(iii)$ in \Cref{rmk:counterexample} fails.
+  Moerdijk and Vermeulen characterise those $\EE$-exponentiable maps
+  as those that are ``tidy'' \cite[III, Corollary 4.9]{moerdijk2000proper}.
+  %TODO example of a geometric morphism that doesn't satisfy BC?
+\end{example}
+
+% \begin{example}[Toposes and \'etale maps]
+%   \label{ex:topos-etale}
+%   A prototypical example of $\RR$-exponentiable maps
+%   can be found in locales, (Grothendieck) 1-toposes, or $\infty$-toposes,
+%   where $\RR$ are the \'etale geometric morphisms.
+%   These examples are very similar,
+%   and share a lot of terminology that may not be consistent across the literature.
+%   In particular, the word ``proper'' is used to mean various things
+%   depending on the context.
+%   For example, Lurie uses the word ``proper'' for \'etale-exponentiability
+%   in $\infty$-toposes \cite[Definition 7.3.1.4]{lurie2009},
+%   whereas Moerdijk and Vermeulen say ``tidy'' \cite[III Definition 1.2]{moerdijk2000proper}
+%   or ``stable BCC'' (Beck--Chevalley condition) for \'etale-exponentiability in 1-toposes,
+%   and reserve the word ``proper'' for a weaker condition.
+%   To keep things precise,
+%   in this example we will consider \'etale morphisms of 1-toposes.
+  
+%   The category of (Grothendieck) toposes with the class of
+%   \'etale geometric morphisms $(\Topos,\EE)$ forms a clan,
+%   so that $\EE(X) \simeq \Sh(X)$ for each topos $X$.%
+%   \footnote{
+%     The standard notation for toposes would identify a topos $X$
+%     and its category (logos) of sheaves $\Sh(X)$.
+%   }
+%   For a geometric morphism $f : Y \to X$,
+%   pullback $f^* : \Topos/X \to \Topos/Y$ preserves \'etale morphisms
+%   and so restricts to a functor $f^* : \EE(X) \to \EE(Y)$,
+%   which corresponds to the ``inverse image'' functor $f^* : \Sh(X) \to \Sh(Y)$
+%   under the equivalence.
+%   The geometric morphism $f$ also comes equipped with a ``direct image''
+%   functor $f_* : \Sh(Y) \to \Sh(X)$, right adjoint to
+%   the inverse image $f^*  : \Sh(X) \to \Sh(Y)$.
+%   This gives us a right adjoint to the pullback $f^* : \EE(X) \to \EE(Y)$
+%   of \'etale maps.
+%   \[ \begin{tikzcd}
+%     Y & {\Sh(Y)} & {\EE(Y)} & {\Topos / Y} \\
+%     X & {\Sh(X)} & {\EE(X)} & {\Topos / X}
+%     \arrow["f"', from=1-1, to=2-1]
+%     \arrow["\simeq"{description}, draw=none, from=1-2, to=1-3]
+%     \arrow[""{name=0, anchor=center, inner sep=0}, "{f_*}", shift left=2, from=1-2, to=2-2]
+%     \arrow[hook, from=1-3, to=1-4]
+%     \arrow[""{name=1, anchor=center, inner sep=0}, "{f_*}", shift left=2, dashed, from=1-3, to=2-3]
+%     \arrow[""{name=2, anchor=center, inner sep=0}, "{f^*}", shift left=2, from=2-2, to=1-2]
+%     \arrow[""{name=3, anchor=center, inner sep=0}, "{f^*}", shift left=2, from=2-3, to=1-3]
+%     \arrow["\simeq"{description}, draw=none, from=2-3, to=2-2]
+%     \arrow[hook, from=2-3, to=2-4]
+%     \arrow["{f^*}", from=2-4, to=1-4]
+%     \arrow["\dashv"{anchor=center}, draw=none, from=2, to=0]
+%     \arrow["\dashv"{anchor=center}, draw=none, from=3, to=1]
+%   \end{tikzcd}\]
+%   However, $f_* : \EE(Y) \to \EE(X)$ may not satisfy Beck--Chevalley;
+%   and even if it does, the same might not hold for pullbacks of $f$.
+%   Hence, the converse of $\textit(iii)$ in \Cref{rmk:counterexample} fails.
+%   Moerdijk and Vermeulen characterise those $\EE$-exponentiable maps
+%   as those that are ``tidy'' \cite[III Corollary 4.9]{moerdijk2000proper}.
+% \end{example}
+
+\begin{example}[Categories and fibrations]\label{ex:categories-and-fibrations}
+  The following example will be explored in greater detail in \Cref{sec:cat-as-types}.
+
+  The category of categories contains several preclans.
+  The classes of (Grothendieck) fibrations and opfibrations are both clans.
+  Opfibrations are fibration-exponentiable and vice versa
+  (\Cref{prop:pushforward-in-cat}),
+  together forming a $\tau$-clan (\Cref{def:double-preclan}).
+  However, this example is somewhat unnatural,
+  since viewing (op)fibrations as clans in $\Cat$ means that
+  we are considering all functors between opfibrations,
+  not just opcartesian functors (\Cref{def:morphism-split-opfibration}).
+
+  We can restrict our attention to
+  \emph{groupoidal} (op)fibrations --
+  those which have groupoid fibres.
+  The classes of groupoidal fibrations and
+  groupoidal opfibrations form a $\tau$-preclan in $\Cat$
+  (as opposed to a $\tau$-clan).
+  Similarly, discrete fibrations and discrete opfibrations form another $\tau$-preclan in $\Cat$.
+  % All functors between groupoidal fibrations are morphisms of fibrations,
+  % so this example is somewhat more natural than the previous.
+
+  The class of (split) isofibrations in the category of groupoids forms a $\pi$-clan.
+  This will be used in \Cref{sec:hottlean} to construct a model of Martin-L\"of Type Theory,
+  after \cite{hofmann1995}.
+  One might expect that another model of Martin-L\"of Type Theory
+  could be given by using isofibrations $\II$ or groupoidal isofibrations $\GG$ in $\Cat$.
+  Unfortunately, although $(\Cat,\II)$ is a clan and $(\Cat,\GG)$ is a preclan,
+  neither satisfies the $\pi$-preclan condition.
+  The following (standard) example of a functor that is not
+  exponentiable (with respect to all morphisms) can be used to demonstrate this fact.
+  Consider the embedding $f := [0,2] : \two \to \three$,
+  where $\two$ is the walking arrow,
+  $\three$ is the walking composition of two arrows,
+  and $f$ takes the arrow to the composition.
+  % It is well known that $f$ is not exponentiable:
+  % $f^* : \Cat / \three \to \Cat / \two$ does not preserve colimits (this example will demonstrate this),
+  % therefore it does not have a right adjoint.
+  Since $\GG$ is a preclan,
+  there is a pullback functor $f^* : \GG(\three) \to \GG(\two)$.
+  If $f$ were $\GG$-exponentiable, $f^*$ would have a right adjoint,
+  so that $f^*$ preserves colimits.
+  Consider the following pushout diagram in $\GG(\three) \subseteq \II(\three) \subseteq \Cat / \three$.
+  \[
+    \begin{tikzcd}
+      1 & \two \\
+      \two & \three
+      \arrow["{[0]}", from=1-1, to=1-2]
+      \arrow["{[1]}"', from=1-1, to=2-1]
+      \arrow["{[1,2]}", from=1-2, to=2-2]
+      \arrow["{[0,1]}"', from=2-1, to=2-2]
+    \end{tikzcd}
+  \]
+  The pullback along $f$ produces the following square, which is not a pushout in $\GG(\two)$.
+  \[
+    \begin{tikzcd}
+      0 & 1 \\
+      1 & \two
+      \arrow["{!}", from=1-1, to=1-2]
+      \arrow["{!}"', from=1-1, to=2-1]
+      \arrow["{[1]}", from=1-2, to=2-2]
+      \arrow["{[0]}"', from=2-1, to=2-2]
+    \end{tikzcd}
+  \]
+  Finally, note that $f$ is a groupoidal isofibration,
+  hence $\GG$ is not a $\pi$-preclan.
+  The same example shows that $\II$ is not a $\pi$-clan and $f$ is not an exponentiable morphism.
+
+  It is also easy to come up with examples of exponentiable maps that are not
+  exponentiable with respect to opfibrations.
+  All opfibrations are exponentiable \cite{giraud1964,vidmar2018},
+  so it suffices to give an opfibration that is not opfibration-exponentiable.
+  Consider the (discrete) opfibrations $0 \to 1$ and $b : 1 \to \{a < b\}$.
+  We can calculate the pushforward explicitly as $a : 1 \to \{a < b\}$,
+  which is not an opfibration.
+  \[ \begin{tikzcd}
+    0 & {1 = \Pi_b 0} \\
+    1 & {\{a < b\}}
+    \arrow["\subseteq"', from=1-1, to=2-1]
+    \arrow["a", from=1-2, to=2-2]
+    \arrow["b"', from=2-1, to=2-2]
+  \end{tikzcd}\]
+\end{example}

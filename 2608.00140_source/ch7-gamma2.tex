@@ -1,0 +1,1492 @@
+\chapter{Hereditary Discrepancy and Factorization Norms}
+\label{ch:gamma2}
+
+We have now seen several tools for proving upper bounds on the
+discrepancy of set systems and matrices, some of which also give
+efficient algorithms for computing a coloring achieving the
+discrepancy bound. In this chapter we address the question of the
+complexity of approximating discrepancy and hereditary discrepancy. In
+addition to showing some hardness results, we will show that
+hereditary discrepancy is approximated well by the
+$\gamma_2$ matrix factorization norm. Beyond giving an approximation
+algorithm for hereditary discrepancy, this result has a number of
+applications to discrepancy theory. It gives a powerful tool for
+giving short proofs of upper and lower bounds on discrepancy, and for
+proving various stability properties of discrepancy. 
+
+\section{Complexity of Computing Discrepancy}
+
+Perhaps the most basic computational question about discrepancy is
+whether $\disc(A)$ can be computed efficiently given a matrix $A$ as
+input. An easier question is whether the promise that $\disc(A)$ is
+small, \eg, at most a universal constant, or even $0$, is enough to
+efficiently find a coloring whose discrepancy is smaller than
+Spencer's worst-case bound $O(\sqrt{n\log(2m/n)})$. Unfortunately, the
+answer to both these questions is negative, as long as $\mathsf{P}
+\neq \mathsf{NP}$, as shown in the following theorem.
+
+\begin{theorem}\label{thm:ch7-disc-hard}
+  For a set system $(\SS, [n])$ with $|\SS| = O(n)$ sets, it is $\mathsf{NP}$-hard to distinguish between the cases: (i) $\disc(\SS) = 0$,
+or (ii) $\disc(\SS) = \Omega(\sqrt{n})$.
+% \begin{enumerate}
+% \item $\disc(\SS) = 0$;
+% \item $\disc(\SS) = \Omega(\sqrt{n})$.
+% \end{enumerate}
+\end{theorem}
+
+We will establish Theorem~\ref{thm:ch7-disc-hard} by reduction from
+the $2$-$2$ Set Splitting problem, whose definition and hardness are given below. %The result is due to Guruswami~\cite{venkat-SS}.
+
+\begin{theorem}\label{thm:ch7-SS}(Guruswami~\cite{venkat-SS})
+For a set system $(\TT, [n])$ with $m = O(n)$ sets, where $|T| = 4$
+for all $T \in \TT$, and each $j \in [n]$ appears in at most $4$
+sets, it is $\mathsf{NP}$-hard to distinguish between the cases:
+\begin{enumerate}
+\item $\disc{(\TT)} = 0$.
+\item for all $\col \in \{\pm 1\}^n$, $|\{T \in \TT: \col(T) \not=
+  0 \}| \geq \alpha m$, where $\alpha \approx 1/22$. %is a small enough constant. 
+\end{enumerate}
+\end{theorem}
+
+Note that Theorem~\ref{thm:ch7-SS} already shows that it is
+$\mathsf{NP}$-hard to decide if a set system has discrepancy $0$, or
+discrepancy at least $2$. By composing a $2$-$2$ Set Splitting
+instance, in an appropriate way, with a set system satisfying a robust
+discrepancy lower bound of $\Omega(\sqrt{n})$, we can amplify this gap and prove Theorem~\ref{thm:ch7-disc-hard}. The incidence matrix
+of the set system used in this composition is given by the following lemma. In it, we
+use the notion of a Hadamard matrix, i.e., an $m \times m$ matrix with
+entries in $\{-1,+1\}$ such that $H^T H = mI$. Such matrices are known
+to exist, and can be efficiently constructed, for all $m$ that are
+powers of $2$ (among other values of $m$). 
+
+\begin{lemma}\label{lm:ch7-hadamard}
+  Let $H$ be an $m\times m$ Hadamard matrix such that
+  one of its rows is the all-ones vector. Then the matrix
+  $A$ obtained by replacing each $-1$ entry of
+  $H$  with $0$ satisfies
+  \(
+  \|A\col\|_\infty \ge \frac{1}{3}\|\col\|_2
+  \)
+  for  any $\col \in \R^m$.
+\end{lemma}
+\begin{proof}
+  Let $\col \in \R^m$ be arbitrary. We first observe that, by
+  comparing the $\ell_\infty$ and $\ell_2$ norms, 
+  \begin{align}
+  \label{eq:hadamard}
+    \| H\col \|_{\infty}^2
+    \geq \frac{1}{m} \|H\col \|_2^2
+    = \frac1m \col^T  H^T H \col
+    = \col^T \col =\|\col \|_2^2.
+  \end{align}
+  Notice that $A = \frac12 (H + J)$ where $J$ is the $m\times m$
+  all-ones matrix. Suppose, without loss of generality, that the first
+  row of $H$ is the all-ones vector, and, therefore, the first row of
+  $A$ is also the all-ones vector. Then
+  \[
+    \|A\col\|_\infty = \frac12 \|H\col + J\col\|_\infty
+    = \frac12 \max_{i = 1}^m |(H\col)_i + (A\col)_1|.
+  \]
+  By \eqref{eq:hadamard}, we know that $|(H\col)_{i^*}|
+  \ge \|\col\|_2$ for some $i^*$. If $|(A\col)_1| \le \frac13\|\col\|_2$, then, by the
+  triangle inequality,
+  \[
+    \|A\col\|_\infty %\ge %\frac12 |(H\col)_{i^*} + (A\col)_1|
+    \ge \frac12 (|(H\col)_{i^*}| - |(A\col)_1|) \ge  \frac13 \|\col\|_2.
+  \]
+  Otherwise, if $|(A\col)_1| > \frac13\|\col\|_2$, then 
+  \(
+  \|A\col\|_\infty  \ge |(A\col)_1| > \frac13\|\col\|_2.
+  \)
+ % The lemma holds in both cases.
+\end{proof}
+
+Notice that the requirement that the Hadamard matrix $H$ has an all-ones
+row is not restrictive. We can replace every entry $H(i,j)$ in $H$ by
+$H(i,j)H(1,j)$, and still get a Hadamard matrix, but now all entries
+in the first row are equal to $1$. 
+
+Theorem~\ref{thm:ch7-SS} and Lemma~\ref{lm:ch7-hadamard} allow for a
+very simple hardness reduction that shows a statement analogous to
+Theorem~\ref{thm:ch7-disc-hard}, but for matrices with entries in
+$\{0,4\}$, as opposed to set systems. The reduction simply takes the
+$m\times n$ incidence matrix $B$ of the set system $\TT$ in
+Theorem~\ref{thm:ch7-SS}, pads it with $0$'s if necessary to make sure
+that $m$ is a power of $2$, and outputs a matrix $\mat \eqdef A B$ for
+the $m\times m$ matrix $A$ defined in Lemma~\ref{lm:ch7-hadamard}.
+
+\begin{exercise}
+  Analyze the reduction described in the paragraph above.
+\end{exercise}
+
+In order to get a reduction that, instead, outputs a set
+system, we need a simple decomposition lemma, stated next. 
+
+\begin{lemma}\label{lm:ch7-partition}
+  Suppose that $(\TT, [n])$ is a set system such that each set in $\TT$
+  has at most $s$ elements, and each element $j \in [n]$
+  appears in at most $t$ sets in $\TT$. Then $\TT$ can be partitioned
+  in polynomial time
+  into $k \le st+1$ disjoint set systems $\TT_1, \ldots, \TT_k$, where
+  each $\TT_i$ consists of disjoint subsets of $[n]$.
+\end{lemma}
+\begin{proof}
+  We partition $\TT$ greedily, similarly to the greedy coloring
+  algorithm for bounded degree graphs. We list the sets in $\TT$ in some
+  order as $T_1, \ldots, T_m$, and, for each $i$, starting
+  from $i=1$ up to $i=m$, we add $T_i$ into $\TT_\ell$, for the smallest $\ell$
+  for which $\TT_\ell$ does not contain any set intersecting
+  $T_i$. Since each $T_i$ can intersect at most $st$ other sets in
+  $\TT$, there is always some $\ell \le st+1$ so that $T_i$ can
+  be added to $\TT_\ell$.
+\end{proof}
+
+\begin{proof}[Proof of Theorem~\ref{thm:ch7-disc-hard}]
+  Let $\TT$ be the set system from Theorem~\ref{thm:ch7-SS}, and let
+  us partition it into $k\le 17$ set systems $\TT_1, \ldots, \TT_k$,
+  each consisting of disjoint sets, using
+  Lemma~\ref{lm:ch7-partition}. Let $B_\ell$ be the incidence matrix
+  of $\TT_\ell$. We can assume that each $B_\ell$ has dimensions $m$
+  by $n$ for some $m$ which is a power of $2$, by padding with
+  zeros. Let us take $H$ to be an $m\times m$ Hadamard matrix, and
+  define $A$ as in Lemma~\ref{lm:ch7-hadamard}. We now define $\mat_\ell \eqdef A B_\ell$, for
+  $\ell \in [k]$. Notice that, since $\TT_\ell$ consists of disjoint
+  sets, $B_\ell$ has at most a single $1$ in each column, so
+  $A B_\ell$ is an $m\times n$ matrix with entries in $\{0,1\}$. We
+  can then interpret $\mat_\ell$ as the incidence matrix of a set
+  system $\SS_\ell$ on $[n]$. We define the set system $\SS$ as the
+  union $\SS_1\cup \ldots \cup \SS_k$. $\SS$ has at most $km \le 17m =
+  O(n)$ sets and can clearly be constructed in polynomial time.
+
+  To finish the proof, we claim that the following two implications
+  hold for an absolute constant $c > 0$:
+  \begin{align}
+    \disc(\TT) = 0 &\implies \disc(\SS) = 0;\label{eq:ch7-compl-sets}\\
+    \min_{\col \in \{-1,+1\}^n} |\{T \in \TT: \col(T) \not=  0 \}| \geq \alpha m
+                   &\implies \disc(\SS) \ge c\sqrt{\alpha m}.\label{eq:ch7-sound-sets}
+  \end{align}
+  The theorem then follows from Theorem~\ref{thm:ch7-SS}.
+
+  We first prove \eqref{eq:ch7-compl-sets}. Since $\disc(\TT)$ is $0$,
+  there exists a coloring $\col \in \{-1,+1\}^n$ for which $\disc(\TT,
+  \col) = 0$. Then $B_\ell \col = 0$ for all $\ell \le k$, since each
+  row of each $B_\ell$ is the indicator vector of a set in $\TT$. Therefore,
+  \[
+    \disc(\SS,\col) = \max_{\ell = 1}^k \disc(\SS_\ell,\col)
+    =
+    \max_{\ell=1}^k \|\mat_\ell \col\|_\infty
+    =
+    \max_{\ell=1}^k \|AB_\ell \col\|_\infty = 0.
+  \]
+
+  Finally, we prove \eqref{eq:ch7-sound-sets}. Take any $\col \in
+  \{-1,+1\}^n$, and suppose that $|\{T \in \TT: \col(T) \not=  0 \}|
+  \geq \alpha m$. This means that for some $\ell \le k$,
+  \[
+    |\{T \in \TT_\ell: \col(T) \not=  0 \}| \geq \alpha m/k
+    \ge \alpha m/17.
+  \]
+  Therefore, $B_\ell\col$ has at least $\frac{\alpha m}{17}$ non-zero
+  entries. Since all entries in $B_\ell\col$ are integers, this means
+  that $\|B_\ell\col\|_2 \ge \sqrt{\alpha
+      m/17}$. So, by Lemma~\ref{lm:ch7-hadamard},
+  \[
+    \disc(\SS,\col) \ge \|\mat_\ell\col\|_\infty
+    =
+    \|AB_\ell \col\|_\infty
+    \ge \frac13 \sqrt{\alpha m/17}. 
+  \]
+  Since $\col \in \{-1,+1\}^n$ was arbitrary, this completes the proof
+  of \eqref{eq:ch7-sound-sets}, 
+%  (with $c = \frac{1}{3\sqrt{17}}$), 
+and,
+  therefore, the theorem. 
+\end{proof}
+
+\section{Approximating Hereditary Discrepancy}
+  
+In contrast with the strong hardness result for discrepancy given by
+Theorem~\ref{thm:ch7-disc-hard}, we will see in the rest of this
+chapter that hereditary discrepancy can be approximated efficiently up
+to multiplicative poly-logarithmic factors. This is one concrete
+example of hereditary discrepancy being a ``better behaved''
+discrepancy notion. We will see other examples later on, also in this
+chapter.
+
+\subsection{Upper Bounds}
+
+Recall that the hereditary discrepancy $\herdisc(\mat)$ of a matrix
+$\mat$ is the maximum discrepancy $\disc(\mat(*,J))$ for any subset
+$J$ of the columns of $\mat$. Since this is a maximum over an exponential
+number of quantities, each of them intractable to approximate, it is
+far from obvious that we can find useful tractable upper bounds on
+$\herdisc(\mat)$. In this subsection we show that this is, in fact,
+possible. 
+
+Our starting point is the observation that if $f$ is a function on
+$m\times n$ matrices which is monotonically non-increasing under
+taking submatrices, \ie, $f(\mat(*,J)) \le f(\mat)$ for any $J
+\subseteq [n]$, and that also satisfies $\disc(\mat) \le f(\mat)$, then we
+automatically get the stronger conclusion $\herdisc(\mat) \le
+f(\mat)$. Indeed, for any $J \subseteq [n]$, we have
+\[
+  \disc(\mat(*,J)) \le f(\mat(*,J)) \le f(\mat).
+\]
+We call such a function $f$ a {\em hereditary upper bound} on discrepancy.
+
+We use the notation $\|\mat\|_{1\to 2}$ for the maximum $\ell_2$ norm
+of a column of the matrix $\mat$, and $\|\mat\|_{2\to\infty}$ for the
+maximum $\ell_2$ norm of a row of the matrix $\mat$.\footnote{More
+  generally, for an $m\times n$ matrix $\mat$, and
+  $p,q \in [1,\infty]$,
+  $\|\mat\|_{p\to q} \eqdef \sup_{x\neq 0} \frac{\|\mat
+    x\|_q}{\|x\|_p}$. }
+
+Notice first that both $c\sqrt{\log(2m)}\|\mat\|_{1\to 2}$ and
+$c\sqrt{\log(2m)}\|\mat\|_{2\to\infty}$ are hereditary upper bounds on
+discrepancy (for some constant $c>0$). The first follows from the Banaszczyk  upper bound for
+the Koml\'os problem (Theorem~\ref{thm:komlos-bana}), and the second
+from Hoeffding's inequality and a union bound, applied to a uniformly
+random coloring.
+Both these upper bounds can be, unfortunately, very loose, {\em e.g.},~consider
+the all-ones matrix. 
+
+However, we already saw in Lemma~\ref{lm:fact-ub}
+that these bounds can be interpolated in a useful way using
+Banaszczyk's theorem. Lemma~\ref{lm:fact-ub}, in the formulation
+in~\eqref{eq:fact-ub}, shows that, for any $m\times n$ matrix $\mat$,
+\(
+\disc(\mat) \lesssim \gamma_2(\mat)\sqrt{\log(2m)},
+\)
+where
+\begin{equation}\label{eq:ch7-gamma2-defn}
+ \gamma_2(\mat) \eqdef \inf\{\|U\|_{2\to\infty}\|V\|_{1\to2}: UV = \mat\}.
+\end{equation}
+The notation $\gamma_2$ comes from functional analysis,
+where this function was first studied in connection with factoring
+linear operators between Banach spaces through a Hilbert space. 
+
+The following corollary follows from the above and the observation
+that $\gamma_2(\mat)$ is a hereditary upper bound on discrepancy.
+
+\begin{corollary}[of Lemma~\ref{lm:fact-ub}]\label{cor:ch7-fact-ub} 
+  For any $m\times n$ matrix $\mat$, we have
+  \[
+    \herdisc(\mat) \lesssim \sqrt{\ln(2m)} \gamma_2(\mat).
+  \]
+\end{corollary}
+\begin{proof}
+  This follows immediately from Lemma~\ref{lm:fact-ub}
+  and the observation that $\gamma_2(\mat)$ is monotonically
+  non-increasing under taking submatrices. Indeed, for any $J
+  \subseteq [n]$, and any  factorization $\mat = UV$, we have that
+  $\mat(*,J) = UV(*,J)$, and $\|V(*,J)\|_{1\to 2} \le \|V\|_{1\to 2}$. Minimizing over all choices of $U$ and $V$
+  gives us $\gamma_2(\mat(*,J)) \le \gamma_2(\mat)$. Thus, by
+  Lemma~\ref{lm:fact-ub}, we have
+  \[
+    \disc(\mat(*,J)) \lesssim \sqrt{\ln(2m)} \gamma_2(\mat(*,J))
+    \le
+    \sqrt{\ln(2m)} \gamma_2(\mat).
+  \]
+  Taking the maximum on the left hand side over all choices of $J\subseteq[n]$ gives the
+  corollary. 
+\end{proof}
+
+Note that the all-ones matrix is no longer a bad example for
+Corollary~\ref{cor:ch7-fact-ub}, since both the hereditary discrepancy
+and the $\gamma_2$ norm of this matrix are equal to $1$. 
+
+\begin{exercise}\label{ex:ch7-fact-ub}
+  Give an example in which Corollary~\ref{cor:ch7-fact-ub} is tight up
+  to constant factors. That is, show that for infinitely many values of
+  $m$, there exists an $m\times n$ matrix $\mat$ for which
+  $\disc(\mat) \gtrsim \sqrt{\ln(2m)} \gamma_2(\mat)$.
+\end{exercise}
+
+We now show that $\gamma_2(\mat)$ also gives a nearly tight
+lower bound on hereditary discrepancy (see Theorem
+\ref{thm:ch7-fact-lb} for the formal statement). This will be our goal in the rest of this section.
+
+\subsection{Semidefinite Program Formulation}
+%Before showing this, 
+%in Corollary~\ref{cor:ch7-fact-ub}
+%is tight up to a poly-logarithmic factor, 
+We start  by reformulating
+$\gamma_2(\mat)$ as a semidefinite program (SDP). One important
+consequence of this formulation is that $\gamma_2(\mat)$ is
+efficiently computable, and, therefore, so is the upper bound we
+proved. By semidefinite programming duality, this formulation also gives a dual formulation of
+$\gamma_2(\mat)$ as a maximization problem. This dual formulation will
+be essential in giving a lower bound on $\herdisc(\mat)$ in terms of
+$\gamma_2(\mat)$.
+
+Recall the definition of $\gamma_2(\mat)$ in
+\eqref{eq:ch7-gamma2-defn}. Note first that we can assume that the
+infimum is over factorizations $\mat = UV$ for which
+$\|U\|_{2\to\infty} = \|V\|_{1\to 2} = \sqrt{\gamma_2(\mat)}$. This is because, for any $c >
+0$, we can replace $U$ by $cU$ and $V$ by $\frac1c V$ to get another
+factorization, and choosing
+$c \eqdef \sqrt{\frac{\|V\|_{1\to   2}}{\|U\|_{2\to\infty}}}$ makes
+the two matrix norms equal.
+
+Note also that, since $\gamma_2(\mat) \le \|I\|_{2\to \infty} \|\mat\|_{1\to 2}=  \|\mat\|_{1\to 2}$, we can
+further assume that $\|U\|_{2\to\infty}$ and $\|V\|_{1\to 2}$ are both
+bounded by $\|\mat\|_{1\to 2}^{1/2}$. Then it follows by a standard
+compactness argument that the infimum in the definition of
+$\gamma_2(\mat)$ is achieved. 
+
+Let us now consider some factorization $\mat = UV$ of the $m\times n$
+matrix $\mat$ into a $m \times k$ matrix $U$ and a $k\times n$ matrix
+$V$. The matrix
+\[
+  X= \begin{pmatrix}
+    U\\
+    V^T
+  \end{pmatrix}
+  \begin{pmatrix}
+    U^T  & V 
+  \end{pmatrix}
+  =
+  \begin{pmatrix}
+    UU^T & UV\\
+    V^TU^T & V^T V
+  \end{pmatrix}
+  =
+  \begin{pmatrix}
+    UU^T & \mat\\
+    \mat^T & V^T V
+  \end{pmatrix}
+\]
+is positive semidefinite, since it equals $W^T W$ for
+$W = \begin{pmatrix}U^T&  V\end{pmatrix}$. Notice that the entry $X(i,i)$, for 
+$1 \le i \le m$, equals $\|U(i,*)\|_2^2$, and the entry $X(m + j,m+j)$  equals $\|V(*,j)\|_2^2$ for
+$1 \le j \le n$.
+
+Conversely, suppose that $X$
+is a semidefinite $(m+n) \times (m+n)$ matrix such that the submatrix
+formed by the first $m$ rows and last $n$ columns equals $\mat$. Since
+$X$ is positive semidefinite, we can write it as $W^T W$ for some
+$(m+n) \times (m+n)$ matrix $W$. Defining $U$ to be the transpose of
+the submatrix of $W$ formed by taking its first $m$ columns, and $V$
+to be the submatrix of $W$ formed by its last $n$ columns, we get a
+factorization $\mat = UV$. Moreover,
+$\max_{i = 1}^m X(i,i) = \|U\|_{2\to\infty}^2$, and
+$\max_{j=1}^n X(m+j,m+j) = \|V\|_{1\to 2}^2$. %With these observations
+%in hand, we can prove the following equivalence.
+This equivalence directly gives the following lemma.
+%detailed proof we leave as an exercise. 
+\begin{lemma}\label{lm:ch7-fact-sdp}
+  For any $m\times n$ matrix $\mat$ we have
+  \begin{align}
+    \gamma_2(\mat) = &\min t \label{eq:ch7-sdp-obj} \\
+               %      &\text{subject to}\notag\\
+                 \text{s.t. \,\,\, }    &X(i,m+j) = X(m+j,i) =\mat(i,j) \ \ \forall i\in [m], j \in [n]
+                    \label{eq:ch7-sdp-eq}\\
+                     &X(i,i) \le t\ \ \forall i \in [m+n]\\
+                     &X \succeq 0\label{eq:ch7-sdp-psd}
+  \end{align}
+  where $X$ ranges over symmetric $(m+n) \times (m+n)$
+  real matrices. 
+\end{lemma}
+% \begin{proof}
+%   The observations above already give us that
+%   \begin{align}
+%     \gamma_2(\mat) = &\inf \left( \max_{i = 1}^m X(i,i)\right)^{1/2}\left(\max_{j=1}^n X(m+j,m+j)\right)^{1/2}\label{eq:ch7-nl-obj}\\
+%                      &\text{subject to}\notag\\
+%                      &X(i,m+j) = X(m+j,i) =\mat(i,j) \ \ \forall i\in [m], j \in [n]\\
+%                      &X \succeq 0\label{eq:ch7-nl-psd}
+%   \end{align}
+%   Since the arithmetic mean of two non-negative numbers is at most
+%   their maximum,
+%   \begin{multline}\label{eq:ch7-norms-equal}
+%     \left( \max_{i = 1}^m X(i,i)\right)^{1/2}\left(\max_{j=1}^n X(m+j,m+j)\right)^{1/2}\\
+%     \le
+%     \max\left\{ \max_{i = 1}^m X(i,i),\max_{j=1}^n X(m+j,m+j)\right\}
+%     =   \max_{i = 1}^{m+n} X(i,i)
+%   \end{multline}
+%   We can show that this inequality can be assumed to hold with
+%   equality. Let $c > 0$ be chosen later, and let $D$ be a diagonal matrix such that $D(i,i) = c$ for $i
+%   \in [m]$, and $D(m+j,m+j) = \frac1c$ for $j \in [n]$. Then if $X$ is
+%   positive semidefinite, $DXD$ is as well. Moreover, notice that, for
+%   any $i \in [m]$ and $j \in [n]$
+%   \[
+%     (DXD)(i,m+j) = (DXD)(m+j,i) = c\cdot\frac1c X(i,m+j) = X(i,m+j).
+%   \]
+%   Therefore, for any feasible solution $X$ to
+%   \eqref{eq:ch7-nl-obj}--\eqref{eq:ch7-nl-psd}, $DXD$ is also
+%   feasible. Furtheremore,
+%   \(
+%   \max_{i = 1}^m (DXD)(i,i)  =   c^2\max_{i = 1}^m X(i,i),
+%   \)
+%   and
+%   \(
+%   \max_{j = 1}^n (DXD)(m+j,m+j)  =   \frac{1}{c^2}\max_{j = 1}^n X(m+j,m+j),
+%   \)
+%   so $DXD$ also achieves the same objective value in
+%   \eqref{eq:ch7-nl-obj} as $X$. 
+%   Choosing $c = \sqrt{\frac{\max_{j  = 1}^n X(m+j,m+j)}{\max_{i = 1}^m
+%       X(i,i)}}$ and replacing $X$ by $DXD$ now allows us to assume that $\max_{i = 1}^m
+%   X(i,i)= \max_{j=1}^n X(m+j,m+j)$, in which case inequality \eqref{eq:ch7-norms-equal}
+%   holds with equality. Therefore we get
+%   \begin{align*}
+%     \gamma_2(\mat) = &\inf \max_{i = 1}^{m+n} X(i,i)\\
+%                      &\text{subject to}\notag\\
+%                      &X(i,m+j) = X(m+j,i) = \mat(i,j) \ \ \forall i\in [m], j \in [n]\\
+%                      &X \succeq 0
+%   \end{align*}
+%   This is easily seen to be equivalent to
+%   \eqref{eq:ch7-sdp-obj}--\eqref{eq:ch7-sdp-psd} except for taking an
+%   $\inf$ rather than a $\min$.% : once $X$ is fixed, the optimal choice
+%   % for the $t$ variable in
+%   % \eqref{eq:ch7-sdp-obj}--\eqref{eq:ch7-sdp-psd} is the maximum of
+%   % $\max_{i = 1}^m X(i,i)$ and $\max_{j=1}^n X(m+j,m+j)$.
+%   To see that
+%   the infimum is also achieved, notice that
+%   $\gamma_2(\mat) \le \|\mat\|_{1\to 2}$ because we can always take
+%   the trivial factorization $\mat = I\mat$, with $I$ the $m \times m$
+%   identity matrix. This means we only need to take the infimum over
+%   $X \succeq 0$ satisfying $\max_{i=1}^m X(i,i) \le \|\mat\|_{1\to 2}$
+%   as well as the equalities \eqref{eq:ch7-sdp-eq}. Since this set is
+%   compact, the infimum is achieved.
+% \end{proof}
+
+
+Semidefinite programs share two important properties with linear
+programs: they are efficiently solvable, in the sense that an
+approximately optimal solution can be found in polynomial time to any
+degree of accuracy; they satisfy a duality theory, i.e., we can 
+derive a dual maximization semidefinite program to a given
+minimization semidefinite program, so that the optimal values of the
+two programs are equal.\footnote{These statements are imprecise: in
+  order to be efficiently solvable and satisfy strong duality,
+  semidefinite programs need to be sufficiently ``nice''. This turns
+  out not to be an issue for our application.} Then, using
+Lemma~\ref{lm:ch7-fact-sdp}, we can show that
+$\gamma_2(\mat)$ is efficiently computable, and has a dual
+maximization formulation. These facts, whose proofs we omit, are
+captured in the following lemma.
+
+%\sasho{might add a proof and more about duality of SDPs here}
+
+\begin{lemma}\label{lm:ch7-fact-dual}
+  For any $m\times n$ matrix $\mat$, and any $\varepsilon > 0$, we can
+  compute a factorization $\mat = UV$ so that $\|U\|_{2\to\infty}
+  \|V\|_{1\to 2} \le (1+\varepsilon)\gamma_2(\mat)$ in time polynomial
+  in $m$, $n$, the maximum bitsize of any entry of $\mat$, and in
+  $\log(1/\varepsilon)$.
+
+  Moreover, $\gamma_2(\mat)$ satisfies the dual formula
+  \begin{equation}
+    \label{eq:ch7-fact-dual}
+    \gamma_2(\mat) =
+    \max\{\|P\mat Q\|_{\tr}: P, Q \text{ diagonal }, \tr(P^2) = \tr(Q^2) = 1\}.
+  \end{equation}
+  Above, $\|P\mat Q\|_{\tr}$ is the trace norm of the matrix $P\mat Q$,
+  i.e., the sum of its singular values. 
+\end{lemma}
+
+\subsection{Lower Bound}
+%We will now show that the upper bound in
+%Corollary~\ref{cor:ch7-fact-ub} is tight up to logarithmic factors. 
+To lower bound the hereditary discrepancy by $\gamma_2(\mat)$ up to logarithmic factors, we need a general tool for proving lower bounds on hereditary
+discrepancy. 
+We next define an intermediate quantity called the determinant lower bound $\detlb(\mat)$. We use the connection between rounding and hereditary discrepancy, discussed Chapter~\ref{ch1-intro}, and a covering argument, to show that $\detlb(\mat)$ is a lower bound on hereditary discrepancy. Finally, we relate  $\gamma_2(\mat)$ and $\detlb(\mat)$.
+
+\paragraph{The Determinant Lower bound and Hereditary Discrepancy.}
+The determinant lower bound
+  of an $m\times n$ matrix $\mat$ is defined as
+  \begin{equation}
+    \label{eq:ch7-detlb-defn}
+    \detlb(\mat) \eqdef \max_k \max_{B \in S_k(\mat)} |\det(B)|^{1/k},
+  \end{equation}
+  where $S_k(\mat)$ is the set of $k\times k$ submatrices of
+  $\mat$.
+We have the following lower bound on $\herdisc(\mat)$.
+\begin{lemma}\label{lm:ch7-detlb}
+  For any $m\times n$ matrix $\mat$ we have the inequality
+  \[
+    \herdisc(\mat) \ge \frac12 \detlb(\mat).
+  \]
+\end{lemma}
+\begin{proof}
+We prove a slightly weaker bound
+$\herdisc(\mat) \ge  \detlb(\mat)/4$,
+  and leave the tighter bound as an exercise.
+  We show that for any $k\times k$ square matrix $B$,
+  \(
+  \herdisc(B) \ge (1/4) |\det(B)|^{1/k}.
+  \)
+  The claimed bound then follows directly as $\herdisc(\mat) \ge
+  \max_k \max_{B \in S_k(\mat)} \herdisc(B)$.   
+  
+\smallskip
+  It follows from the transference theorem (Theorem~\ref{thm:ch1-transference}) that 
+  \[
+    \forall y \in [0,1]^k \ \exists z \in \{0,1\}^k\ \ 
+  \|B (y-z)\|_\infty \le \herdisc(B).
+  \]
+  Let $K \eqdef \{x \in \R^k: \|Bx\|_{\infty} \le
+  \herdisc(B)\}$. The equation above is equivalent to
+  \(
+    [0,1]^k \subseteq \bigcup_{z \in \{0,1\}^k} (K + z).
+  \)
+  Letting $\vol^k(\cdot)$ be the $k$-dimensional Lebesgue
+  measure, by its translation invariance we have
+  \begin{align}
+    1 &= \vol^k([0,1]^k) \le
+    \sum_{z \in \{0,1\}^k} \vol^k(K + z) = 2^k \vol^k(K).\label{eq:ch7-covering}
+  \end{align}
+  To turn this into a lower bound on $\herdisc(B)$, we need to
+  relate it to $\vol^k(K)$. Let us assume that $B$ is invertible: 
+  otherwise, the lower bound
+  \(
+  \herdisc(B) \ge \frac14 |\det(B)|^{1/k}=0
+  \)
+  is trivial. Then we can write
+  \begin{align*}
+    K & = \{x \in \R^k: \|B x\|_{\infty} \le   \herdisc(B)\}\\
+    & = \{B^{-1} y: y\in \R^k, \|y\|_{\infty} \le \herdisc(B)\}.
+  \end{align*}
+  The right side is the image of the cube
+  $[-\herdisc(B),\herdisc(B)]^k$ under multiplication by $B^{-1}$, and
+  has volume $
+  (2\herdisc(B))^{k} |\det(B^{-1})|$ $=
+  2^k\herdisc(B)^k/|\det(B)|$.
+  
+Together with \eqref{eq:ch7-covering}, 
+ we get that \[
+    1 \le 2^k\vol^k(K) = 4^k\herdisc(B)^k/|\det(B)|. \]
+  Re-arranging gives us the lower bound. 
+\end{proof}
+
+\begin{remark}\label{rem:vollb}
+  The determinant lower bound can be far from tight when $m$ is
+  large. For example, take $\mat$ to be a $2^n \times n$ matrix whose
+  rows are all the vectors in $\{-1, +1\}^n$. Hadamard's inequality shows that
+  $\detlb(\mat) \le \sqrt{n}$, but it is easy to see that $\disc(\mat)
+  = n$. Intuitively, the reason for this gap is that the determinant
+  lower bound only considers square submatrices of $\mat$. The proof
+  above, however, can be modified slightly to establish a
+  stronger volumetric lower bound on hereditary discrepancy, as we
+  explain next. 
+
+  Notice that the proof of the inequality \eqref{eq:ch7-covering} did
+  not use that $B$ is a square matrix, and in fact works for any
+  submatrix $B$ of $\mat$. Using the inequality for
+  submatrices that consist of a subset of the columns of $\mat$, we
+  get that, for any $S \subseteq [n]$, the convex body
+  $\{x \in \R^S: \|\mat(*,S) x\|_{\infty} \le \herdisc(\mat)\}$ has
+  $|S|$-dimensional volume at least $2^{-|S|}$, or, equivalently,
+  $\{x \in \R^S: \|\mat(*,S) x\|_{\infty} \le 1\}$, has volume at
+  least $(2\herdisc(\mat))^{-|S|}$. Letting 
+  $\overline{K} \eqdef \{x \in \R^n: \|\mat x\|_{\infty} \le 1\}$,
+  this means that
+  \begin{equation}
+    \label{eq:vollb}
+    \herdisc(\mat) \ge \frac12 \vollb(\mat) \eqdef
+    \min_{S \subseteq [n]}\vol^{S}(\overline{K} \cap \R^S)^{-1/|S|},
+  \end{equation}
+  where $\vol^S(\cdot)$ is the $|S|$-dimensional Lebesgue measure
+  taken inside $\R^S$, and we used the observation that
+  \(
+  \overline{K} \cap \R^S = \{x \in \R^S: \|\mat(*,S) x\|_{\infty} \le 1\}.
+  \)
+   This volumetric lower bound takes advantage of
+  ``tall'' matrices, and can be stronger than the determinant lower
+  bound. Returning to the $2^n \times n$ matrix $\mat$ above, whose rows are
+  all vectors in $\{-1,+1\}^n$, we have
+  $\overline{K} = \{x \in \R^n: \|x\|_1 \le 1\}$, i.e., the
+  $n$-dimensional $\ell_1$ ball, which has Lebesgue measure
+  $2^n/n!$. So $\vollb(\mat) = (n!)^{1/n}/2 \approx n/2e$ by
+  Stirling's approximation. Unlike the determinant lower bound, this
+  matches the discrepancy of $\mat$  up to a constant factor.
+\end{remark}
+
+\begin{exercise}
+  Prove the inequality \(\herdisc(\mat) \ge (1/2) \detlb(\mat)\) in
+  Lemma~\ref{lm:ch7-detlb}. To do so, argue that
+  \eqref{eq:ch7-covering} can be strengthened to $\vol^k(K) \ge 1$.
+\end{exercise}
+
+\paragraph{Relating $\detlb(\mat)$ and $\gamma_2(\mat)$.}
+%We show a lower bound on $\herdisc(\mat)$ in terms of $\gamma_2(\mat)$
+Our goal will be to show that $\gamma_2(\mat)\lesssim \log(2n) \detlb(\mat)$. 
+
+Let us first see how to use
+Lemma~\ref{lm:ch7-fact-dual} to get an inequality in the other
+direction. Let us take any $k\times k$ submatrix $\mat(S,T)$ of $\mat$ that
+achieves $\detlb(\mat)$. Define $P(i,i) = \frac{1}{\sqrt{k}}$ for $i \in S$,
+$Q(j,j) = \frac{1}{\sqrt{k}}$ for $j \in T$, and define all other entries of $P$
+and $Q$ to be $0$. Then, by \eqref{eq:ch7-fact-dual},
+\[
+  \gamma_2(\mat) \ge \|P\mat Q\|_{\tr} = \frac1k \|\mat(S,T)\|_{\tr},
+\]
+and notice that $\frac1k \|\mat(S,T)\|_{\tr}$ is the arithmetic mean of
+the singular values of $\mat(S,T)$. Since $|\det(\mat(S,T))|^{1/k}$ is
+the geometric mean of the singular values of the same matrix, the
+AM-GM inequality gives us that
+$\gamma_2(\mat) \ge \detlb(\mat)$.  
+
+To reverse this inequality, we
+then need an inequality that reverses the AM-GM inequality, in the
+appropriate sense. The next lemma is sufficient for us for this
+purpose. %\sasho{Is this ``reverses AM-GM'' confusing?}
+
+\begin{lemma}\label{lm:ch7-rev-AMGM}
+  %For any integer $r \ge 2$, and 
+  For any non-negative real numbers $\sigma_1 \ge \ldots \ge
+  \sigma_r \ge 0$,
+  \[
+    \max_{k = 1}^r k(\sigma_1 \cdots \sigma_k)^{1/k}
+    \ge
+    \max_{k = 1}^r k\sigma_k
+    \ge
+    \frac{\sigma_1 + \ldots + \sigma_r}{1+\ln r}
+  \]
+\end{lemma}
+\begin{proof}
+  The first inequality is trivial. The second
+  follows as,
+  %By the (the trivial case of) H\"older's inequality, we get that 
+  \begin{align*}
+    \sum_{k = 1}^r \sigma_k =
+    \sum_{k = 1}^r k\sigma_k\cdot\frac{1}{k}
+    &\le \left(\max_{k = 1}^r k\sigma_k\right)\left(\sum_{k=1}^r \frac{1}{k}\right)
+    \le \left(\max_{k = 1}^r k\sigma_k\right)(1+\ln r),
+  \end{align*}
+  %where we used the inequality
+  as $\sum_{k=1}^r \frac{1}{k} \le 1 + \ln r$.
+\end{proof}
+
+Let us also recall the Cauchy-Binet formula, which states that for any
+two $m\times n$ matrices $A,B$, where $n \le m$, we have
+\[
+  \det(A^T B) = \sum_{S \subseteq [m]: |S| = n} \det(A(S,*))\det(B(S,*)).
+\]
+For a short proof, see Section 3.2 in Tao's
+book~\cite{Tao-randmat}. Note that applying the Cauchy-Schwarz
+inequality to the right hand side of the Cauchy-Binet formula, we get
+\begin{align}
+  \det(A^T B)^2 &\le
+  %\left(\sum_{S \subseteq [m]: |S| = n} \det(A(S,*))\det(A(S,*)\right)\left(\sum_{S \subseteq [m]: |S| = n} \det(B(S,*))\det(B(S,*)\right)\notag\\
+  %&=
+     \det(A^T A) \det(B^T B).  \label{eq:ch7-CS-mat}
+\end{align}
+
+We need one final lemma before we can relate $\gamma_2(\mat)$ and
+$\detlb(\mat)$. This lemma  allows us to extract a submatrix of
+$\mat$ to use as a certificate that $\detlb(\mat)$ is large. 
+
+\begin{lemma}\label{lm:ch7-submatrix}
+  Let $n\le m$ be positive integers, and let $D$ be an $m\times m$ diagonal matrix with non-negative entries such that $\tr(D) =
+  1$. Then for any $m\times n$ matrix $A$, there exists a set
+  $S\subseteq [m]$ of cardinality $n$ for which 
+  \[
+    |\det(A(S,*))| \ge  \sqrt{n!\det(A^TDA)}.
+  \]
+\end{lemma}
+\begin{proof}
+  By the Cauchy-Binet formula and H\"older's inequality, we have
+  \begin{align*}
+    \det(A^T DA) %&= \sum_{S\subseteq [m]: |S| = n} \det(D(S)\det(A(S,*))^2\\
+                 &= \sum_{S\subseteq [m]: |S| = n}  \det(A(S,*))^2 \left(\prod_{i \in S} D(i,i)\right)\\
+                 &\le \left(\max_{S \subseteq [m]: |S| = n}\det(A(S,*))^2\right)
+                   \left(\sum_{S\subseteq [m]: |S| = n} \prod_{i \in S} D(i,i)\right).
+  \end{align*}
+  It remains to bound the sum on the right hand side. One can show that this sum is maximized when all $D(i,i)$ are equal,
+  in which case it equals ${m \choose n} \frac{1}{m^n} <
+  \frac{1}{n!}$. For an elementary proof of a similar bound,
+  notice that, since all $D(i,i)$ are non-negative,
+  \[
+    1 = (D(1,1) + \ldots + D(m,m))^n
+    \ge n! \sum_{S\subseteq [m]: |S| = n} \prod_{i \in S} D(i,i),
+  \]
+  because when we expand $(D(1,1) + \ldots + D(m,m))^n$ we get each
+  multilinear term $\left(\prod_{i \in S} D(i,i)\right)$ $n!$ times,
+  in addition to the other terms. %Combining the inequalities gives the lemma.
+\end{proof}
+
+We are, finally, ready to prove that $\gamma_2(\mat)$ and
+$\detlb(\mat)$ are equal up to a logarithmic factor.
+
+\begin{lemma}\label{lm:ch7-fact-detlb}
+  For any $m\times n$ matrix $\mat$ of rank $r$, we have
+  \[
+    \detlb(\mat) \le \gamma_2(\mat) \lesssim (1 + \log r) \detlb(\mat).
+  \]
+\end{lemma}
+\begin{proof}
+  As we argued above, the first inequality follows by considering the
+  $k\times k$ submatrix $\mat(S,T)$ of $\mat$ achieving
+  $|\det(\mat(S,T))|^{1/k} = \detlb(\mat)$, and setting $P$ and $Q$ in
+  \eqref{eq:ch7-fact-dual} so that $P\mat Q = \frac1k \mat(S,T)$.
+  Here we prove the second inequality, again using
+  Lemma~\ref{lm:ch7-fact-dual}, as well as
+  Lemmas~\ref{lm:ch7-rev-AMGM}~and~\ref{lm:ch7-submatrix}.
+
+  Let $P$ and $Q$ achieve equality in \eqref{eq:ch7-fact-dual}, and
+  let $\sigma_1 \ge \ldots \ge \sigma_r \ge 0$ be the $r$ largest singular
+  values of $P \mat Q$. Since $P \mat Q$ has rank at most $r$, all
+  other singular values of $P \mat Q$ are $0$, and $\gamma_2(\mat) =
+  \sigma_1 + \ldots + \sigma_r$. Let $k \in [r]$ be the integer for
+  which Lemma~\ref{lm:ch7-rev-AMGM} guarantees that
+  \begin{equation}\label{eq:ch7-top-k}
+    k(\sigma_1 \cdots \sigma_k)^{1/k}
+    \ge \frac{\sigma_1 + \ldots + \sigma_r}{1+\ln r}
+    = \frac{\gamma_2(\mat)}{1+\ln r}.
+  \end{equation}
+  The goal in the rest of the proof is to show that there exists a
+  $k\times k$ submatrix $\mat(S,T)$ of $\mat$ for which $|\det(\mat(S,T))|^{1/k}$ is not
+  much smaller than $k(\sigma_1 \cdots \sigma_k)^{1/k}$.
+
+  Let $v_1, \ldots, v_k$ be the right singular vectors of $P \mat Q$
+  associated with $\sigma_1, \ldots, \sigma_k$, and let $V$ be a
+  matrix with columns $v_1, \ldots, v_k$. Define the $m\times k$
+  matrix $A \eqdef \mat QV$. The matrix $PA$ then has singular values
+  $\sigma_1, \ldots, \sigma_k$, or, equivalently, $A^TP^2A$ has
+  eigenvalues $\sigma_1^2, \ldots,
+  \sigma_k^2$. Lemma~\ref{lm:ch7-submatrix} applied to $A$ and $D
+  \eqdef P^2$ now tells us that there exists a set $S \subseteq [m]$
+  of cardinality $k$ so that
+  \begin{align}
+    |\det(\mat(S,*)QV)| &= |\det(A(S,*))|\notag\\
+    &\ge \sqrt{k! \det(A^TP^2A)} = \sqrt{k!} \sigma_1 \cdots \sigma_k.    \label{eq:ch7-rows}
+  \end{align}
+
+  Next we would like to apply Lemma~\ref{lm:ch7-submatrix} again, in
+  order to replace $\mat(S,*)QV$ with $\mat(S,T)$ for some cardinality
+  $k$ set $T \subseteq [n]$. We first need to deal with the matrix
+  $V$, however. To this end, apply \eqref{eq:ch7-CS-mat}  to the
+  matrices $Q\mat(S,*)^T$ and $V$, to conclude that
+  \begin{align}
+    \det(\mat(S,*)Q^2 \mat(S,*)^T) &\ge
+    \frac{\det(\mat(S,*)QV)^2}{\det(V^T V)} \notag\\
+                                   &= \det(\mat(S,*)QV)^2,\label{eq:ch7-proj}
+  \end{align}
+  where we used that $V^T V = I$. 
+  Then 
+  \eqref{eq:ch7-rows} and \eqref{eq:ch7-proj} together give us
+  \[
+    \sqrt{\det(\mat(S,*)Q^2\mat(S,*)^T)} \ge
+    \sqrt{k!} \sigma_1 \cdots \sigma_k.
+  \]
+  Finally, we apply Lemma~\ref{lm:ch7-submatrix} one more time, now
+  with the $n\times k$ matrix $A \eqdef \mat(S,*)^T$ and $D \eqdef
+  Q^2$, concluding that there exists a set $T \subseteq [n]$ of
+  cardinality $k$ for which
+  \[
+    |\mat(S,T)| \ge \sqrt{k!\det(\mat(S,*)Q^2\mat(S,*)^T)} \ge
+    k! \sigma_1 \cdots \sigma_k.
+  \]
+  Together with \eqref{eq:ch7-top-k}, and as $k! \ge (k/e)^k$, we can conclude that
+  \begin{align*}
+    \detlb(\mat)
+    \ge
+    |\det(\mat(S,T))|^{1/k}
+   % &\ge
+    %  (k! \sigma_1 \cdots \sigma_k)^{1/k}\\
+    &\gtrsim
+      k (\sigma_1 \cdots \sigma_k)^{1/k}
+    \ge
+      \frac{\gamma_2(\mat)}{1+\ln r}.  \qedhere
+  \end{align*}
+%  as we needed to prove. Above, on the second line, we used the
+%  inequality 
+\end{proof}
+
+Lemma~\ref{lm:ch7-fact-detlb} gives an approximation algorithm for the
+determinant lower bound: computing $\gamma_2(\mat)$ gives a factor
+$O(\log r)$ approximation for $\detlb(\mat)$ for any rank $r$ matrix
+$\mat$. No better polynomial time computable approximation for
+$\detlb(\mat)$ is known. 
+
+Combining Lemmas~\ref{lm:ch7-detlb}~and~\ref{lm:ch7-fact-detlb}, we get
+the following lower bound on hereditary discrepancy.
+
+\begin{theorem}\label{thm:ch7-fact-lb}
+  For any $m\times n$ matrix $\mat$ of rank $r$, we have
+  \[
+    \herdisc(\mat) \gtrsim  \frac{\gamma_2(\mat)}{1 + \log r}.
+  \]
+\end{theorem}
+
+
+\subsection{The Approximation Theorem}
+
+We can now state our main result.
+\begin{theorem}\label{thm:ch7-fact-main}
+  For any $m\times n$ matrix $\mat$ of rank $r$, we have
+  \[
+    \frac{\gamma_2(\mat)}{1 + \log r} \lesssim
+    \herdisc(\mat)
+    \lesssim
+    \sqrt{\ln(2m)} \gamma_2(\mat).
+  \]
+\end{theorem}
+Theorem~\ref{thm:ch7-fact-main} follows immediately from
+Corollary~\ref{cor:ch7-fact-ub}, and Theorem~\ref{thm:ch7-fact-lb}.
+
+In Exercise~\ref{ex:ch7-fact-ub} we showed that the upper bound in
+Theorem~\ref{thm:ch7-fact-main} is tight up to constant factors. Soon
+we will see a simple example of a matrix for which the lower bound is
+tight.
+
+\section{Some Properties}
+
+There are many natural questions one can ask about the behavior of
+hereditary discrepancy under simple transformations. For example, we
+can ask how $\herdisc(\SS \cup \SS')$ compares to $\herdisc(\SS)$ and
+$\herdisc(\SS')$ for two set systems $\SS$ and $\SS'$ on the same
+universe. As another example, we can ask how $\herdisc(\mat^T)$
+compares to $\herdisc(\mat)$ for a matrix $\mat$. None of these
+questions has an obvious answer, but, nevertheless, we can give nearly tight
+answers to them using Theorem~\ref{thm:ch7-fact-main}, and simple
+properties of the $\gamma_2$ norm. Let us remark that it is essential
+here to work with hereditary discrepancy - discrepancy itself does not
+behave nicely with respect to most simple transformations. Two
+examples of this are offered in the next exercises.
+
+\begin{exercise}
+  Give an example of two set systems $\SS$ and $\SS'$, both on the ground
+  set $[n]$ for an arbitrarily large integer $n$, so that $\disc(\SS)
+  = \disc(\SS') = 0$ but $\disc(\SS \cup \SS') \gtrsim n$.
+\end{exercise}
+
+% SS: each set takes t elements from L := {1, ..., n/2} and t elements from
+% R := {n/2 + 1, ..., n}. SS contains all such sets.
+% SS' = {L, R}.
+% e.g. t= n/4 works
+
+\begin{exercise}
+  Give an example of a $n\times n$ matrix with $\{0,1\}$ entries,
+  for $n$ arbitrarily large, so that $\disc(\mat) = 0$ but
+  $\disc(\mat^T) \gtrsim \sqrt{n}$.
+\end{exercise}
+
+% Take a Hadamard matrix, replace -1 with 0, duplicate each columns
+% twice, pad with 0 rows to make it square.
+
+The next lemma summarizes the basic properties of the $\gamma_2$ norm
+that are useful in reasoning about hereditary
+discrepancy. Below, we use $\otimes$ for the Kronecker product: given
+two matrices $A$ and $B$, of dimensions, respectively, $m \times n$
+and $p \times q$, $A\otimes B$ is a $(mp) \times (nq)$ matrix whose
+rows are indexed by $[m]\times [p]$, whose columns are indexed by $[n]\times
+[q]$, and whose entries are $(A\otimes B)((i_1, i_2), (j_1, j_2)) =
+A(i_1,j_1)B(i_2,j_2)$. The key property of Kronecker products that we
+repeatedly use is that $(A\otimes B)(A'\otimes B') =
+(AA')\otimes(BB')$ for any matrices $A,A',B,B'$ for which these matrix
+products are well-defined.
+
+\begin{lemma}\label{lm:ch7-gamma2-props}
+  The $\gamma_2$ function on matrices has the following properties:
+  \begin{enumerate}
+  \item $\gamma_2(\mat(S,T)) \le \gamma_2(\mat)$ for any $m\times n$
+    matrix $\mat$ and any submatrix $\mat(S,T)$ of
+    it;\label{pr:ch7-submatrix}
+  \item duplicating rows and columns of $\mat$  keeps $\gamma_2(\mat)$ unchanged;\label{pr:ch7-duplicate}
+  \item $\gamma_2(\mat) = \gamma_2(\mat^T)$ for any matrix $\mat$;\label{pr:ch7-transpose}
+  \item $\gamma_2(\mat) = 0 \implies \mat = 0$;\label{pr:ch7-pos}
+  \item $\gamma_2(c\mat) = |c|\gamma_2(\mat)$ for any matrix $\mat$
+    and real value $c$;\label{pr:ch7-hom}
+  \item $\gamma_2(\mat + \mat') \le \gamma_2(\mat) + \gamma_2(\mat')$;\label{pr:ch7-triangle}
+  \item for any two matrices $\mat'$ and $\mat''$, each with $n$ columns, and the matrix 
+    $\mat = \begin{pmatrix}\mat'\\ \mat''\end{pmatrix}$, 
+    we have $\gamma_2(\mat) \le \sqrt{\gamma_2(\mat')^2 +
+      \gamma_2(\mat'')^2}$; \label{pr:ch7-union}
+  \item $\gamma_2(\mat \otimes \mat') = \gamma_2(\mat)
+    \gamma_2(\mat')$ for any matrices $\mat$ and $\mat'$.\label{pr:ch7-tensor}
+  \end{enumerate}
+\end{lemma}
+\begin{proof}
+  Property~\ref{pr:ch7-submatrix} was noted previously. Next we
+  give the proofs of some of the remaining properties, and leave
+  the rest as exercises.
+
+  Property~\ref{pr:ch7-triangle} can be proved in several ways,
+  including by directly giving a factorization of $\mat + \mat'$ using
+  optimal factorizations of $\mat$ and $\mat'$. Instead, let us prove
+  it using the SDP characterization from
+  Lemma~\ref{lm:ch7-fact-sdp}. Let $X, t$ be a solution to the
+  semidefinite program \eqref{eq:ch7-sdp-obj}--\eqref{eq:ch7-sdp-psd}
+  for $\mat$ that achieves the optimal objective value
+  $\gamma_2(\mat)$, and let $X', t'$ be a solution for $\mat'$ that
+  achieves objective value $\gamma_2(\mat')$. Then $X + X', t + t'$ is a
+  feasible solution for $\mat + \mat'$, and achieves objective value
+  $\gamma_2(\mat) + \gamma_2(\mat')$, which is an upper bound $\gamma_2(\mat + \mat')$.
+
+\smallskip
+  While property~\ref{pr:ch7-union} can also be shown using the SDP
+  characterization, we give a direct
+  factorization of $\mat = \begin{pmatrix}\mat'\\ \mat''\end{pmatrix}$
+  instead. Let $\mat' = U' V'$ and $\mat'' = U'' V''$ be
+  factorizations achieving, respectively,
+  $\gamma_2(\mat') = \|U'\|_{2\to\infty} \|V'\|_{1\to 2}$, and
+  $\gamma_2(\mat'') = \|U''\|_{2\to\infty} \|V''\|_{1\to
+    2}$. 
+    %Moreover, choose $U'$ and $U''$ 
+    Rescale, so that
+  $\|U'\|_{2\to\infty} = \|U''\|_{2\to\infty} = 1$,
+  $\|V'\|_{1\to 2} = \gamma_2(\mat')$, and
+  $\|V''\|_{1\to 2} = \gamma_2(\mat'')$.
+  %This is always possible to
+  %achieve by replacing $U'$ by $\frac{U'}{\|U'\|_{2\to\infty}}$, and
+  %$V'$ by $\|U'\|_{2\to\infty} V'$, and similarly for $U''$ and
+  %$V''$. 
+  Consider then the factorization $\mat = UV$ where
+  \[
+    U =
+    \begin{pmatrix}
+      U' &0\\
+      0  &U''
+    \end{pmatrix}; \ \ \ \ 
+    V =
+    \begin{pmatrix}
+      V'\\
+      V''
+    \end{pmatrix}.
+  \]
+  %where the $0$ blocks in the definition of $U$ are of the appropriate
+  %dimensions for $U$ to be well defined.
+  Then, clearly,
+  \(
+  \|U\|_{2 \to \infty}= 1.
+  \)
+  %At the same time, since, by Pythagoras's theorem,
+  Moreover, as
+  \(\|V(*,i)\|_2^2 = \|V'(*,i)\|_2^2 + \|V''(*,i)\|_2^2\)
+  for any $i \in [n]$, we have
+  \begin{align*}
+    \|V\|_{1\to 2}^2 &= \max_{i = 1}^n \left( \|V'(*,i)\|_2^2 + \|V''(*,i)\|_2^2 \right)\\
+    &\le
+      \max_{i = 1}^n  \|V'(*,i)\|_2^2 + \max_{i=1}^n\|V''(*,i)\|_2^2\\
+    &=
+    \|V'\|_{1\to 2}^2 + \|V''\|_{1\to 2}^2.
+  \end{align*}
+  Thus,
+  \(
+  \gamma_2(\mat)^2 \le \|U\|^2_{2\to\infty} \|V\|^2_{1\to 2}
+  \le
+  \gamma_2(\mat')^2 + \gamma_2(\mat'')^2,
+  \)
+  as claimed.
+  
+\smallskip
+  Finally, we prove property \ref{pr:ch7-tensor}.  
+  To
+  show
+  $\gamma_2(\mat \otimes \mat') \le \gamma_2(\mat) \gamma_2(\mat')$ we
+  can, once again, either use the SDP characterization, or give a
+  direct factorization. Using the SDP characterization and Lemma~\ref{lm:ch7-fact-sdp} let $X, t$ be
+  a solution to the semidefinite program
+  \eqref{eq:ch7-sdp-obj}--\eqref{eq:ch7-sdp-psd} for $\mat$ achieving
+  value $\gamma_2(\mat)$, and let $X', t'$ be
+  a solution for $\mat'$ achieving value $\gamma_2(\mat')$. Then $X\otimes X', tt'$ is a
+  feasible solution for $\mat\otimes \mat'$ achieving value
+  $\gamma_2(\mat)\gamma_2(\mat')$. Here we use the fact that the
+  Kronecker product of two positive semidefinite matrices is positive
+  semidefinite. 
+  
+  To show the reverse inequality $\gamma_2(\mat\otimes
+  \mat') \ge \gamma_2(\mat)\gamma_2(\mat')$, we use
+  Lemma~\ref{lm:ch7-fact-dual}. Let $P,Q$ achieve equality in
+  \eqref{eq:ch7-fact-dual} for $\mat$, let $P', Q'$ achieve
+  equality in \eqref{eq:ch7-fact-dual} for $\mat'$. Then,
+  \begin{align*}
+    \gamma_2(\mat\otimes \mat') &\ge
+    \|(P\otimes P') (\mat \otimes \mat') (Q\otimes Q')\|_{\tr}\\
+    &=
+    \|(P\mat Q)\otimes (P'\mat Q')\|_{\tr}
+    =
+   \|P\mat Q\|_{\tr}\|P'\mat Q'\|_{\tr}.
+ \end{align*}
+ Above we used the fact that, for any matrices $A$ and $B$,
+ $\|A\otimes B\|_{\tr} = \|A\|_{\tr}\|B\|_{\tr}$, which can be verified
+ easily using the singular value decomposition. 
+\end{proof}
+
+\begin{exercise}
+  Prove the remaining properties
+  \ref{pr:ch7-transpose}--\ref{pr:ch7-hom} in Lemma~\ref{lm:ch7-gamma2-props}.
+\end{exercise}
+
+Note that properties \ref{pr:ch7-pos}--\ref{pr:ch7-triangle} in
+Lemma~\ref{lm:ch7-gamma2-props} show that $\gamma_2$ is, indeed, a
+norm on matrices.
+
+Lemma~\ref{lm:ch7-gamma2-props} and Theorem~\ref{thm:ch7-fact-main}
+show that properties~\ref{pr:ch7-submatrix}--\ref{pr:ch7-tensor} carry
+over from the $\gamma_2$ norm to hereditary discrepancy, up to
+logarithmic factors. Properties \ref{pr:ch7-submatrix},
+\ref{pr:ch7-pos}, and \ref{pr:ch7-hom} hold trivially for
+hereditary discrepancy even without the extra logarithmic factors, but
+we know no direct proof for the others. The next theorem rephrases
+some of these properties for set systems.
+
+\begin{theorem}\label{thm:ch7-props-ss}
+  The following bounds hold:
+  \begin{enumerate}
+  \item \label{pr:ch7-ss-dual} For a set system $(\SS, \uni)$, define the dual set system
+    $\SS^*$ on the universe $\SS$ by $\{S_\elem: \elem \in \uni\}$ where $S_\elem = \{S \in
+    \SS: \elem \in S\}$; then 
+    \(
+    \herdisc(\SS^*) \lesssim  \log(2|\uni|)^{3/2}\herdisc(\SS),
+    \)
+  \item \label{pr:ch7-ss-union} For any set systems $\SS_1, \ldots, \SS_k$ defined on the same
+    universe $\uni$, 
+ \[
+ %\begin{multline*}
+    \herdisc(\SS_1 \cup \cdots \cup \SS_k)
+    \lesssim
+    \log(2m)^{3/2} \left(\sum_{i=1}^k \herdisc(\SS_i)^2\right)^{1/2},\]
+  %  \end{multline*}
+    where $m = \sum_{i=1}^k|\SS_i|$.
+    
+  \item \label{pr:ch7-ss-product}  for set systems $(\SS_1, \uni_1), \ldots, (\SS_k, \uni_k)$,
+    let $\SS_1 \times \cdots \times \SS_k$ consist of all product sets $S_1
+    \times \cdots \times S_k$ with $S_i \in \SS_i$; then
+    \begin{multline*}
+      \log(2m)^{ - \frac{k}{2}-1}
+      \lesssim
+      \frac{\herdisc(\SS_1 \times \cdots \times \SS_k)}{\herdisc(\SS_1) \cdots \herdisc(\SS_k)}
+      \lesssim
+      \log(2m)^{k + \frac12},
+    \end{multline*}
+    where $m = |\SS_1|\cdots |\SS_k|$.
+  \end{enumerate}
+\end{theorem}
+\begin{proof}
+  Each of the bounds follows from Theorem~\ref{thm:ch7-fact-main}, and
+  respectively, properties~\ref{pr:ch7-transpose}, \ref{pr:ch7-union}, and
+  \ref{pr:ch7-tensor} of Lemma~\ref{lm:ch7-gamma2-props}. 
+\end{proof}
+
+\section{Applications}
+
+In this section we outline several applications of
+Theorem~\ref{thm:ch7-fact-main} to proving upper and lower bounds on
+the discrepancy of set systems.
+
+\subsection{The $\gamma_2$ Norm of Intervals}
+
+We start with a set system that, at first sight appears to be quite
+uninteresting: the set system $\II_n$ of prefix intervals  of $[n]$, i.e., sets
+of the type $\{1, \ldots i\}$. The hereditary discrepancy of $\II_n$
+is $1$: we just need to alternate the signs the elements we color to
+achieve this bound. It turns out however, that the $\gamma_2$ norm of
+the incidence matrix of $\II_n$ is on the order of $\log
+n$. This fact, which we prove below, shows that the lower bound in 
+Theorem~\ref{thm:ch7-fact-lb} is tight up to constants. It is also
+useful in the applications we develop below.
+
+We use $T_n$ for the incidence matrix of $\II_n$, which we
+write as the lower triangular matrix
+\[
+T_n(i,j) =
+\begin{cases}
+  1 &i \ge j\\
+  0 &i < j
+\end{cases}.
+\]
+
+\begin{lemma}\label{lm:ch7-gamma2-Tn}
+  For the matrix $T_n$ above, $\gamma_2(T_n) = \Theta(\log n)$. 
+\end{lemma}
+\begin{proof}
+  The upper bound follows from Theorem~\ref{thm:ch7-fact-lb}, since
+  \[
+    \gamma_2(T_n) \lesssim (1 + \log n) \herdisc(T_n) = 1 + \log n.
+  \]
+  For the lower bound $\gamma_2(T_n) \gtrsim 1+\log n$, we use
+  Lemma~\ref{lm:ch7-fact-dual}. In particular, setting $P = Q =
+  \frac{1}{\sqrt{n}}$ in \eqref{eq:ch7-fact-dual}, we see that
+  \(
+    \gamma_2(T_n) \ge \frac1n \|T_n\|_{\tr}.
+  \)
+  To prove a lower bound on $\|T_n\|_{\tr}$, we need to estimate the
+  singular values of $T_n$. This can be done directly by computing the
+  eigenvectors of $T_n^T T_n$, which have a simple closed
+  form. Instead, we will consider a matrix that is easier to
+  diagonalize. Consider the matrix $S_n = 2T_n - J_n$, where $J_n$ is
+  the $n\times n$ all-ones matrix. In other words, $S_n$ is the matrix
+  we get from $T_n$ by replacing all entries equal to $0$ with
+  $-1$. By the triangle inequality,
+  \begin{equation}\label{eq:ch7-Tn-lb}
+    \gamma_2(T_n) \ge \frac1n \|T_n\|_{\tr}
+    \ge \frac{1}{2n} (\|S_n\|_{\tr} - \|J_n\|_{\tr})
+    = \frac{1}{2n} \|S_n\|_{\tr} - \frac12,
+  \end{equation}
+  since $J_n$ has only one nonzero singular value equal to $n$. Notice
+  that $S_n$ is a normal matrix, i.e., $S_n^T S_n = S_nS_n^T$, and,
+  therefore, the singular values of $S_n$ are equal to the absolute
+  values of the eigenvalues of $S_n$. To compute $\|S_n\|_{\tr}$, it
+  then suffices to compute its eigenvalues. We can diagonalize $S_n$
+  over the complex numbers, using a transformation similar to the
+  discrete Fourier transform. Let $\omega \in \mathbb{C}$ be a primitive $2n$-th
+  root of unity, and, for $k \in \{0, \ldots, n-1\}$,  define the
+  vector $u_k$ by $u_k(i) = \omega^{(2k + 1)(i-1)}$. What motivates
+  this choice is that $\omega^{(2k + 1)n} = -1$. It is easy to
+  verify that $u_k$ and $u_\ell$ are orthogonal (with the standard
+  inner product over $\mathbb{C}^n$) if $k \neq \ell$. Moreover,
+  notice that
+  \begin{align*}
+    (S_nu_k)(i)
+    &=
+      (1 + \ldots + \omega^{(2k + 1)(i-1)})
+      - (\omega^{(2k + 1)i} +\ldots +  \omega^{(2k + 1)(n-1)})\\
+    &= \frac{\omega^{(2k + 1)i} - 1}{\omega^{2k + 1} - 1}
+      - \frac{\omega^{(2k + 1)n} - \omega^{(2k + 1)i}}{\omega^{2k + 1} - 1}\\
+    &= \frac{2\omega^{(2k + 1)i}}{\omega^{2k + 1}-1}
+      = \frac{2\omega^{2k + 1}}{\omega^{2k + 1}-1}u_k(i).
+  \end{align*}
+  Therefore, $u_k$ is an eigenvector of $S_n$ with eigenvalue
+  $\frac{2\omega^{2k + 1}}{\omega^{2k + 1}-1}$. Thus, the
+  singular values of $S_n$ are $2/|\omega - 1|,
+  \ldots, 2/|\omega^{2n-1} - 1|$. Using elementary
+  trigonometry,
+  \(
+  |\omega^{2k + 1} - 1| = 2\sin\left(\frac{\pi(2k+1)}{2n}\right),
+  \)
+  and, therefore,
+  \[
+    \|S_n\|_{\tr} = \sum_{k = 0}^{n-1} \frac{1}{\sin\left(\frac{\pi(2k+1)}{2n}\right)}
+    \ge
+    \frac{2n}{\pi}\sum_{k = 0}^{n-1} \frac{1}{2k+1},
+  \]
+  as $\sin x \le x$ for $x \ge 0$.
+  Plugging back into \eqref{eq:ch7-Tn-lb}, we get that
+  \[
+    \gamma_2(T_n) \ge \frac{1}{\pi}\sum_{k = 0}^{n-1} \frac{1}{2k+1}
+    \gtrsim 1 + \log n. \qedhere
+  \]
+%  as we wanted to prove. 
+\end{proof}
+
+\begin{exercise}
+  Using canonical intervals (see Section~\ref{sec:ch2-tusnady}), give a factorization
+  showing that $\gamma_2(T_n) \lesssim 1 + \log n$. This gives a more
+  direct proof of the upper bound in Lemma~\ref{lm:ch7-gamma2-Tn}.
+\end{exercise}
+
+\subsection{The Discrepancy of Boxes}
+
+Let us now use what we have proved to show nearly tight bounds on the
+discrepancy of boxes in $d$-dimensions, resolving
+Problem~\ref{prob:tusnady} up to a fixed power of log.
+
+Recall that
+$\RR_d$ is the set of all axis aligned boxes in $\R^d$, i.e., sets of
+the type $\rbox_{a,b} = \{u \in \R^d: a \le u \le b\}$ for $a,b \in
+\R^d$. Recall also that $\disc(\RR_d, n)$ is the largest discrepancy
+achieved by restricting $\RR_d$ to a set $P$ of $n$
+points. Theorem~\ref{thm:ch7-fact-main}, Lemma~\ref{lm:ch7-gamma2-Tn},
+and the properties of the $\gamma_2$ norm allow us to prove the
+following bounds on $\disc(\RR_d,n)$.
+
+\begin{theorem}\label{thm:ch7-tusnady}
+  For any integer $d \ge 1$,
+  \[
+    \log(2n)^{d-1} \lesssim_d \disc(\RR_d,n) \lesssim_d \log(2n)^{d+\frac12},
+  \]
+  where the $\lesssim_d$ means that the constant
+  depends on $d$.
+\end{theorem}
+\begin{proof}
+  As we have done before with boxes, we will use the fact that we only
+  need to consider anchored boxes, restricted to the grid
+  $[n]^d$. Recall that $\AA_d$ is the set system of anchored boxes of the type $[0,b_1]\times\cdots \times [0,b_d]$ for $b \in \R^d$, and consider
+  the set system $\SS \eqdef \AA_d|_{[n]^d}$ of subsets of the
+  $n\times \cdots \times n$ grid induced by anchored boxes. As we observed in Section~\ref{sec:ch2-tusnady},
+  \begin{equation}\label{eq:ch7-tusnady-grid}
+   2^{-d}\disc(\RR_d,n) \le \herdisc(\SS) \le \disc(\RR_d,n^d).
+ \end{equation}
+  Thus, it suffices to bound $\herdisc(\SS)$ from
+  both sides, and we do so by computing the $\gamma_2$ norm of the
+  incidence matrix of $\SS$.
+
+  Let then $\mat$ be the incidence matrix of $\SS$. The main
+  observation is that $\SS = \II_n^{\times d}$, i.e., the product of
+  $\II_n$ with itself $d$ times. Therefore,  $\mat =
+  T_n^{\otimes d}$, i.e., the Kronecker
+  product of $T_n$ with itself $d$
+  times. Lemma~\ref{lm:ch7-gamma2-props} then shows that
+  \(
+  \gamma_2(\mat) = \gamma_2(T_n^{\otimes d}) = \gamma_2(T_n)^d,
+  \)
+  so, by Lemma~\ref{lm:ch7-gamma2-Tn}, 
+  \begin{equation}\label{eq:ch7-gamma2-tusnady}
+    \log(2n)^d \lesssim_d \gamma_2(\mat) \lesssim_d \log(2n)^d.
+  \end{equation}
+  Theorem~\ref{thm:ch7-fact-main} now implies
+  \[
+    \log(2n)^{d-1} \lesssim_d \herdisc(\SS) \lesssim_d \log(2n)^{d+\frac12}
+  \]
+  since $|\SS| \le n^d$. This implies the theorem via
+  \eqref{eq:ch7-tusnady-grid}.
+\end{proof}
+
+Below we will see that the upper bound in
+Theorem~\ref{thm:ch7-tusnady} can be improved further. The lower bound
+is the best one known for Tusn\'ady's problem.
+
+\subsection{Other Applications}
+
+Let us note a couple of other discrepancy upper bounds that can be
+proved using Lemma~\ref{lm:ch7-gamma2-props},
+Theorem~\ref{thm:ch7-props-ss}, and
+Theorem~\ref{thm:ch7-fact-main}. Neither of the two bounds below is
+optimal, but they are both non-trivial and follow easily from the
+results proved thus far.
+
+\paragraph{Permutation families.} The set system induced by a single
+permutation of $[n]$ clearly has hereditary discrepancy $1$, as we can list the
+elements of $[n]$ (or a subset of it) in the order given by the permutation, and alternate
+the signs of the coloring. Then, by property~\ref{pr:ch7-ss-union}.~of
+Theorem~\ref{thm:ch7-props-ss}, we have that, for a set system $\SS$
+induced by $k$ permutations of $[n]$, $\disc(\SS) \lesssim \sqrt{k} \log(kn)^{3/2}$.
+
+\paragraph{Arithmetic Progressions.} Consider the system $\mathcal{AP}$
+consisting of all arithmetic progressions restricted to $[n]$. A
+classical result of Roth shows that $\disc(\mathcal{AP}) \gtrsim n^{1/4}$. We
+can show an upper bound that matches Roth's lower bound up to
+logarithmic factors. Let $\mathcal{AP}_d$ be the subset of $\mathcal{AP}$ consisting of
+arithmetic progressions of difference $d$, i.e., sets of the form $a +
+d, a+2d, \ldots, a + \ell d$ for some integers $a$ and $\ell$. Let
+$\mathcal{AP}_{\ge s} \eqdef \bigcup_{d \ge s} \mathcal{AP}_{d}$ for a parameter $s$ we will
+choose soon. Since
+every arithmetic progression in $\mathcal{AP}_{\ge s}$ has difference at least
+$s$, it can have size at most $\frac{n}{s}$, so, for the incidence
+matrix $\mat_{\ge s}$ of $\mathcal{AP}_{\ge s}$, $\gamma_2(\mat_{\ge s}) \le
+\sqrt{\frac{n}{s}}$. On the other hand, the hereditary discrepancy of
+$\mathcal{AP}_d$ for any $d$ is at most $1$, since we can separately color each
+congruence class $\mod d$, and alternate signs of the coloring within
+a class. Therefore, by Theorem~\ref{thm:ch7-fact-main},
+$\gamma_2(\mat_{d}) \lesssim \log(2n)$ for the incidence matrix
+$\mat_d$ of $\mathcal{AP}_d$. Using property~\ref{pr:ch7-union} of
+Lemma~\ref{lm:ch7-gamma2-props} we have, for the incidence matrix
+$\mat$ of $\mathcal{AP}$,
+\begin{align*}
+  \gamma_2(\mat) &\le (\gamma_2(\mat_{\ge s})^2 +
+  \gamma_2(\mat_{s-1})^2 + \cdots + \gamma_2(\mat_1)^2)^{1/2}\\
+  &\lesssim \left(\frac{n}{s} + s\log(2n)^2\right)^{1/2}.
+\end{align*}
+Optimizing over $s$, we have $\gamma_2(\mat) \lesssim
+n^{1/4}\sqrt{\log(2n)}$, and Theorem~\ref{thm:ch7-fact-main} gives us 
+\(
+\disc(\mathcal{AP}) \lesssim n^{1/4}\log(2n).
+\)
+
+\begin{exercise}
+  Use canonical intervals to show that $\gamma_2(\mat)\lesssim
+  n^{1/4}$ for the incidence matrix $\mat$ of the set system of
+  arithmetic progressions restricted to $[n]$.
+\end{exercise}
+\section{Prefix Discrepancy}
+
+Recall that in Lemma~\ref{lm:fact-ub-prefix} we showed that, for any
+matrix $\mat$ with columns $u_1, \ldots, u_n \in \R^m$, the prefix discrepancy
+\begin{equation}\label{eq:ch7-ub-prefix}
+  \pdisc(\mat) \lesssim \gamma_2(\mat)\sqrt{\log(2mn)}.
+\end{equation}
+% where $\pdisc(\mat)$ is the minimum over $\col \in \{-1,+1\}^n$ of 
+% \[
+%   \pdisc(\mat,\col) = \max_{j = 1}^n \left\|\sum_{i = 1}^j \col(i)u_u\right\|_\infty.
+% \]
+Theorem~\ref{thm:ch7-fact-main} and this inequality show that prefix
+discrepancy is never much bigger than the hereditary discrepancy,
+since, for any $m\times n$ matrix $\mat$,
+\begin{equation}
+  \label{eq:ch7-pdisc-herdisc}
+  \pdisc(\mat) \lesssim \log(mn)^{1.5} \herdisc(\mat).
+\end{equation}
+
+In addition to this connection between prefix and hereditary
+discrepancy, the upper bound~\eqref{eq:ch7-ub-prefix} sometimes allows us to
+prove tighter discrepancy upper bounds than
+Theorem~\ref{thm:ch7-fact-main}. We give two such examples below, the
+first giving the best known  upper bound for Tusn\'ady's problem.
+
+\medskip
+\noindent {\bf Axis-aligned boxes.} As we will see in the next theorem, the
+bound \eqref{eq:ch7-pdisc-herdisc} allows us to improve the upper
+bound in Theorem~\ref{thm:ch7-tusnady} by effectively getting one
+dimension ``for free''.
+
+\begin{theorem}\label{thm:ch7-tusnady-ub}
+  For any integer $d \ge 1$,
+  \(
+    \disc(\RR_d,n) \lesssim_d \log(2n)^{d-\frac12}.
+  \)
+\end{theorem}
+\begin{proof}
+  As in Theorem~\ref{thm:ch7-tusnady}, we only consider anchored
+  boxes, restricted to sets in $[n]^d$. Equation
+  \eqref{eq:ch7-pdisc-herdisc} allows us to restrict the sets we
+  consider even more. Let $P \subseteq [n]^d$ be some $n$-point set,
+  and let $\SS$ be the set system of all subsets of
+  $P$ of the form $R \cap P$ where
+  \(
+  R = [0,b(1)] \times\cdots \times [0,b({d-1})]\times \R,
+  \)
+  for $b\in \R^{d-1}$. That is, $\SS$ consists of sets
+  induced by anchored boxes that extend to infinity in the last
+  coordinate. Equivalently, let $\pi_{d-1}$ be the orthogonal
+  projection onto the first $d-1$ coordinates of $\R^d$; then $\SS$ is
+  the set system consisting of all sets of the type $\{p: \pi_{d-1}(p)
+  \in R\}$ where $R \in \AA_{d-1}$ is a $(d-1)$-dimensional anchored
+  box. Since $\SS$ is isomorphic to $\AA_{d-1}|_{\pi_{d-1}(P)}$, equation \eqref{eq:ch7-gamma2-tusnady} in the proof
+  of Theorem~\ref{thm:ch7-tusnady} gives us that the incidence matrix
+  $\mat$ of $\SS$ satisfies $\gamma_2(\mat)\lesssim_d
+  \log(2n)^{d-1}$.
+
+
+  Let us order $P$ as $p_1, \ldots, p_n$ so that $p_1(d) \le \ldots
+  \le p_n(d)$, and also order the columns of the incidence matrix $\mat$ of $\SS$
+  so that the $i$-th column is the indicator vector of sets containing $p_i$.
+  The key observation we make is that, for any anchored box $R \in
+  \AA_d$, $R \cap P = S \cap \{p_1, \ldots, p_i\}$ for some $S \in
+  \SS$ and $i \in [n]$. In particular, we can take $p_i$ to be the
+  point with the largest $p_i(d)$ coordinate contained in $R$, and then
+  take $S = \{p \in P: \pi_{d-1}(p) \in \pi_{d-1}(R)\}$. Therefore, for any
+  coloring $\col:P \to \{-1,+1\}$, $|\col(R \cap P)|$ is bounded by
+  $\pdisc(\mat, \col)$. The theorem now follows from
+  \eqref{eq:ch7-ub-prefix} since
+  \[
+    \disc(\AA_d|_P) \le \pdisc(\mat)
+    \lesssim_d \sqrt{\log(2n)} \gamma_2(\mat)
+    \lesssim_d \log(2n)^{d-\frac12},
+  \]
+  where we used the fact that $\AA_d|_P$ consists of at most $n^d$
+  distinct sets, as well as the estimate
+  \(\gamma_2(\mat)\lesssim_d  \log(2n)^{d-1}\) above.
+\end{proof}
+
+\paragraph{Arithmetic Progressions.} Recall that $\mathcal{AP}$ is the
+set system of arithmetic progressions restricted to $[n]$. We can use
+equation~\eqref{eq:ch7-pdisc-herdisc} to improve our upper bound on
+its discrepancy to $\disc(\mathcal{AP}) \lesssim n^{1/4}\sqrt{\log
+  n}$. To see this, let us define $\SS$ to be the set of
+\emph{maximal} arithmetic progressions, \ie, progressions inside $[n]$
+that cannot be extended further to the left or to the right. We claim
+that the incidence matrix $\mat$ of $\SS$ satisfies $\gamma_2(\mat)
+\lesssim n^{1/4}$. To see this, notice that
+\(
+\mat =
+\begin{pmatrix}
+  \mat_{\ge \sqrt{n}}\\
+  \mat_{< \sqrt{n}}
+\end{pmatrix}
+\), where $\mat_{\ge \sqrt{n}}$ and $\mat_{< \sqrt{n}}$ are the incidence matrix of maximal
+arithmetic progressions of difference at least $\sqrt{n}$, and at most $\sqrt{n}$  respectively. 
+
+Recall that each arithmetic progression in $[n]$ of difference $d$ has
+cardinality at most $n/d$, and all maximal arithmetic
+progressions of the same difference are disjoint. Thus, it follows that $\gamma_2(\mat_{\ge \sqrt{n}}) \le n^{1/4}$ as each of its rows has at
+most $\sqrt{n}$ ones, and $\gamma_2(\mat_{<\sqrt{n}}) \le n^{1/4}$
+as each of its columns has at most $\sqrt{n}$ ones, one for each
+possible difference. So  property~\ref{pr:ch7-union} of
+Lemma~\ref{lm:ch7-gamma2-props} gives us that $\gamma_2(\mat)\le
+\sqrt{2} n^{1/4}$.  Now equation
+\eqref{eq:ch7-ub-prefix} gives us that
+\(
+\pdisc(\mat) \lesssim n^{1/4} \sqrt{\log n},
+\)
+where the colums of $\mat$ are ordered so that the $i$-th column is
+the indicator of the sets in $\SS$ containing $i$. This means that
+there exists a coloring $\col:[n]\to \{-1,+1\}$ such that $|\col(S
+\cap [j])| \lesssim n^{1/4} \sqrt{\log n}$ for each $j \in [n]$ and $S
+\in \SS$. Since any arithmetic progression inside $[n]$ can be written
+as $(S \cap [k]) \setminus (S \cap [j])$, we also have
+$\disc(\mathcal{AP},\col) \lesssim n^{1/4}\sqrt{\log n}$.
+
+\section{Bibliographic Notes}
+
+The computational complexity of discrepancy was first investigated by
+Charikar, Newman and Nikolov, who proved
+Theorem~\ref{thm:ch7-disc-hard}, and analogous results for set systems
+of bounded degree, and for set systems of bounded VC
+dimension~\cite{dischard}. It was shown by Austrin, Guruswami, and
+H{\aa}stad that hereditary discrepancy is $\mathsf{NP}$-hard to
+approximate within factor $2-\varepsilon$ for any
+$\varepsilon > 0$~\cite{AustrinGH13}. 
+
+The $\gamma_2$ norm was first introduced in Banach space theory as a
+way to measure how well a bounded linear operator $u:X \to Y$ between
+Banach spaces $X$ and $Y$ factors through a Hilbert space. In
+particular, $\gamma_2(u)$ is the infimum of the product of operator
+norms $\|v\|\|w\|$ over all operators $v:X \to H$ and $w:H \to Y$ such
+that $wv = u$ and $H$ is some Hilbert space. Analogously, if we
+replace the Hilbert space with an $L_p$ space over some measure space
+$(\Omega,\mu)$, we get the $\gamma_p$ norm. The $\gamma_2$ norm we
+define here for matrices corresponds to the special case when $X =
+\ell_1^n$ and $Y = \ell_\infty^m$.
+Factorization of linear operators through
+$L_p$ spaces was studied systematically by Kwapien~\cite{Kwapien72},
+but has its origins already in the work of
+Grothendieck~\cite{Grothendieck52}. In particular, the dual formulation
+\eqref{eq:ch7-fact-dual} can be derived from the results of
+Grothendieck (up to a factor of 2) and Kwapien; see also the appendix
+of Pisier's survey on Grothendieck's inequality~\cite{Pisier-grothendieck}. The book by
+Tomczak-Jaegermann surveys the basic facts and many
+applications of the $\gamma_p$ norms in Banach space theory~\cite{Tomczak-Jaegermann}.
+
+The connection between hereditary discrepancy and the $\gamma_2$ norm
+is due to Matou\v{s}ek, Nikolov, and Talwar, who also proved
+Theorems~\ref{thm:ch7-fact-main}~and~\ref{thm:ch7-tusnady}~\cite{MNT}. The
+semidefinite formulation in Lemma~\ref{lm:ch7-fact-sdp}, and the
+computability and duality results in Lemma~\ref{lm:ch7-fact-dual} are
+due to Lee, Shraibman, and \v{S}palek~\cite{LeeSS08}. 
+
+The $\gamma_2$ norm has also found other applications, \eg, to
+communication complexity and learning
+theory~\cite{LinialMSS07-signmatrices} (see also the
+book~\cite{LeeS09}), and differential privacy~\cite{NTZ}. It is also
+implicit in the work of Larsen on lower bounds for oblivious range
+searching data structure~\cite{disc-larsen}, who also discovered the discrepancy upper
+bounds stated in Lemma~\ref{lm:fact-ub} and
+Corollary~\ref{cor:ch7-fact-ub}.
+
+The determinant lower bound in Lemma~\ref{lm:ch7-detlb} was first
+shown by Lov\'asz, Spencer, and Vesztergombi~\cite{LSV}. They also asked
+if hereditary discrepancy can be bounded from above by a function of
+the determinant lower bound. This was disproved by Hoffman, and his
+counterexample can be found in Chapter~4 of Matou\v{s}ek's
+book~\cite{matousek2010geometric}. Nevertheless, it is possible to
+show that $\herdisc(\mat) \lesssim
+\detlb(\mat)\sqrt{\log(2m)\log(2n)}$. The first result of this type
+was proved by Matou\v{s}ek~\cite{Matousek-detlb}, and his (loose)
+bound was strengthened by Jiang and
+Reis~\cite{JiangReis22}.  Li and Nikolov showed this bound is
+tight~\cite{LiNikolov24}. 
+The volume
+lower bound in Remark~\ref{rem:vollb} was observed by
+Banaszczyk~\cite{Bana93}. It was further investigated by Dadush, Nikolov,
+Talwar, and Tomczak-Jaegermann, who showed it matches the hereditary
+discrepancy up to logarithmic factors for any finite dimensional norm,
+and matches a hereditary notion of partial coloring discrepancy up to
+constant factors~\cite{anynorm}.
+
+The lower bound on $\gamma_2(T_n)$ in Lemma~\ref{lm:ch7-gamma2-Tn} is due to Mathias~\cite{Mathias}. He also showed that $\gamma_2(S_n) = \frac{1}{n} \|S_n\|_{\tr}$, and, therefore, $\gamma_2(T_n) \le \frac{1}{2n}\|S_n\| + \frac12$. Together with \eqref{eq:ch7-Tn-lb}, this gives us the value of $\gamma_2(T_n)$ up an additive approximation of $1$. Determining the exact value of $\gamma_2(T_n)$ as a function of $n$, and giving an optimal factorization remain intriguing open problems, with applications in differential privacy~\cite{DP-FTRL}.
+
+The improved upper bound on the discrepancy of boxes in
+Theorem~\ref{thm:ch7-tusnady-ub} is due to
+Nikolov~\cite{tusnady-ub}. Essentially the same proof, together with a
+decomposition theorem of Matou\v{s}ek~\cite{Matousek99-boxes}, gives similar upper bounds for
+more general set systems induced by polytopes with prescribed facets. 
+Moreover, the lower bound in Theorem~\ref{thm:ch7-tusnady}  also
+extends to these more general set systems, under some technical conditions. These
+results are also due to Nikolov~\cite{tusnady-ub}. 
+
+The discrepancy of arithmetic progressions is bounded by $O(n^{1/4})$,
+and this was shown by Matou\v{s}ek and Spencer using the partial
+coloring method~\cite{MatousekSpencer-ap}: see the notes to
+Chapter~\ref{ch:partial} for more on the discrepancy of arithmetic
+progressions. 
+
+
+
+
+%%% Local Variables:
+%%% mode: latex
+%%% TeX-master: "book"
+%%% End:

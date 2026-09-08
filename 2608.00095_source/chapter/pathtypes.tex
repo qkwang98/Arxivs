@@ -1,0 +1,1037 @@
+In \cite{awodey2026},
+a new approach to the semantics of identity types was introduced,
+in a category with finite limits with a bipointed exponentiable object $I$,
+playing the role of an interval. 
+From a small number of easy-to-check assumptions on a universe,
+including the presence of what we will call ``path types'',
+this interval can be used to produce an elimination principle for identity types.
+
+Though not all models with intensional identity types have path types,
+many of the standard models of Martin-L\"of type theory have them.
+These examples include the model in groupoids \cite{hofmann1995},
+the discrete model in presheaves,
+Voevodsky's model in simplicial sets \cite{kapulkin2021},
+and various cubical models.
+
+In addition to simplifying the construction of identity types in models of
+type theory,
+path types also present identity types in a style more consistent
+with that of $\Sigma$ and $\Pi$-type formers in algebraic type theory.
+In algebraic type theory, a universe has $\Sigma$-types and $\Pi$-types
+precisely when there are pullback squares classifying certain
+universal constructions by the universe of type families
+(cf. \Cref{def:alg-pi-type-mltt,def:alg-sig-type-mltt}).
+\[ \begin{tikzcd}
+      {P_{\uu}{\Ulow}} & \Ulow \\
+      {P_{\uu}{\U}} & \U
+      \arrow["\lam", from=1-1, to=1-2]
+      \arrow["{{P_{\uu}{\uu}}}"', from=1-1, to=2-1]
+      \arrow["\lrcorner"{anchor=center, pos=0.125}, draw=none, from=1-1, to=2-2]
+      \arrow["\uu", from=1-2, to=2-2]
+      \arrow["\Pi"', from=2-1, to=2-2]
+    \end{tikzcd} 
+    \quad \quad 
+    \begin{tikzcd}
+      Q & \Ulow \\
+      {P_\uu\U} & \U
+      \arrow["\pair", from=1-1, to=1-2]
+      \arrow["{\uu \pcomp \uu}"', from=1-1, to=2-1]
+      \arrow["\lrcorner"{anchor=center, pos=0.125}, draw=none, from=1-1, to=2-2]
+      \arrow["\uu", from=1-2, to=2-2]
+      \arrow["\Sigma"', from=2-1, to=2-2]
+    \end{tikzcd}\]
+A similar pullback square will be used to define path types.
+
+A version of the argument presented here has been formalised in Lean,
+as part of the HoTTLean project \cite{hua2025},
+which is summarised in \Cref{sec:hottlean}.
+% The assumptions for having Path types also produces
+% a cubical filling structure on the universe,
+% making any type family classified by the universe a cubical Kan fibration.
+We present a variation of the proof in \cite{awodey2026} in a style
+that is more consistent with the formalisation,
+using $\pi$-preclans rather than a lex category,
+and replacing the assumption of an exponentiable interval with
+cylinder and path functors.
+In the formalisation,
+abstracting away some of the cartesian structure
+from \cite{awodey2026} simplifies the formalisation in Lean.
+This results in an almost syntactic presentation of the argument,
+where the cylinder and path structures are controlled by a \emph{modality}
+(see for example \cite{licata2016, licata2017, gratzer2020, shulman2023}).
+% Unlike \cite{awodey2026},
+% we do not assume the underlying category is lex.
+As a result, the setup will be slightly more complicated,
+but the abstractions should ultimately clarify some technical
+details appearing in the argument.
+
+\section{Cylinders and paths}
+
+We fix a $\pi$-preclan $(\CC,\RR)$ (\Cref{def:pi-preclan}) with a terminal object
+and a cylinder structure (\Cref{def:cylinder-structure}).
+We can use the cylinder structure
+to define an endofunctor on the slice $\CC / \Gamma$
+for every object $\Gamma \in \CC$.
+\[
+   \cyl[\Gamma] : \CC / \Gamma \to \CC / \Gamma
+\]
+\[
+  (d : X \to \Gamma) \mapsto (d \circ \pi : \cyl X \to \Gamma)
+\]
+This results in a {cylinder structure in each slice $\CC / \Gamma$}.
+
+Let us denote the bicategory of large categories using $\tcat$.
+For a category $\CC$,
+let us write $S(-) : \CC \to \tcat$
+for the \emph{covariant slice pseudofunctor} (in fact a strict 2-functor),
+that takes an object $\Gamma \in \CC$ to the slice
+$S(\Gamma) = \CC / \Gamma$ and a morphism $\sigma : \Delta \to \Gamma$
+to the postcomposition functor
+\[ S(\sigma) = \sigma_! : \CC / \Delta \to \CC / \Gamma\]
+\[ (h : X \to \Delta) \mapsto (\sigma \circ h : X \to \Gamma)\]
+
+\begin{proposition}
+  Given a cylinder structure on a category $\CC$,
+  the cylinders over each $\Gamma \in \CC$
+  \[\cyl[\Gamma] : \CC / \Gamma \to \CC / \Gamma\]
+  constitute a pseudotransformation
+  \[ {\cyl} : S (-) \to S (-) \]
+  with modifications
+  \[\delta_0, \delta_1 : \id \to {\cyl}
+  \quad \quad
+  \pi : {\cyl} \to \id
+  \quad \quad 
+  \psi : \cyl \circ \cyl \to \cyl \circ \cyl\]
+   satisfying the same equations as before,
+   but now as modifications.
+    % \[
+    % \begin{tikzcd}
+    %   \id & {\cyl} & \id & {{\cyl} \circ {\cyl}} & {{\cyl} \circ {\cyl}} \\
+    %   & \id &&& {{\cyl} \circ {\cyl}}
+    %   \arrow["{\delta_0}", from=1-1, to=1-2]
+    %   \arrow[equals, from=1-1, to=2-2]
+    %   \arrow["\pi"', from=1-2, to=2-2]
+    %   \arrow["{\delta_0}"', from=1-3, to=1-2]
+    %   \arrow[equals, from=1-3, to=2-2]
+    %   \arrow["\psi", from=1-4, to=1-5]
+    %   \arrow[equals, from=1-4, to=2-5]
+    %   \arrow["\psi", from=1-5, to=2-5]
+    % \end{tikzcd}
+    % \]
+    % \[ \begin{tikzcd}
+    %   {\cyl} & {\cyl} & {\cyl} & {\cyl} & {{\cyl} \circ {\cyl}} & {{\cyl} \circ {\cyl}} \\
+    %     {{\cyl} \circ {\cyl}} & {{\cyl} \circ {\cyl}} & {{\cyl} \circ {\cyl}} & {{\cyl} \circ {\cyl}} & {\cyl} & {\cyl}
+    %     \arrow[equals, from=1-1, to=1-2]
+    %     \arrow["{\delta_0 {\cyl}}"', from=1-1, to=2-1]
+    %     \arrow["{{\cyl} \delta_0}", from=1-2, to=2-2]
+    %     \arrow[equals, from=1-3, to=1-4]
+    %     \arrow["{\delta_1 {\cyl}}"', from=1-3, to=2-3]
+    %     \arrow["{{\cyl} \delta_1}", from=1-4, to=2-4]
+    %     \arrow["\psi", from=1-5, to=1-6]
+    %     \arrow["{\pi {\cyl}}"', from=1-5, to=2-5]
+    %     \arrow["{{\cyl} \pi}", from=1-6, to=2-6]
+    %     \arrow["\psi", from=2-1, to=2-2]
+    %     \arrow["\psi", from=2-3, to=2-4]
+    %     \arrow[equals, from=2-5, to=2-6]
+    %   \end{tikzcd}\]
+\end{proposition}
+
+Pseudonaturality of ${\cyl} : S(-) \to S(-)$ says that for any
+map $\sigma : \Delta \to \Gamma$ there is an isomorphism
+\begin{equation}\label{eq:frobenius-identity}
+\begin{tikzcd}
+	{\CC / \Delta} & {\CC / \Gamma} \\
+	{\CC / \Delta} & {\CC / \Gamma}
+	\arrow["{\sigma_!}", from=1-1, to=1-2]
+  \arrow["{\cyl[\Delta]}"', from=1-1, to=2-1]
+  \arrow["{\cyl[\Gamma]}", from=1-2, to=2-2]
+	\arrow["{\sigma_!}"', from=2-1, to=2-2]
+\end{tikzcd} \end{equation}
+
+\begin{example}\label{ex:exponentiable-bipointed}
+Consider the assumptions of \cite{awodey2026},
+where there is a bipointed exponentiable object
+$\delta_0, \delta_1 : 1 \rightrightarrows I$.
+We could instantiate a cylinder structure
+by taking ${\cyl} X := X \times I$, 
+where $I$ is the given interval,
+and $X$ is an object in the category.
+It follows that the cylinder over $\Gamma$ of some $X$ in the slice
+$\CC / \Gamma$ is
+${\cyl}_{\Gamma} X := X \times_\Gamma I_\Gamma$.
+Then the pseudonaturality square looks like the topos-theoretic ``Frobenius identity'':
+\[ \sigma_! (X \times_\Delta I_\Delta) \iso (\sigma_! X) \times_\Gamma I_\Gamma\]
+\end{example}
+
+% \begin{axiom}\label{ax:preclan}
+%   There is a $\pi$-preclan (\Cref{def:pi-preclan}) $(\CC,\RR)$.
+% \end{axiom}
+
+Recall the definition of a partial right adjoint
+from \Cref{def:partial-right-adjoint}.
+\begin{definition}\label{def:path-functor}
+  We say that a $\pi$-preclan $(\CC,\RR)$ with a terminal object
+  and a cylinder structure (\Cref{def:cylinder-structure})
+  \emph{has path functors} if, additionally,
+  for each object $\Gamma$ in $\CC$,
+  the cylinder functor $\cyl[\Gamma] : \CC / \Gamma \to \CC / \Gamma$ over $\Gamma$
+  has a partial right adjoint $\arr[\Gamma] : \RR(\Gamma) \to \RR(\Gamma)$.
+  \[\begin{tikzcd}
+    {\CC / \Gamma} & {\RR(\Gamma)} \\
+    {\CC / \Gamma} & {\RR(\Gamma)}
+    \arrow[""{name=0, anchor=center, inner sep=0}, "{\cyl[\Gamma]}"', from=1-1, to=2-1]
+    \arrow[hook', from=1-2, to=1-1]
+    \arrow[""{name=1, anchor=center, inner sep=0}, "{\arr[\Gamma]}"', from=2-2, to=1-2]
+    \arrow[hook', from=2-2, to=2-1]
+    \arrow["{{\dashv_\partial}}"{description}, draw=none, from=0, to=1]
+  \end{tikzcd}\]
+\end{definition}
+We will call $\arr[\Gamma] A$ the \emph{paths} in $A$ over $\Gamma$,
+and $\arr[\Gamma]$ the \emph{path functor}.
+
+Partial right adjoints have counits (but not units on all elements);
+we will denote the counit at an object $A \in \RR(\Gamma)$ by
+\[ \epsilon_A : \cyl[\Gamma] \arr[\Gamma]{A} \to A\]
+It is the morphism in $\CC / \Gamma$
+that is conjugate to the identity $\id : \arr[\Gamma]{A} \to \arr[\Gamma]{A}$.
+
+The $\pi$-preclan $\RR$ induces a pseudofunctor
+$\RR(-) : \CC^\op \to \tcat$,
+where the contravariant action on morphisms is given by pullback.
+
+\begin{proposition}
+  Suppose $(\CC,\RR)$ has path functors.
+  The functors $\arr[\Gamma]$ together form a pseudotransformation
+  $\arr : \RR(-) \to \RR(-)$.
+  This pseudotransformation is equipped with modifications 
+  \[\src, \trg : \arr \to {\id}
+  \quad \quad
+  \pi : {\id} \to \arr
+  \quad \quad 
+  \sym : \arr \circ \arr \to \arr \circ \arr\]
+  satisfying the following equations
+    \[
+      \begin{tikzcd}
+        & \id &&& {{\arr} \circ {\arr}} \\
+        \id & \arr & \id & {{\arr} \circ {\arr}} & {{\arr} \circ {\arr}}
+        \arrow[equals, from=1-2, to=2-1]
+        \arrow["\rfl"{description}, from=1-2, to=2-2]
+        \arrow[equals, from=1-2, to=2-3]
+        \arrow["\src", from=2-2, to=2-1]
+        \arrow["\trg"', from=2-2, to=2-3]
+        \arrow[equals, from=2-4, to=1-5]
+        \arrow["\sym"', from=2-4, to=2-5]
+        \arrow["\sym"', from=2-5, to=1-5]
+      \end{tikzcd}
+    \]
+    \[ \begin{tikzcd}
+	{{\arr} \circ {\arr}} & {{\arr} \circ {\arr}} & {{\arr} \circ {\arr}} & {{\arr} \circ {\arr}} & \arr & \arr \\
+	\arr & \arr & \arr & \arr & {{\arr} \circ {\arr}} & {{\arr} \circ {\arr}}
+	\arrow["\sym", from=1-1, to=1-2]
+	\arrow["{{\src {\arr}}}"', from=1-1, to=2-1]
+	\arrow["{{{\arr} \src}}", from=1-2, to=2-2]
+	\arrow["\sym", from=1-3, to=1-4]
+	\arrow["{{\trg {\arr}}}"', from=1-3, to=2-3]
+	\arrow["{{{\arr} \trg}}", from=1-4, to=2-4]
+	\arrow[equals, from=1-5, to=1-6]
+	\arrow["{{\rfl {\arr}}}"', from=1-5, to=2-5]
+	\arrow["{{{\arr} \rfl}}", from=1-6, to=2-6]
+	\arrow[equals, from=2-1, to=2-2]
+	\arrow[equals, from=2-3, to=2-4]
+	\arrow["\sym"', from=2-5, to=2-6]
+\end{tikzcd}\]
+\end{proposition}
+\begin{proof}
+  The pseudonaturality condition follows a standard
+  (partial) adjoint hom-set bijection argument,
+  making use of the Frobenius identity.
+  Suppose $\sigma : \Delta \to \Gamma$,
+  then naturally in $X \in \CC / \Delta$ we have,
+  \begin{align*}
+    & \CC / \Delta (X, \sigma^* \arr[\Gamma] A) \\
+     \iso \; & \CC / \Gamma (\sigma_! X, \arr[\Gamma] A) \\
+     \iso \; & \CC / \Gamma (\cyl[\Gamma] \sigma_! X, A) \\
+     \iso \; & \CC / \Gamma (\sigma_! \cyl[\Delta] X, A) \\
+     \iso \; & \CC / \Delta (\cyl[\Delta] X, \sigma^* A) \\
+     \iso \; & \CC / \Delta (X, \arr[\Delta] \sigma^* A) \\
+  \end{align*}
+  From the Yoneda lemma,
+  it follows that $\sigma^* \arr[\Gamma] A \iso \arr[\Delta] \sigma^* A$.
+  This isomorphism holds in $\RR(\Delta)$ since it is a full
+  subcategory of the slice.
+
+  To define $\src : \arr[\Gamma] A \to A$ (and similarly $\trg$)
+  for some $A \in \RR(\Gamma)$,
+  consider the composition 
+  \[ 
+  \begin{tikzcd}
+    {\arr[\Gamma]A} & {\cyl[\Gamma] \arr[\Gamma]{A}} \\
+    & A
+    \arrow["{\delta_0 }", from=1-1, to=1-2]
+    \arrow["\src"', from=1-1, to=2-2]
+    \arrow["{\epsilon_A}", from=1-2, to=2-2]
+  \end{tikzcd}
+  \]
+  Under the partial adjunction,
+  the map $\pi : \cyl[\Gamma] A \to A$ has a conjugate
+  $\rfl : A \to \arr[\Gamma] A$.
+  We can define
+  $\sym : \arr[\Gamma] \arr[\Gamma] A \to \arr[\Gamma] \arr[\Gamma] A$
+  via the following hom-set bijection
+  \begin{align*}
+    & \CC / X (\arr \arr A, \arr \arr A) & \ni \sym \\
+    \iso \; & \CC / X (\cyl \arr \arr A, \arr A) \\
+    \iso \; & \CC / X (\cyl \cyl \arr \arr A, A) \\
+    \iso \; & \CC / X (\cyl \cyl \arr \arr A, A) & (\text{via } \psi) \\
+    \iso \; & \CC / X (\cyl \arr \arr A, \arr A) \\
+    \iso \; & \CC / X (\arr \arr A, \arr \arr A) & \ni \id
+  \end{align*}
+  
+  We leave it to the reader to check that $\src, \trg, \rfl$,
+  and $\sym$ are modifications
+  that satisfy the required equations.
+  Here, being a modification amounts to these operations being natural in
+  $A \in \RR(\Gamma)$
+  and stable (up to isomorphism) under pullback along maps $\Delta \to \Gamma$.
+\end{proof}
+
+For any $\RR$-object $A$ in the slice over $\Gamma$,
+we obtain a \emph{pathobject factorisation} of the diagonal
+$\Delta : A \to A \times_\Gamma A$ using the path functor.
+\[\begin{tikzcd}
+	{A} & {\arr[\Gamma]{A}} \\
+	& {{A} \times_\Gamma A}
+	\arrow["\rfl", from=1-1, to=1-2]
+	\arrow["{\Delta}"', from=1-1, to=2-2]
+	\arrow["{(\src,\trg)}", from=1-2, to=2-2]
+\end{tikzcd}\]
+% We will refer to the map $(\src,\trg) : \arr[\Gamma] A \to A$
+% as the pathobject of $A$.
+
+% Let us call the morphisms in $\RR$ fibrations.
+
+% \begin{axiom}\label{ax:path-types-universe}
+%   We have an $\RR$-algebraic universe (\Cref{def:algebraic-universe})
+%   $\uu : \Ulow \to \U$.
+%   We call $\uu$ \emph{the universe of small fibrations}.
+%   Denoting the set of pullbacks of $\uu$ by $\RR_\U$,
+%   we call maps in $\RR_\U$ \emph{small fibrations}.
+%   We also require that every small fibration $A : X \to \Gamma$ in $\RR_\U$
+%   is equipped with a chosen \emph{classifying map}
+%   $\ulcorner A \urcorner : \Gamma \to \U$,
+%   so that
+%   \[ \begin{tikzcd}
+% 	X & \Ulow \\
+% 	\Gamma & \U
+% 	\arrow[from=1-1, to=1-2]
+% 	\arrow["A"', from=1-1, to=2-1]
+% 	\arrow["\lrcorner"{anchor=center, pos=0.125}, draw=none, from=1-1, to=2-2]
+% 	\arrow["\uu", from=1-2, to=2-2]
+% 	\arrow["{{\ulcorner A \urcorner}}"', from=2-1, to=2-2]
+% \end{tikzcd} \]
+% \end{axiom}
+
+Let us now consider the universal pathobject factorisation
+on a universe $\uu : \Ulow \to \U$ in $\RR(\U)$.
+We will say that $\uu : \Ulow \to \U$ is an $\RR$-algebraic
+universe if it is an $\RR$-map and $\U$ is an $\RR$-object
+(cf. \Cref{def:algebraic-universe} where $\RR$ was a clan).
+
+\begin{definition}\label{def:mltt-alg-path-types-2}
+  Suppose $(\CC,\RR)$ has path functors
+  and an $\RR$-algebraic universe
+  $\uu : \Ulow \to \U$.
+  Then we will say that $\uu$ admits algebraic $\Path$-types
+  when we have maps
+  $\Path : \Ulow \times_\U \Ulow \to \U$
+  and $\path : \arr[\U] \Ulow \to \Ulow$
+  forming a pullback square
+  \[
+  \begin{tikzcd}
+    {{\arr[\U] \Ulow}} & \Ulow \\
+    {\Ulow \times_\U \Ulow} & \U
+    \arrow["\path", from=1-1, to=1-2]
+    \arrow["{(\src,\trg)}"', from=1-1, to=2-1]
+    \arrow[from=1-2, to=2-2]
+    \arrow["\Path"', from=2-1, to=2-2]
+    \arrow["\lrcorner"{anchor=center, pos=0.125}, draw=none, from=1-1, to=2-2]
+  \end{tikzcd}\]
+\end{definition}
+
+For an $\RR$-algebraic universe $\uu : \Ulow \to \U$.
+Let us write $\RR_\U$ for the class of pullbacks of $\uu$.
+\[
+  \RR_\U := \{ A : X \to \Gamma \st \begin{tikzcd}
+  X & \Ulow \\
+  \Gamma & \U
+  \arrow["\exists", dashed, from=1-1, to=1-2]
+  \arrow["A"', from=1-1, to=2-1]
+  \arrow["\lrcorner"{anchor=center, pos=0.125}, draw=none, from=1-1, to=2-2]
+  \arrow["\uu", from=1-2, to=2-2]
+  \arrow["\exists"', dashed, from=2-1, to=2-2]
+\end{tikzcd}\}
+\]
+Let us call the maps in $\RR_\U$ \emph{small fibrations},
+and the maps in $\RR$ fibrations.
+
+\begin{proposition}\label{prop:universal-pathobject}
+  Suppose $(\CC,\RR)$ has path functors
+  and an $\RR$-algebraic universe.
+  The following are equivalent
+  \begin{itemize}
+    \item For any small fibration $A \to \Gamma$,
+      the pathobject projection
+      $(\src,\trg) : \arr[\Gamma] A \to A \times_\Gamma A$
+      is a small fibration.
+    \item The universal pathobject projection
+      $(\src,\trg) : \arr[\Gamma] \Ulow \to \Ulow \times_\U \Ulow$
+      is a small fibration.
+  \end{itemize}
+\end{proposition}
+If the universe admits $\Path$-types,
+then certainly the conditions of \Cref{prop:universal-pathobject} hold.
+Conversely, if the universe $\uu$ has classifying maps
+(\Cref{def:alg-universe-classifying-map})
+then the latter condition provides $\Path$-types on $\uu$.
+
+% \begin{definition}\label{def:AM-with-path-types}
+%   Let us call the combination of Axioms
+%   \labelcref{ax:cylinder,ax:path-functor,ax:path-types-universe,,ax:universal-pathobject}
+%   \[(\CC,\RR,\cyl,\arr,\uu : \Ulow \to \U, \Path, \path)\]
+%   an algebraic model of MLTT with (a universe that admits) $\Path$-types.
+% \end{definition}
+
+\section{Hurewicz structure}
+
+Let us fix a $\pi$-preclan $(\CC,\RR)$ that has path functors.
+Recall the definition of a Hurewicz structure on a morphism
+from \Cref{def:hurewicz-defs}.
+
+\begin{lemma}\label{lem:hurewicz-over-1}
+  If $\uu : \Ulow \to \U$ is an $\RR$-algebraic universe 
+  that admits a normal Hurewicz structure $(\uu, l)$,
+  then any small fibration $f : A \to B$ (i.e., any pullback of $\uu$)
+  inherits a normal Hurewicz structure.
+\end{lemma}
+\begin{proof}
+  The right lifting structure of Hurewicz maps is
+  preserved under pullback.
+  Thus, the Hurewicz structure on the universe pulls back to 
+  Hurewicz structure on all small fibrations.
+\end{proof}
+
+% The following is closely related to opfibrancy in $\Cat$
+% (\Cref{def:split-opfibration}).
+% \begin{definition}\label{def:hurewicz-defs} Let $\Gamma$ be an object of $\CC$ and
+%   $f : A \to B$ be a morphism in $\CC / \Gamma$.
+%   A \emph{Hurewicz structure $(f,l)$ over $\Gamma$} consists of
+%   \begin{itemize} 
+%     \item For every object $X$ in the slice $\CC / \Gamma$,
+%     and every pair of maps $a : X \to A$
+%     and $p : \cyl[\Gamma] X \to B$ such that
+%     $f \circ a = p \circ \delta_0$,
+%     a chosen diagonal filler $l_{(a,p)} : \cyl[\Gamma] X \to A$.
+%     \[\begin{tikzcd}
+%         X & A \\
+%         {\cyl[\Gamma] X} & B
+%         \arrow["a", from=1-1, to=1-2]
+%         \arrow["\delta_0"', from=1-1, to=2-1]
+%         \arrow["f", from=1-2, to=2-2]
+%         \arrow["{l_{(a,p)}}"{description}, dashed, from=2-1, to=1-2]
+%         \arrow["p"', from=2-1, to=2-2]
+%       \end{tikzcd} \]
+%     \item For any morphism $x : X' \to X$,
+%     a coherence equation between lifts
+%     $l_{(a \circ x,p \circ \cyl x)} : \cyl[\Gamma] X \to A$
+%     and $l_{(a,p)} : \cyl[\Gamma] X \to A$.
+%     \[ l_{(a,p)} \circ \cyl x = l_{(a \circ x,p \circ \cyl x)} \]
+%   \end{itemize}
+
+%   We say that a Hurewicz structure
+%   $(f,l)$ is \emph{normal} if
+%   for every $b : X \to B$
+%   \[\begin{tikzcd}
+%       X && A \\
+%       {\cyl[\Gamma] X} & X & B
+%       \arrow["a", from=1-1, to=1-3]
+%       \arrow["{\delta_0}"', from=1-1, to=2-1]
+%       \arrow["f", from=1-3, to=2-3]
+%       \arrow["{l_{(a,b \circ \pi)}}"{description}, dashed, from=2-1, to=1-3]
+%       \arrow["\pi"', from=2-1, to=2-2]
+%       \arrow["a"{description}, from=2-2, to=1-3]
+%       \arrow["b"', from=2-2, to=2-3]
+%     \end{tikzcd}
+%     \quad \quad 
+%     l_{(a,b \circ \pi)} = a \circ \pi
+%     \]  
+% \end{definition}
+% When $\cyl = (-) \times I$ is given by product with an interval object,
+% a Hurewicz structure on $f : A \to B$ is the usual homotopy lifting
+% definition from \cite{awodey2026}.
+
+\begin{proposition}[Locally Hurewicz]\label{prop:hurewicz-equiv-defs}
+  Let $\Gamma$ be an object of $\CC$ and
+  $f : A \to B$ be a morphism in $\RR(\Gamma)$.
+  (Note that $A$ and $B$ are required to be fibrant over $\Gamma$.)
+  The following are equivalent (structures)
+  \begin{itemize}
+    \item A Hurewicz structure $(f,l)$ in the slice $\CC / \Gamma$ with respect to
+      the cylinder $\cyl[\Gamma] : \CC / \Gamma \to \CC / \Gamma$.
+    \item A section $l$ of the ``pullback-hom'' $h$
+      given in the following diagram in $\RR(\Gamma)$.
+      \[\begin{tikzcd}
+      {\arr[\Gamma] A} && \\
+      & P & A \\
+      & {\arr[\Gamma] B} & B
+      \arrow["h"{description}, dashed, from=1-1, to=2-2]
+      \arrow["\src", bend left, from=1-1, to=2-3]
+      \arrow["{\arr[\Gamma] f}"', bend right, from=1-1, to=3-2]
+      \arrow[from=2-2, to=2-3]
+      \arrow[from=2-2, to=3-2]
+      \arrow["\lrcorner"{anchor=center, pos=0.125}, draw=none, from=2-2, to=3-3]
+      \arrow["f", from=2-3, to=3-3]
+      \arrow["\src"', from=3-2, to=3-3]
+      \end{tikzcd}
+      \quad \quad
+      \quad \quad
+      \begin{tikzcd}
+        & {\arr[\Gamma] A} \\
+        P & P
+        \arrow["h", from=1-2, to=2-2]
+        \arrow["l", from=2-1, to=1-2]
+        \arrow[equals, from=2-1, to=2-2]
+      \end{tikzcd} \]
+  \end{itemize}
+
+  Then a Hurewicz structure $(f,l)$ is normal
+  if and only if $l \circ h \circ \rfl = \rfl$.
+  \[\begin{tikzcd}
+    A & {\arr[\Gamma] A} \\
+    {\arr[\Gamma] A} & P
+    \arrow["\rfl", from=1-1, to=1-2]
+    \arrow["\rfl"', from=1-1, to=2-1]
+    \arrow["h"', from=2-1, to=2-2]
+    \arrow["l"', from=2-2, to=1-2]
+  \end{tikzcd}\]
+\end{proposition}
+
+\begin{lemma}[Globally Hurewicz implies locally Hurewicz]\label{lem:global-hurewicz-to-local-hurewicz}
+  If a morphism $f : A \to B$ in $\RR(\Delta)$ is (normal) Hurewicz
+  as a map in $\CC$,
+  then $f$ is also (normal) Hurewicz as a map in the slice $\CC / \Delta$.
+\end{lemma}
+\begin{proof}
+  Let us prove a more general statement:
+  if $\sigma : \Delta \to \Gamma$ is a morphism in $\CC$
+  and $f : A \to B$ in $\RR(\Delta)$
+  is (normal) Hurewicz over $\Gamma$,
+  then $f : A \to B$ is (normal) Hurewicz over $\Delta$.
+
+  Consider a diagram in $\CC / \Delta$:
+  \[\begin{tikzcd}
+      X & A \\
+      {\cyl[\Gamma] X} & B
+      \arrow["a", from=1-1, to=1-2]
+      \arrow["\delta_0"', from=1-1, to=2-1]
+      \arrow["f", from=1-2, to=2-2]
+      \arrow["p"', from=2-1, to=2-2]
+    \end{tikzcd} \]
+  We take the image of this diagram under the composition functor
+  $\sigma_! : \CC / \Delta \to \CC / \Gamma$.
+  By the Frobenius identity (\cref{eq:frobenius-identity}),
+  we obtain a diagonal filler in $\CC / \Gamma$.
+  \[
+  \begin{tikzcd}
+    {\sigma_!X} & {\sigma_!X} & {\sigma_!A} \\
+    {\cyl[\Gamma]\sigma_! X} & {\sigma_!\cyl[\Gamma] X} & {\sigma_!B}
+    \arrow[equals, from=1-1, to=1-2]
+    \arrow["{\delta_0}"', from=1-1, to=2-1]
+    \arrow["{\sigma_!a}", from=1-2, to=1-3]
+    \arrow["{\sigma_!\delta_0}"{pos=0.7}, from=1-2, to=2-2]
+    \arrow["{\sigma_!f}", from=1-3, to=2-3]
+    \arrow["l"{pos=0.2}, dashed, from=2-1, to=1-3]
+    \arrow["\iso"{description}, draw=none, from=2-1, to=2-2]
+    \arrow["{\sigma_!p}"', from=2-2, to=2-3]
+  \end{tikzcd}
+  \]
+  The composition of the isomorphism 
+  ${\cyl[\Gamma]\sigma_! X} \iso {\sigma_!\cyl[\Gamma] X}$
+  with $l$ provides us with the required diagonal filler over $\Delta$.
+\end{proof}
+
+\begin{corollary}\label{cor:small-fibration-hurewicz}
+  If $\uu : \Ulow \to \U$ is an $\RR$-algebraic universe 
+  with a normal Hurewicz structure $(\uu, l)$,
+  and $A$ and $B$ are objects in $\RR(\Gamma)$
+  then any small fibration $f : A \to B$
+  is normal Hurewicz $(f,l)$ in the slice over $\Gamma$.
+\end{corollary}
+\begin{proof}
+  This follows from \Cref{lem:hurewicz-over-1} and \Cref{lem:global-hurewicz-to-local-hurewicz}.
+% we have that the ``global'' Hurewicz condition on the universe
+% implies a ``local'' Hurewicz condition on each small fibration.
+\end{proof}
+
+In the following,
+we will always work in the slice over $\Gamma \in \CC$,
+so that we drop the subscript in $\arr[\Gamma] A$ and $A \times_\Gamma A$
+for an object $A \in \RR(\Gamma)$.
+\begin{lemma}[Connection]\label{lem:connection}
+  Suppose $\uu : \Ulow \to \U$ is an $\RR$-algebraic universe 
+  with a normal Hurewicz structure $(\uu, l)$,
+  and $\Gamma$ is an object in $\CC$.
+  For any small fibration $A \to \Gamma$,
+  there is a map $\chi : \arr A \to \arr \arr A$
+  satisfying
+  \[ \begin{tikzcd}
+        A & {\arr A} \\
+        {\arr A} & {\arr \arr A} \\
+        & {\arr A}
+        \arrow["\rfl", from=1-1, to=1-2]
+        \arrow["\src_A", from=2-1, to=1-1]
+        \arrow["\chi", from=2-1, to=2-2]
+        \arrow[equals, from=2-1, to=3-2]
+        \arrow["\src_{\arr \! A}"', from=2-2, to=1-2]
+        \arrow["\trg_{\arr \! A}", from=2-2, to=3-2]
+    \end{tikzcd} 
+    \quad \quad
+    \text{and}
+    \quad \quad
+    \begin{tikzcd}
+	A & {\arr A} \\
+        {\arr A} & {\arr \arr A}
+        \arrow["\rfl_A", from=1-1, to=1-2]
+        \arrow["\rfl_A"', from=1-1, to=2-1]
+        \arrow["\rfl_{\arr \! A}", from=1-2, to=2-2]
+        \arrow["\chi"', from=2-1, to=2-2]
+    \end{tikzcd}
+    \]
+\end{lemma}
+We will call $\chi$ a (normal) connection,
+where the square involing $\rfl$ is the normality condition.
+We think of $\chi$ as taking a path $p : x \rightsquigarrow y$ in $A$
+to a path $\chi_p : \rfl x \rightsquigarrow p$ in $\arr A$,
+or a homotopy in $A$,
+such that $\chi_{\rfl x}$ is the constant path $\rfl : \rfl x \rightsquigarrow \rfl x$:
+\[ \begin{tikzcd}
+	x & x \\
+	x & y
+	\arrow[rightsquigarrow, from=1-1, to=1-2]
+	\arrow[""{name=0, anchor=center, inner sep=0}, "{\rfl x}"', rightsquigarrow, from=1-1, to=2-1]
+	\arrow[""{name=1, anchor=center, inner sep=0}, "p", rightsquigarrow, from=1-2, to=2-2]
+	\arrow[rightsquigarrow, from=2-1, to=2-2]
+	% \arrow["\chi"{description}, between={0.1}{0.9}, Rightarrow, from=0, to=1]
+  \end{tikzcd} \]
+We will construct $\chi$ via a ``box-filling'' argument,
+schematically as follows.
+First, the open box
+\[ \begin{tikzcd}
+	x & x \\
+	x & y
+	\arrow["{\rfl x}"', rightsquigarrow, from=1-1, to=2-1]
+	\arrow["{\rfl x}", rightsquigarrow, from=1-1, to=1-2]
+	\arrow["p"', rightsquigarrow, from=2-1, to=2-2]
+  \end{tikzcd} \]
+is a Hurewicz lifting problem in $(\src,\trg) : \arr A \to A \times A$.
+By \Cref{cor:small-fibration-hurewicz},
+the map $\arr A \to A \times A$ is Hurewicz over $\Gamma$.
+Hence, we have filled box
+\[ \begin{tikzcd}
+	x & x \\
+	x & y
+	\arrow["{\rfl x}"', rightsquigarrow, from=1-1, to=2-1]
+	\arrow["{\rfl x}", rightsquigarrow, from=1-1, to=1-2]
+	\arrow["p"', rightsquigarrow, from=2-1, to=2-2]
+	\arrow["", rightsquigarrow, from=1-2, to=2-2]
+  \end{tikzcd} \]
+Using $\sym : \arr \arr A \to \arr \arr A$,
+we obtain the required homotopy. 
+\[ \begin{tikzcd}
+	x & x \\
+	x & y
+	\arrow["{\rfl x}", rightsquigarrow, from=1-1, to=1-2]
+	\arrow["{\rfl x}"', rightsquigarrow, from=1-1, to=2-1]
+	\arrow["p", rightsquigarrow, from=1-2, to=2-2]
+	\arrow[rightsquigarrow, from=2-1, to=2-2]
+  \end{tikzcd} \]
+Notice that although we will know that the top map is $\rfl x$
+(definitionally),
+we will not be able to say anything about the bottom map provided by box filling.
+\begin{proof}[Proof of \Cref{lem:connection}.]
+  The open box can be constructed as follows.
+  Since $\arr : \RR(\Gamma) \to \RR(\Gamma)$ is a partial right adoint,
+  it preserves all limits,
+  and so $\arr (A \times A) \iso \arr A \times \arr A$.
+  We construct the open box $b$
+  a map into the pullback.
+  \[ \begin{tikzcd}
+        {\arr A} && A \\
+        & P & {\arr A} \\
+        {\arr A \times \arr A} & {\arr (A \times A)} & {A \times A}
+        \arrow["\src", from=1-1, to=1-3]
+        \arrow["b"{description}, dashed, from=1-1, to=2-2]
+        \arrow["{(\rfl \circ \src, \id)}"', from=1-1, to=3-1]
+        \arrow["\rfl", from=1-3, to=2-3]
+        \arrow["\src", from=2-2, to=2-3]
+        \arrow["{\arr (\src,\trg)}"', from=2-2, to=3-2]
+        \arrow["{(\src,\trg)}", from=2-3, to=3-3]
+        \arrow["\iso"{description}, draw=none, from=3-2, to=3-1]
+        \arrow["\src"', from=3-2, to=3-3]
+        \arrow["\lrcorner"{anchor=center, pos=0.125}, draw=none, from=2-2, to=3-3]
+    \end{tikzcd} \]
+  By \Cref{cor:small-fibration-hurewicz},
+  the map $\arr A \to A \times A$ is Hurewicz over $\Gamma$.
+  Then we can obtain a filled box by composing $b$ with $l : P \to \arr \arr A$
+  (see \Cref{prop:hurewicz-equiv-defs}),
+  and then flip the box by composing with $\sym$.
+%   Then we can construct a map $b : \arr A \to P$
+%   \[\begin{tikzcd}
+% 	{\arr A} && A \\
+% 	& {\arr \arr A} & {\arr A} \\
+% 	{\arr A \times \arr A} & {\arr (A \times A)} & {A \times A}
+% 	\arrow["\src", from=1-1, to=1-3]
+% 	\arrow["{l \circ b}"{description}, dashed, from=1-1, to=2-2]
+% 	\arrow["{(\rfl \circ \src, \id)}"', from=1-1, to=3-1]
+% 	\arrow["\rfl", from=1-3, to=2-3]
+% 	\arrow["\src", from=2-2, to=2-3]
+% 	\arrow["{\arr (\src,\trg)}"', from=2-2, to=3-2]
+% 	\arrow["{(\src,\trg)}", from=2-3, to=3-3]
+% 	\arrow["\iso"{description}, draw=none, from=3-2, to=3-1]
+% 	\arrow["\src"', from=3-2, to=3-3]
+% \end{tikzcd}\]
+  \[ 
+    \begin{tikzcd}
+        {\arr A} & P & {\arr \arr A} & {\arr \arr A}
+        \arrow["b", from=1-1, to=1-2]
+        \arrow["\chi"', bend right, dashed, from=1-1, to=1-4]
+        \arrow["l", from=1-2, to=1-3]
+        \arrow["\sym", from=1-3, to=1-4]
+    \end{tikzcd}
+  \]
+\end{proof}
+
+\section{Identity elimination}
+
+\begin{theorem}\label{thm:id-elim}
+  Suppose $(\CC,\RR)$ is a $\pi$-preclan.
+  If $\uu : \Ulow \to \U$ is an $\RR$-algebraic universe (\labelcref{def:algebraic-universe}) that
+  admits $\Path$-types (\labelcref{def:mltt-alg-path-types-2})
+  and a normal Hurewicz structure (\labelcref{def:hurewicz-defs}),
+  then the universe also admits $\Id$-types (\labelcref{def:algebraic-id-types}).
+\end{theorem}
+\begin{proof}
+  Identity formation and introduction (\Cref{def:algebraic-id-form-intro})
+  are provided by the following diagram.
+  \[\begin{tikzcd}
+    \Ulow & {{\arr[\U] \Ulow}} & \Ulow \\
+    & {\Ulow \times_\U \Ulow} & \U
+    \arrow["\rfl", from=1-1, to=1-2]
+    \arrow["\Delta"', from=1-1, to=2-2]
+    \arrow["\path", from=1-2, to=1-3]
+    \arrow[from=1-2, to=2-2]
+    \arrow["\lrcorner"{anchor=center, pos=0.125}, draw=none, from=1-2, to=2-3]
+    \arrow[from=1-3, to=2-3]
+    \arrow["\Path"', from=2-2, to=2-3]
+  \end{tikzcd}\]
+  Note that $I = {\arr[\U] \Ulow}$ is provided algebraically by the path functor.
+  
+  Let $\Gamma \in \CC$;
+  we again drop subscripts for $\arr[\Gamma]$ and always work over $\Gamma$.
+  Let $A \to \Gamma$ and $d : C \to \arr A$ be
+  two small fibrations,
+  and $r : A \to C$ be a map satisfying $d \circ r = \rfl$.
+  By \Cref{prop:id-elim-equiv},
+  it suffices construct a lift $j : \arr A \to C$
+  such that $d \circ j = \id$ and $j \circ \rfl = r$.
+  \[ \begin{tikzcd}
+	{{A}} & C \\
+	{\arr{A}} & {\arr{A}}
+	\arrow["r",  from=1-1, to=1-2]
+	\arrow["{{{{\rfl}}}}"', from=1-1, to=2-1]
+	\arrow[from=1-2, to=2-2]
+	\arrow["{{j}}"{description}, dashed, from=2-1, to=1-2]
+	\arrow[equals, from=2-1, to=2-2]
+  \end{tikzcd} \]
+  By \Cref{cor:small-fibration-hurewicz}, $d : C \to \arr A$ is Hurewicz over $\Gamma$.
+  To construct $j$, let us consider the following lifting problem in $C$
+  for some path $p : x \rightsquigarrow y$ in $A$.
+  \[ \begin{tikzcd}
+	r & {j_p} & { C} \\
+	{\rfl x} & p & { \arr A}
+	\arrow[dashed, from=1-1, to=1-2]
+	\arrow[maps to, from=1-1, to=2-1]
+	\arrow["d", from=1-3, to=2-3]
+	\arrow["{\chi_p}"', squiggly, from=2-1, to=2-2]
+    \end{tikzcd}\]
+  More formally, the lifting problem is captured by the following dotted map.
+  \[\begin{tikzcd}
+        {\arr A} && A \\
+        & P & C \\
+        & {\arr \arr A} & {\arr A}
+        \arrow["\src", from=1-1, to=1-3]
+        \arrow["{(\chi,r \circ \src)}"{description}, dashed, from=1-1, to=2-2]
+        \arrow["\chi"', bend right, from=1-1, to=3-2]
+        \arrow["r", from=1-3, to=2-3]
+        \arrow[from=2-2, to=2-3]
+        \arrow["\pi_1", from=2-2, to=3-2]
+        \arrow["\lrcorner"{anchor=center, pos=0.125}, draw=none, from=2-2, to=3-3]
+        \arrow["d", from=2-3, to=3-3]
+        \arrow["\src"', from=3-2, to=3-3]
+    \end{tikzcd}\]
+    By \Cref{prop:hurewicz-equiv-defs},
+    $\arr C$ comes with a locally Hurewicz lifting operation $l : P \to \arr C$.
+    We obtain $j$ by composing
+    $(\chi,r \circ \src) : \arr A \to P$
+    with $l : P \to \arr C$
+    and the target map $\trg : \arr C \to C$.
+    \[ \begin{tikzcd}
+        {\arr A} & P & {\arr C} & C
+        \arrow["{(\chi,r \circ \src)}", from=1-1, to=1-2]
+        \arrow["j"', bend right, dashed, from=1-1, to=1-4]
+        \arrow["l", from=1-2, to=1-3]
+        \arrow["\trg", from=1-3, to=1-4]
+    \end{tikzcd} \]
+    The lower triangle involving $j$ commutes:
+    \begin{align*}
+      & d \circ j \\
+      = \; & d \circ {\trg} \circ l \circ (\chi, r \circ \src) \\
+      = \; & {\trg} \circ \arr (d) \circ l \circ (\chi, r \circ \src) \\
+      = \; & {\trg} \circ \pi_1 \circ (\chi, r \circ \src) \\
+      = \; & {\trg} \circ \chi \\
+      = \; & \id \\
+    \end{align*}
+    The upper triangle commutes due to normality of $\chi$ and $l$.
+    \begin{align*}
+      & j \circ \rfl \\
+      = \; & {\trg} \circ l \circ (\chi, r \circ \src) \circ \rfl \\
+      = \; & {\trg} \circ l \circ (\chi\circ \rfl, r \circ \src\circ \rfl)  \\
+      = \; & {\trg} \circ l \circ (\rfl \circ \rfl, r) & (\chi \text{ normal}) \\
+      = \; & {\trg} \circ l \circ h \circ \rfl \circ r   \\
+      = \; & {\trg} \circ \rfl \circ r & (l \text{ normal}) \\
+      = \; & r  \\
+    \end{align*}
+\end{proof}
+
+\section{Examples} \label{sec:examples}
+
+\begin{example}\label{example:sets}
+  Take $\RR$ to be all maps in a lex category $\CC$
+  and the cylinder functor $\cyl : \CC \to \CC$
+  to be the identity functor on $\CC$, 
+  then the path functors $\arr[X] : \RR(X) \to \RR(X)$
+  will also be identities
+  and all maps are trivially normal Hurewicz.
+  It follows that the pullback square appearing in \Cref{def:mltt-alg-path-types-2}
+  is the same pullback square defining \emph{extensional} Identity types (cf.~\cite{awodey2025}):
+  \[ \begin{tikzcd}
+        \Ulow & \Ulow \\
+        {\Ulow \times_\U \Ulow} & \U
+        \arrow["\path", from=1-1, to=1-2]
+        \arrow["{{(\src,\trg) = \Delta}}"', from=1-1, to=2-1]
+        \arrow["\lrcorner"{anchor=center, pos=0.125}, draw=none, from=1-1, to=2-2]
+        \arrow[from=1-2, to=2-2]
+        \arrow["\Path"', from=2-1, to=2-2]
+    \end{tikzcd} \]
+
+  In particular when $\CC = \Psh(\DD)$ is a category of presheaves,
+  $\RR$ is the class of all maps,
+  $\uu : \Ulow \to U$ is a Hofmann-Streicher universe \cite{hofmann1997},
+  such a pullback square can always be constructed (see \cite[Section {7.1}]{awodey2026}).
+\end{example}
+
+As shown in \Cref{ex:exponentiable-bipointed},
+a bipointed exponentiable object
+$\delta_0, \delta_1 : 1 \rightrightarrows I$
+naturally gives rise to a cylinder structure on $\CC$.
+
+\begin{example}\label{example:groupoids}
+  Take $\CC$ to be the category of groupoids
+  and $I = \{\star \iso \star\}$ to be the walking isomorphism.
+  Then the normal Hurewicz condition is equivalent to being a normal isofibration.
+  Taking $\RR$ to be the class of isofibrations,
+  which is a $\pi$-clan,
+  it is clear that exponentiation by $I_X$ provides a partial right adjoint
+  $\RR(X) \to \RR(X)$ -- it also extends to an actual right adjoint.
+  Taking $\uu : \Ulow \to \U$ to be the universal small isofibration in groupoids
+  (see \Cref{sec:universe-in-groupoid-model}),
+  it is easy to check the equivalent conditions of \Cref{prop:universal-pathobject}.
+  In fact, pathobject projection for a small isofibration
+  is a small discrete isofibration.
+\end{example}
+
+\begin{example} \label{example:cSet}
+  If we take $\CC = \cSet$ to be the category of
+  Cartesian cubical sets, $I = y(\Box_1)$,
+  and $\RR$ to be the class of unbiased cubical fibrations
+  \cite[Definition 4.6]{awodey2026cartesian},
+  then $(\CC,\RR)$ is only a $\pi$-preclan.
+  To see that $(\CC,\RR)$ fails to be a $\pi$-clan,
+  note that the interval $I$ is not fibrant.
+  However, for each $\Gamma$, taking $\arr[\Gamma] A := A^{I_\Gamma}$
+  still defines an endofunctor $\arr[\Gamma] : \RR(\Gamma) \to \RR(\Gamma)$,
+  where $I_\Gamma$ is the pullback of $I$ to the slice $\CC / \Gamma$.
+  This is because although $I \to 1$ is not a fibration,
+  it is $\RR$-exponentiable.
+  We can take $\uu : \Ulow \to \U$
+  to be the classifier for small unbiased fibrations
+  \cite[Proposition 7.17]{awodey2026cartesian};
+  checking that $\U$ itself is fibrant \cite[Proposition 9.4]{awodey2026cartesian}.
+  In this case, all unbiased cubical fibrations are Hurewicz,
+  and a straightforward computation shows that the universal pathobject projection
+  is a small unbiased fibration.
+\end{example}
+
+\begin{example} \label{example:sSet}
+  Take $\CC = \mathsf{sSet}$ to be the category of
+  simplicial sets and $\RR$ to be the class of Kan fibrations.
+  This again forms a $\pi$-preclan (\Cref{ex:sset-kan}).
+  Exponentiation by $I = [1]$ (and its pullbacks)
+  again defines an endofunctor $\arr[1] : \RR(1) \to \RR(1)$.
+  Then we can take $\uu : \Ulow \to \U$
+  to be the universe from \cite[Definition 2.1.9]{kapulkin2021},
+  checking that $\U$ is fibrant \cite[Theorem 2.2.1]{kapulkin2021}.
+  Here, it is also the case that all Kan fibrations are Hurewicz.
+  A proof that the universal pathobject projection
+  is a small unbiased fibration can be adapted from \cite[Proposition 2.3.3]{kapulkin2021}.
+\end{example}
+
+\section{A path types modality}
+There is a modal character to path types, which we make precise now
+by defining a modal theory and showing that our examples are models
+of this modal theory.
+This suggests a modal type theory that
+has characteristics of both (plain) Homotopy Type Theory
+and (various versions of) cubical type theory.
+Here we will suggest what a model of such a modal type theory should satisfy,
+leaving the design of a modal syntax to future work.
+% So far,
+% we have presented path types in a style that is reminiscent of modal type theory.
+% Here, we make this precise by providing
+% a modal type theory and an additional condition
+% that makes our setting a model of it.
+
+The modal theory is given as follows,
+in the style of \cite{licata2016,licata2017,gratzer2020}.
+Consider the 2-category $\MM$ (the \emph{mode theory}) with a single 0-cell (\emph{mode}) $\star$,
+a single non-trivial 1-cell (\emph{modality}) $\arr : \star \to \star$,
+and two-cells $\src, \trg : \arr \to \id$,
+$\rfl : \id \to \arr$ and $\sym : \arr \circ \arr \to \arr \circ \arr$.
+
+Let us again assume that
+$(\CC,\RR)$ is a $\pi$-preclan with a terminal object,
+a cylinder structure and path functors (\Cref{def:path-functor}).
+It is straightforward to define a strict 2-functor
+$\llbracket - \rrbracket : \MM^\mathsf{coop} \to \tcat$
+(cf. \cite[Definition 5.1]{gratzer2020}),
+using the cylinder structure.
+The mode $\star$ is interpreted as the category $\CC$,
+the modality $\arr$ is interpreted as the cylinder functor $\cyl : \CC \to \CC$
+and the two-cells are interpreted as the obvious natural transformations.
+
+\begin{definition}\label{def:modal-model}
+  A modal universe with respect to the context structure
+  $\llbracket - \rrbracket : \MM^\mathsf{coop} \to \tcat$
+  consists of an $\RR$-algebraic universe $\uu : \Ulow \to \U$,
+  maps $\Mod : \arr[1] \U \to \U$ and $\mod : \arr[1] \Ulow \to \Ulow$,
+  such that
+  \[\begin{tikzcd}
+      {\arr[1] \Ulow} & \Ulow \\
+      {\arr[1] \U} & {  \U}
+      \arrow["\mod", from=1-1, to=1-2]
+      \arrow["{\arr[1]\uu}"', from=1-1, to=2-1]
+      \arrow["\lrcorner"{anchor=center, pos=0.125}, draw=none, from=1-1, to=2-2]
+      \arrow["\uu", from=1-2, to=2-2]
+      \arrow["\Mod"', from=2-1, to=2-2]
+  \end{tikzcd}\]
+  is a pullback square.
+\end{definition}
+Given an interval object $I$,
+the map $\Mod : \arr[1] \U \to \U$ should be viewed as
+a kind of $\Pi$-type indexed by $I$,
+taking a type $A : I \to \U$ to the type $\Pi_I A : \U$.
+
+Since we are working internally,
+the above definition of a modal universe is the internal analogue of a
+``modal natural model'' (\cite{gratzer2020}) with a ``dependent right adjoint''
+(\cite{birkedal2020}).
+By taking the image of $\uu : \Ulow \to \U$ under the Yoneda embedding,
+we obtain a model of modal type theory with 
+a dependent right adjoint provided by the partial right adjoints
+$\arr[\Gamma] : \RR(\Gamma) \to \RR(\Gamma)$
+for each $\cyl[\Gamma] : \CC / \Gamma \to \CC / \Gamma$.
+One way to state a precise result is using CwDRAs
+(categories with dependent right adjoints),
+but the same could be done with modal natural models.
+
+\begin{proposition}
+  Suppose $(\CC,\RR)$ is a $\pi$-preclan with a terminal object,
+  a cylinder structure and path functors (\Cref{def:path-functor}).
+  A modal universe provides a model of the modal type theory $\MM$
+  in the sense of being a CwDRA (\cite[Definition 2]{birkedal2020})
+  where the presheaf of types is representable.
+\end{proposition}
+
+% Cylinders on contexts $\cyl : \CC \to \CC$
+% are the functors associated with the modality
+% $\arr$ and paths on types $\arr[\Gamma] : \RR(\Gamma) \to \RR(\Gamma)$
+% are their so-called ``{dependent right adjoints}''.
+% As usual,
+% each two-cell between modalities induces a natural transformation
+% between the associated functors.
+
+If the universe $\uu : \Ulow \to \U$ has classifying maps
+(\Cref{def:alg-universe-classifying-map}),
+then we can also rephrase the pullback condition in \Cref{def:modal-model} as saying
+that the path functor $\arr[1]$ preserves small fibrations
+(pullbacks of the universe $\uu$).
+\[ \arr[1] : (\RR(1),\RR_\U) \to (\RR(1),\RR_\U) \]
+(If $A$ and $B$ are in $\RR(1)$ and $f : A \to B$ is a small fibration then
+so is $\arr[1] f : \arr[1] A \to \arr[1] B$.)
+This is useful because in practice it is often easier
+to check whether the path functor preserves small fibrations,
+as opposed to directly constructing the maps $\Mod$ and $\mod$.
+To demonstrate this,
+let us revisit the previous examples.
+
+\begin{example}
+  % The examples from before,
+  % using an interval object $I$,
+  % all admit modal universes,
+  % and are therefore models of the model type theory
+  % given by $\MM$.
+  In $\Set$, taking $I = 1$ as the interval,
+  exponentiation by $1$ is the identity,
+  and so path functors preserve small fibrations.
+
+  In $\Grpd$ with $I$ as the walking isomorphism,
+  exponentiation by $I$ preserves small isofibrations because
+  $I \to 1$ is itself a small isofibration,
+  and small isofibrations form a $\pi$-preclan.
+  One way to see this is by using \Cref{lem:pushforward-preserves-maps},
+  with $\SS$ as small isofibrations and $\RR$ as the
+  $\pi$-clan of isofibrations.
+
+  In $\mathsf{cSet}$ with $I = y(\Box_1)$,
+  although $I \to 1$ is not a fibration,
+  it is $\RR$-exponentiable (see \Cref{ex:cSet-unbiased-fibrations}),
+  where $\RR$ is the class of unbiased fibrations.
+  It follows that exponentiating by $I$ preserves small unbiased fibrations:
+  again we can use \Cref{lem:pushforward-preserves-maps},
+  with $\SS$ as small unbiased fibrations and $\RR$ as the
+  $\pi$-preclan of unbiased fibrations.
+\end{example}
+
+% \begin{remark}
+%   We have only used the $\pi$-clan for making polynomial functors,
+%   which in turn are used to construct the generic case for identity elimination.
+%   As was demonstrated in \Cref{sec:exponentiability} and \Cref{sec:polynomials},
+%   a $\pi$-clan is not the setting in which polynomials can be defined.
+%   A similar exponentiability condition was omitted in \cite{awodey2026},
+%   where coherence of identity elimination was not proven;
+%   one way to fix this issue is to require that the universe is exponentiable.
+%   % As noted in \Cref{a},
+%   % $\pi$-clans are not the only way one can obtain polynomial functors
+
+%   % If such a condition were added,
+%   % then the axioms presented here are more general than those in \cite{awodey2026}.
+% \end{remark}

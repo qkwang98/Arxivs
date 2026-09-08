@@ -1,0 +1,370 @@
+\section{A Crash Course on Category Theory}\label{sec:introtoCT}
+
+This section introduces sufficient background in Category Theory for our purposes. String diagrams are surveyed in~\cite{Sel10,PZ:stringdiagrams}. A working cryptographer might find texts such as~\cite{coecke2010categories,FS19,heunenvicary:categories} easier to learn from, as they start with some applications in mind and introduce string diagrams concurrently with the material. General references for category theory include~\cite{awodey:categorytheory,leinster:basicCT}. 
+
+
+\subsection{Categories}\label{ssec:cats}
+
+In mathematics and computing we often study objects of a given kind together with maps between those objects, such as:
+\begin{itemize}
+    \item sets and functions between sets;
+    \item groups and group homomorphisms;
+    \item finite-dimensional real vector spaces (with a chosen basis) where maps from a space of dimension $n$ to a space of dimension $m$ are given by $m \times n$ matrices;
+    \item types in some type system, where maps from type $S$ to type $T$ consist of a well-typed term $t$ of type $T$ with a free variable $x$ of type $S$ (in shorthand, $x : S \vdash t : T$).
+\end{itemize}
+
+Category theory provides a systematic language to capture this kind of situation. A \emph{category} $\CC$ consists of \emph{objects} and \emph{maps} between them. We denote objects $A,B,C,\dots$ and maps, also called \emph{morphisms}, by $f,g,h,\dots$. Every morphism has a \emph{source} (also called the \emph{domain}) and a \emph{target} (also called the \emph{codomain}), and we write $f \colon A\to B$ to mean that $f$ is a morphism (in $\CC$) from $A$ to $B$. 
+
+A nice feature of categories is that they admit a pictorial syntax, known as \emph{string diagrams}, that is both intuitive and rigorous. We introduce string diagrams in tandem with our discussion of categories. In a string diagram, a morphism $f \colon A\to B$ is depicted by 
+\[\begin{pic}
+\node[box=0/1/0/1] (f) at (0,0) {f};
+\draw (f.east) to  ++(.6, 0) node[above] {$B$};
+\draw (f.west) to  ++(-.6, 0) node[above] {$A$};
+\end{pic}\]
+We will often omit the labels for the wires when there is no risk of confusion.
+
+In a category, morphisms can be composed whenever it makes sense to do so. For our four examples above:
+\begin{itemize}
+    \item In the category $\cat{Set}$ of sets and functions, if $f : A \to B$ and $g : B \to C$, their composition is given by $g \circ f : A \to C$.
+    \item In the category $\cat{Grp}$ of  groups and group homomorphisms composition is defined similarly.
+    \item In the category $\cat{Mat}$ of vector spaces and matrices, composition corresponds to matrix multiplication.
+    \item In the category $\cat{Trm}$ of types and terms, the composition of $x \colon S \vdash t \colon T$ with $y \colon T \vdash s \colon U$
+    is given by substituting $t$ for $y$ in $s$, giving $x \colon S \vdash s[t/y] \colon U$. 
+\end{itemize}
+
+In general, in a category $\CC$, there has to be a sequential composition operation $\circ$, which, when given $f \colon A\to B$ and $g \colon B\to C$, returns $g\circ f \colon A\to C$, which in string diagrams is expressed by
+\[\begin{pic}
+\node[box=0/1/0/1] (a) at (0,0) {g \circ f};
+\draw (a.east) to ++(.6, 0) node[above] {$C$};
+\draw (a.west) to ++(-.6, 0) node[above] {$A$};
+\end{pic}
+\enspace := \enspace
+\begin{pic}
+\node[box=0/1/0/1] (f) at (0,0) {f};
+\node[box=0/1/0/1] (g) at (1.5,0) {g};
+\draw (f.east) to node[above] {$B$} (g.west);
+\draw (f.west) to ++(-.6, 0) node[above] {$A$};
+\draw (g.east) to ++(.6, 0) node[above] {$C$}; 
+\end{pic}\]
+To match the diagrammatic order, the notation $f;g$ is sometimes used instead of $g\circ f$. 
+
+Moreover, for every object $A$ there has to be an identity morphism $\id[A] \colon A\to A$ on it, drawn as 
+\[\begin{pic}
+ \draw (0,0) node[left] {$A$} to (1,0) node[right] {$A$};
+ \end{pic}\]
+What makes $\id[A]$ and $\id[B]$ earn their names is that they are required to satisfy $f\circ \id[A]=f=\id[B]\circ f$ for any $f \colon A\to B$. One benefit of string diagrams is how they make the required axioms pictorially intuitive, so this would be expressed by 
+\[\begin{pic}
+    \node[box=0/1/0/1] (f) at (0,0) {f};
+    \draw (f.east) to  ++(.5, 0) node[above] {$B$};
+    \draw (f.west) to  ++(-.3, 0) node[above] {$A$} to  ++(-.7, 0) node[above] {$A$} ;
+    \end{pic}
+     =
+    \begin{pic}
+    \node[box=0/1/0/1] (f) at (0,0) {f};
+    \draw (f.east) to  ++(.5, 0) node[above] {$B$};
+    \draw (f.west) to  ++(-.5, 0) node[above] {$A$};
+    \end{pic}
+    =
+    \begin{pic}
+    \node[box=0/1/0/1] (f) at (0,0) {f};
+    \draw (f.east) to  ++(.3, 0) node[above] {$B$} to  ++(.7, 0) node[above] {$B$};
+    \draw (f.west) to  ++(-.5, 0) node[above] {$A$};
+    \end{pic}
+\]
+More informally, this amounts to saying that the length of a wire carries no information. 
+
+Moreover, we require composition to be associative, so that whenever we have three morphisms $f \colon A\to B,g \colon B\to C$ and $h \colon C\to D$ that could be composed in sequence, we do not need to specify which pairs we compose first, i.e., $h\circ (g\circ f)=(h\circ g)\circ f$. This means that we can omit the brackets and simply write $h\circ g\circ f$, which justifies the drawing 
+\[\begin{pic}
+\node[box=0/1/0/1] (f) at (0,0) {f};
+\node[box=0/1/0/1] (g) at (1.5,0) {g};
+\node[box=0/1/0/1] (h) at (3,0) {h};
+\draw (f.east) to  (g.west);
+\draw (f.west) to ++(-.6, 0) node[above] {$A$};
+\draw (g.east) to (h.west);
+\draw (h.east) to ++(.6, 0) node[above] {$D$};
+\end{pic}\]
+This concludes the definition of a category: a class of objects and morphisms between them where morphisms compose, there is an identity morphism for each object, the identity morphisms are identities under composition, and composition is associative. 
+
+The structure of a category is already sufficiently rich to express many properties of interest. For example, one can define a morphism  $f \colon A\to B$  to be an \emph{isomorphism} if there exists a morphism $g \colon B\to A$ such that $g\circ f=\id[A]$ and $f\circ g=\id[B]$. This general notion specializes to the correct notion of ``sameness'' in each context, capturing, e.g., bijections between sets and isomorphisms of groups, vector spaces, and types.
+
+While many examples of interest arise from sets-with-further-structure and structure-preserving maps, the definition of a category does not require the morphisms to consist of some kind of functions. To see that this is not always the right thinking, it is useful to consider a partially ordered set (poset) consisting of a set $P$ equipped with a relation $\leq$ that is reflexive, transitive, and antisymmetric. Any poset $\tuple{P,\leq}$ induces a category whose objects are given by elements of $P$, and whose morphisms are defined by setting there to be exactly one morphism $x\to y$ whenever $x\leq y$ and no morphisms $x\to y$ otherwise, with reflexivity and transitivity inducing identities and composition. In fact, we will see another example of a category where the intuition of morphisms as functions is not correct: in Section~\ref{ssec:baseforUC} we will encounter a category whose morphisms are certain networks of interactive Turing machines. 
+
+\subsection{Monoidal and symmetric monoidal categories}\label{ssec:monoidalcats}
+    In many categories of interest, there is also a way of composing objects and morphisms \emph{in parallel} and not just sequentially. For example,
+\begin{itemize}
+    \item Recall that if $A$ and $B$ are sets then their cartesian product $A \times B = \{\tuple{x,y} | x \in A,\, y \in B\}$ is the set of all pairs of elements with the first element in $A$ and the second in $B$. Given two functions $f \colon A\to B$ and $g \colon C\to D$, there is a function $f\times g \colon A\times C\to B\times D$ which sends $\tuple{x,y}\in A\times C$ to $\tuple{f(x),g(y)}\in B\times D$. 
+
+    \item Given two groups $G$ and $H$, the product $G\times H$ is obtained by taking the cartesian product of the underlying sets, and performing multiplication pointwise. With this definition, the product $f\times g$ of group homomorphisms $f$ and $g$ is again a group homomorphism of product groups. 
+
+    \item Given two vector spaces $A$ and $B$ with bases $a_1,\dots, a_m$ and $b_1,\dots ,b_n$, their tensor product $A \otimes B$ is an $mn$-dimensional vector space that has a basis built out of pairs $(a_i,b_j)$. Now, given an $m\times n$-matrix $f$ and a $p\times q$-matrix $g$, their \emph{Kronecker product} $f \otimes g$ is the $mp\times nq$-matrix essentially obtained by replacing the $(i,j)$th entry $f_{i,j}$ of $f$ with the matrix $f_{i,j} g$. 
+    
+    \item If a type system has product types, one can use terms $x : S \vdash t : T$ and $y : U \vdash v : V$ to obtain a term $z : S\times U \vdash \tuple{t[\fst(z)/x], v[\snd(z)/y]} : T\times V$, where $\tuple{t,v}$ builds a pair and $\fst$ and $\snd$ extract the first and second components of a pair. 
+\end{itemize}
+Monoidal categories capture this kind of situation. Roughly speaking, a monoidal category is a category equipped with a parallel composition operation that is associative and has a unit.
+The parallel composition operation is written using the tensor product symbol $ \otimes$.  Given two morphisms $f \colon A\to B$ and $g \colon C\to D$ in $\CC$, their parallel composite is a morphism $f \otimes g \colon A \otimes C\to B \otimes D$. Diagrammatically this is denoted by juxtaposition:
+\[\begin{pic}
+\node[box=0/2/0/2] (a) at (0,0) {f \otimes g};
+\draw (a.east.1) to  ++(.6, 0) node[right] {$B$};
+\draw (a.west.1) to  ++(-.6, 0) node[left] {$A$};
+\draw (a.east.2) to ++(.6, 0) node[right] {$D$};
+\draw (a.west.2) to  ++(-.6, 0) node[left] {$C$};
+\end{pic}
+\enspace := \enspace 
+\begin{pic}
+\node[box=0/1/0/1, minimum height=5mm] (f) at (0,.65) {f};
+\node[box=0/1/0/1, minimum height=5mm] (g) at (0,0) {g};
+\draw (f.east) to ++(.6, 0) node[right] {$B$};
+\draw (f.west) to  ++(-.6, 0) node[left] {$A$};
+\draw (g.west) to  ++(-.6, 0) node[left] {$C$};
+\draw (g.east) to  ++(.6, 0) node[right] {$D$};
+\end{pic}\]
+
+This parallel composition operation must satisfy $\id[A \otimes B]=\id[A] \otimes \id[B]$ which pictorially amounts to  
+\[\begin{pic}
+    \draw (0,0) node[above] {$A \otimes B$} to (1.5,0) node[above] {$A \otimes B$};
+  \end{pic}
+  \enspace =\enspace 
+  \begin{pic}
+      \draw (0,0) node[left] {$A$} to (1.5,0) node[right] {$A$};
+      \draw (0,-.5) node[left] {$B$} to (1.5,-.5) node[right] {$B$};
+  \end{pic}
+\] 
+This lets us replace a wire of type $A \otimes B$ with two wires (one for $A$ and one for $B$) whenever it is convenient to do so. Morphisms between products are not required to be products of morphisms. For example, a function $(x,y)\mapsto (f(x,y),g(x,y))$ is a product only if $f$ depends only on $x$ and $g$ only on $y$. 
+
+An arbitrary box can have multiple input and output wires. Diagrammatically, a morphism  \[f \colon A_1 \otimes \dots \otimes A_n\to B_1 \otimes \dots \otimes B_m\] is drawn as 
+\[\begin{pic}
+\node[box=0/3/0/3] (a) at (0,0) {f};
+\draw (a.east.1) to  ++(.6, 0) node[right] {$B_1$};
+\draw (a.east.3) to ++(.6, 0) node[right] {$B_m$};
+\draw (a.west.1) to  ++(-.6, 0) node[left] {$A_1$};
+\draw (a.west.3) to  ++(-.6, 0) node[left] {$A_n$};
+\node[left] at (a.west.2) {\dots};
+\node[right] at (a.east.2) {\dots};
+\end{pic}\]
+
+We also require the \emph{interchange law}, which states that 
+\begin{equation}\label{eq:interchange}
+(h \otimes k)\circ (f \otimes g)=(h\circ f) \otimes (k\circ g)
+\end{equation}
+for all $f \colon A\to B$, $g \colon C\to D$, $h \colon B\to E$, and $k \colon D\to F$. The interchange law guarantees that the string diagram 
+\[\begin{pic}
+\node[box=0/1/0/1, minimum height=5mm] (f) at (0,.65) {f};
+\node[box=0/1/0/1, minimum height=5mm] (g) at (0,0) {g};
+\node[box=0/1/0/1, minimum height=5mm] (h) at (1.5,.65) {h};
+\node[box=0/1/0/1, minimum height=5mm] (k) at (1.5,0) {k};
+\draw (h.east) to  ++(.6, 0) node[above] {$E$};
+\draw (f.west) to  ++(-.6, 0) node[above] {$A$};
+\draw (f.east) to node[above] {$B$} (h.west);
+\draw (g.west) to  ++(-.6, 0) node[below] {$C$};
+\draw (g.east) to node[below] {$D$} (k.west);
+\draw (k.east) to  ++(.6, 0) node[below] {$F$};
+\end{pic}\] 
+is unambiguous. 
+
+In a \emph{strict} monoidal category, parallel composition is \emph{unital}. This means that there is a special object $I$, called \emph{the tensor unit}, satisfying
+\[
+    A \otimes I = A = I \otimes A \quad\text{and}\quad \id[I] \otimes f = f = f \otimes \id[I]
+\]
+on objects and morphisms, respectively. Further, parallel composition is \emph{associative}, meaning
+\[
+    A \otimes (B \otimes C) = (A \otimes B) \otimes C  \quad\text{and}\quad f \otimes (g \otimes h)=(f \otimes g) \otimes h~.
+\] This results in the notion of a \emph{strict monoidal category}.
+
+Unfortunately, strict monoidal categories are too strict: they rule out most examples of interest.
+For instance, the cartesian product of sets is not strictly associative. Rather, it is associative up to the isomorphism $((a,b),c)\mapsto (a,(b,c))$. Loosely speaking, a \emph{monoidal category} is a category with parallel composition $ \otimes$ that is associative and unital up to isomorphism. More formally, a monoidal category is a category equipped with a parallel composition operation and associativity and unitality isomorphisms which must satisfy some equations. Technically, these should be natural isomorphisms satisfying the triangle and pentagon identities. We won't delve further into these equations; see~\cite[Section 7.8]{awodey:categorytheory} for definitions. 
+
+It is a theorem that every monoidal category is monoidally equivalent to a strict monoidal category, which roughly speaking means that for any monoidal category there is a strict monoidal category and suitable mappings between them that translate back and forth. We neither formalize nor prove this theorem here, but use this result implicitly to pretend that all monoidal categories we work with are strict, simplifying notation.
+
+The tensor unit $I$ is denoted by the empty diagram (as juxtaposing any diagram with the empty one results in the same diagram).  Thus, a morphism $r \colon I\to  A$ would be denoted by a box with no inputs
+\[\begin{pic}
+\node[box=0/0/0/1] (r) at (0,0) {r};
+\draw (r.east) to  ++(.6, 0) node[above] {$A$};
+\end{pic}\]
+
+Borrowing terminology from quantum circuits~\cite{AC04,heunenvicary:categories}, morphisms from $I$ are usually called \emph{states}, and we will draw states $r \colon I\to A$ and $r \colon I\to A_1 \otimes \cdots \otimes A_n$ respectively as 
+   \[ \begin{pic}
+    \node[state] (r) at (0,0){$r$};
+    \draw (r.east) to ++(.6,0) node[above] {$A$};
+  \end{pic}\quad \text{and } \quad \begin{pic}
+    \node[state,minimum width=1cm] (r) at (0,0){$r$};
+    \draw (r.north east) to ++(.6,0) node[right] {$A_1$};
+    \node[right] at (r.east) {\dots};
+    \draw (r.south east) to ++(.6,0) node[right] {$A_n$};
+  \end{pic}\]
+In $\cat{Set}$ states correspond to elements of a set, in $\cat{Mat}$ to vectors, in $\cat{Grp}$ to neutral elements, and in $\cat{Trm}$ to closed terms (i.e., ones with no free variables) of a given type. 
+
+Now, a \emph{symmetric} monoidal category (SMC) is, roughly speaking, a monoidal category where $ \otimes$ is suitably commutative. Slightly more formally, an SMC comes with specified \emph{swap} or \emph{symmetry} isomorphisms $\sigma_{A,B} \colon A \otimes B \to B \otimes A$ for all objects $A, B$, satisfying some further equations. These are more easily explained in string diagrams. To start, we draw  $\sigma_{A,B} \colon A \otimes B \to B \otimes A$ as
+\[\begin{pic}[yscale=.8]
+\node (botl) at (0, 0) {};
+\node (topl) at (0, .8) {};
+\draw (topl) to node[above] {$A$} ++(.6,0) to[in=180,out=0] ++(1.2,-.8) to node[below] {$A$} ++(.6,0);
+\draw (botl) to node[below] {$B$} ++(.6,0) to[in=180,out=0]  ++(1.2,.8) to node[above] {$B$} ++(.6,0);
+\end{pic}\quad  \text{instead of}\quad \begin{pic}
+\node[box=0/2/0/2, minimum height=9mm] (a) at (0,0) {\sigma_{A,B}};
+\draw (a.west.1) to ++(-.6, 0) node[above] {$A$};
+\draw (a.west.2) to ++(-.6, 0) node[below] {$B$};
+\draw (a.east.1) to ++(.6, 0) node[above] {$B$};
+\draw (a.east.2) to ++(.6, 0) node[below] {$A$};
+\end{pic}\] 
+Given this notation, we then require
+\[\begin{pic}
+\node[box=0/1/0/1,minimum height=6mm] (g) at (0, .8) {g};
+\node[box=0/1/0/1,minimum height=6mm] (f) at (0, 0) {f};
+\draw (g.east.1) to  ++(.8,0) node[above] {$D$};
+\draw (f.east.1) to  ++(.8,0) node[above] {$C$};
+\draw (g.west.1) to[in=0,out=180] ++(-1.2,-.8) to ++(-.75,0) node[above] {$B$};
+\draw (f.west.1) to[in=0,out=180]  ++(-1.2,.8) to  ++(-.75,0) node[above] {$A$};
+\end{pic}=
+\begin{pic}
+\node[box=0/1/0/1,minimum height=6mm] (f) at (0, .8) {f};
+\node[box=0/1/0/1,minimum height=6mm] (g) at (0, 0) {g};
+\draw (f.west.1) to ++(-.8,0) node[above] {$A$};
+\draw (g.west.1) to ++(-.8,0) node[above] {$B$} ;
+\draw (f.east.1) to[in=180,out=0] ++(1.2,-.8) to  ++(.75,0) node[above] {$C$};
+\draw (g.east.1) to[in=180,out=0]  ++(1.2,.8) to  ++(.75,0) node[above] {$D$};
+\end{pic}\]
+or equivalently,
+ $(g \otimes f)\circ  \sigma_{A,B} = \sigma_{C,D} \circ  (f \otimes g)$ 
+holds for all $f \colon A\to C,g \colon B\to D$. Intuitively, this states that boxes can be slid along wires. (Formally this property corresponds to the family $\sigma$ being a \emph{natural transformation}, a concept that shows up often in category theory.)  Second, we require that crossing the same wires twice amounts to no change:
+\[\begin{pic}[yscale=.8]\node (botl) at (0, 0) {};
+\node (topl) at (0, .8) {};
+\draw (topl) to node[above] {$A$} ++(.6,0) to[in=180,out=0] ++(1.2,-.8) to node[below] {$A$} ++(.6,0) to[in=180,out=0]  ++(1.2,.8) to node[above] {$A$} ++(.6,0);
+\draw (botl) to node[below] {$B$} ++(.6,0) to[in=180,out=0]  ++(1.2,.8) to node[above] {$B$} ++(.6,0)  to[in=180,out=0] ++(1.25,-.8) to node[below] {$B$} ++(.6,0);
+\end{pic}
+\enspace=\enspace \begin{pic}[yscale=.8]\node (botl) at (0, 0) {};
+\node (topl) at (0, .8) {};
+\draw (topl) to node[above] {$A$} ++(.6,0) to ++(1,0);
+\draw (botl) to node[below] {$B$} ++(.6,0) to ++(1,0);
+\end{pic}
+\]
+or equivalently $\sigma_{B,A} \circ \sigma_{A,B} = \id[A \otimes B]$. The slogan ``only connectivity matters'' is often used to summarize the pleasant properties of string diagrams for SMCs. While we work somewhat informally with string diagrams, we  stress that they are a perfectly rigorous tool to capture exactly what follows from the axioms of an SMC. To this effect, we recall Selinger's formulation~\cite[Theorem~3.12]{Sel10} of the Joyal--Street coherence theorem~\cite[Theorem~2.3]{joyalstreet}.
+
+\begin{theorem}[Joyal--Street~{\cite[Theorem~2.3]{joyalstreet}}, as formulated in {\cite[Theorem~3.12]{Sel10}}]
+   A well-formed equation between morphisms in the language of symmetric monoidal categories follows from the axioms of symmetric monoidal categories if and only if it holds, up to isomorphism of diagrams, in the graphical language.
+\end{theorem}
+
+Given an SMC $\CC$, by a \emph{sub-SMC} of $\CC$ we mean an SMC $\DD$ whose objects and morphisms are sub-collections of those of $\CC$, and whose SMC-structure (sequential and parallel composition, identity morphisms, unit object, symmetries) coincides with that of $\CC$. Sub-SMCs are closed under arbitrary intersections: as a result, one can always form the smallest sub-SMC containing given collections of morphisms and objects, and we will refer to the end-result as the \emph{sub-SMC generated by} this data. 
+
+\subsection{Building an SMC from generators and equations}\label{ssec:gensandrels}
+
+We will now review how to build a symmetric monoidal category from generators and equations, as this will be used in Section~\ref{ssec:baseforUC} to build a category of networks of interactive Turing machines to model UC. A useful analogy is that of building a group from generators and equations. A more detailed yet introductory account can be found in~\cite[Chapter 2]{PZ:stringdiagrams}. 
+To generate an SMC, one needs
+\begin{itemize}
+    \item A set $\OO$ of generating objects, a general object then being an element of the set $\OO^*$ of words in the alphabet $\OO$.
+    \item For each $V,W\in \OO^*$, a (possibly empty) set $\MM_{V,W}$ of generating morphisms $V\to W$. 
+\end{itemize} 
+
+The symmetric monoidal category generated by $(\OO,\MM)$ has $\OO^*$ as its set of objects, and its morphisms can be thought of as given by string diagrams built from identity wires, symmetries and generating morphisms from the sets $\MM_{V,W}$ modulo the equations we've asserted for SMCs in the previous section (associativity and unitality of $ \otimes$ and the equations for swap).
+
+As a warm up for using this construction in later sections, let us consider an example. We let $\OO$ consist of a single element, so that an element of $\OO^*$ is uniquely specified by its length and hence $\OO^*$ can be identified with $\NN$. We let $\MM_{0,1}$ and $\MM_{2,1}$ be singletons and draw their elements as
+\[ 
+   \begin{pic}[scale=.6]
+    \node[dot] (r) at (0,0){};
+    \draw (r) to ++(1,0);
+  \end{pic}\enspace \text{and} \enspace 
+  \begin{pic}[scale=.6]
+    \node[dot] (r) at (0,0){};
+    \draw (r) to ++(1,0);
+    \draw (r) to[out=90,in=0] ++(-1,.5);
+    \draw (r) to[out=270,in=0] ++(-1,-.5);
+  \end{pic}
+  \]
+and let $\MM_{i,j}$ be empty for all other choices of $i,j\in\NN$. Then in the resulting SMC, 
+ \[ \begin{pic}[scale=.6]
+    \node[dot] (r) at (0,0){};
+    \draw (r) to ++(1,0);
+    \draw (r) to[out=90,in=0] ++(-1,.5);
+    \draw (r) to[out=270,in=0] ++(-1,-.5);
+    \node[dot] (s) at (0,1){};
+    \draw (s) to ++(1,0);
+  \end{pic}
+  \enspace ,  \enspace 
+   \begin{pic}[scale=.6]
+    \node[dot] (r) at (0,1){};
+    \draw (r) to ++(1,0);
+    \draw (r) to[out=90,in=0] ++(-1,.5);
+    \draw (r) to[out=270,in=0] ++(-1,-.5);
+    \node[dot] (s) at (0,0){};
+    \draw (s) to ++(1,0);
+  \end{pic}
+  \enspace  \text{and} 
+  \begin{pic}[scale=.6]
+\node (botl) at (0, -0.5) {};
+\node (topl) at (0, 0.5) {};
+\draw (topl) to node[above] {} ++(.75,0) to[in=180,out=0] ++(1.5,-1) to node[below] {} ++(.75,0);
+\draw (botl) to node[below] {} ++(.75,0) to[in=180,out=0]  ++(1.5,1) to node[above] {} ++(.75,0);
+\end{pic}
+  \]
+give three distinct morphisms $2\to 2$ whereas
+
+ \[ \begin{pic}[scale=.6]
+    \node[dot] (r) at (0,0){};
+    \draw (r) to ++(1,0);
+    \node[dot] (s) at (0,1){};
+    \draw (s) to ++(1,0);
+  \end{pic}
+  \enspace \text{and} \enspace 
+  \begin{pic}[yscale=.6]\node[dot] (botl) at (0, -0.5) {};
+\node (topl)[dot] at (0, 0.5) {};
+\draw (topl) to node[above] {} ++(.6,0) to[in=180,out=0] ++(1.2,-1) to node[below] {} ++(.6,0) to[in=180,out=0]  ++(1.2,1) to node[above] {} ++(.6,0);
+\draw (botl) to node[below] {} ++(.6,0) to[in=180,out=0]  ++(1.2,1) to node[above] {} ++(.6,0)  to[in=180,out=0] ++(1.25,-1) to node[below] {} ++(.6,0);
+\end{pic}
+  \]
+denote the same morphism $0\to 2$ due to equations satisfied by any SMC (swapping twice gives the identity).
+
+Having built an SMC from generators, we now discuss building an SMC from generators and equations.  It turns out that there is no real need to allow for equations between objects, as equations between morphisms suffice.\footnote{If one did want to identify two words $A,B\in \OO^*$, one would instead add generating morphisms $f \colon A\to B$ and $g \colon B\to A$ and equations asserting that $g$ is the inverse of $f$. While this doesn't force $A$ and $B$ to be equal in the resulting SMC, it forces them to be isomorphic, which is sufficient for most categorical purposes.} In turn, a defining equation is given by $f = g$, where $f, g $ are two morphisms $V \to W$ in the monoidal category generated by $(\OO,\MM)$.  In the resulting SMC, morphisms can now be thought of as equivalence classes of string diagrams, modulo the defining equations.
+
+Returning to the simple example, we will now add the equations of a commutative monoid. Associativity of the multiplication is captured by 
+\[
+  \begin{pic}[scale=.6]
+    \node[dot] (r) at (0,0){};
+    \draw (r) to ++(1,0);
+    \draw (r) to[out=90,in=0] ++(-1,.5) node[dot] (s) {};
+    \draw (r) to[out=270,in=0] ++(-1,-.5) to ++(-1,0);
+    \draw (s) to[out=90,in=0] ++(-1,.5);
+    \draw (s) to[out=270,in=0] ++(-1,-.5);
+  \end{pic}\enspace =\enspace
+  \begin{pic}[scale=.6]
+    \node[dot] (r) at (0,0){};
+    \draw (r) to ++(1,0);
+    \draw (r) to[out=90,in=0] ++(-1,.5)  to ++(-1,0);
+    \draw (r) to[out=270,in=0] ++(-1,-.5) node[dot] (s) {};
+    \draw (s) to[out=90,in=0] ++(-1,.5);
+    \draw (s) to[out=270,in=0] ++(-1,-.5);
+  \end{pic}
+  \]
+while commutativity is given by
+   \[   \begin{pic}[scale=.6]
+    \node[dot] (r) at (0,0){};
+    \draw (r) to ++(1,0);
+    \draw (r) to[out=90,in=0] ++(-1,.5) to[in=0,out=180] ++(-1.5,-1) to++(-.5,0);
+    \draw (r) to[out=270,in=0] ++(-1,-.5) to[in=0,out=180] ++(-1.5,1) to++(-.5,0);
+  \end{pic}\enspace =\enspace 
+  \begin{pic}[scale=.6]
+    \node[dot] (r) at (0,0){};
+    \draw (r) to ++(1,0);
+    \draw (r) to[out=90,in=0] ++(-1,.5);
+    \draw (r) to[out=270,in=0] ++(-1,-.5);
+  \end{pic}
+  \]
+and the unit laws are 
+\[
+  \begin{pic}[scale=.6]
+    \node[dot] (r) at (0,0){};
+    \draw (r) to ++(1,0);
+    \draw (r) to[out=90,in=0] ++(-1,.5) node[dot] {};
+    \draw (r) to[out=270,in=0] ++(-1,-.5);
+  \end{pic}
+  \enspace = \enspace
+  \begin{pic}[baseline=-.09cm,scale=.6]
+  \draw (0,0) to (2,0);
+  \end{pic}
+  \enspace = \enspace
+    \begin{pic}[scale=.6]
+    \node[dot] (r) at (0,0){};
+    \draw (r) to ++(1,0);
+    \draw (r) to[out=90,in=0] ++(-1,.5);
+    \draw (r) to[out=270,in=0] ++(-1,-.5) node[dot] {};
+  \end{pic}
+\]
+One can then build an SMC out of these generators and equations, whose morphisms are equivalence classes of string diagrams modulo the equations we've asserted.  In Section~\ref{ssec:baseforUC}, we will apply this machinery to UC.

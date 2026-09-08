@@ -1,0 +1,358 @@
+// Certificates for the 411 primitive residual linear actions.
+//
+// The data are grouped by residual row.  For each action they give matrix
+// generators, an abundant vector, and either a source of a balanced pair or
+// the indication that the cubic condition is to be checked.
+
+procedure RequireEqual(description, found, expected)
+    if found ne expected then
+        error description cat "\nexpected: " cat Sprint(expected)
+            cat "\nfound: " cat Sprint(found);
+    end if;
+end procedure;
+
+MatrixGroupInAmbient := function(ambient, storedGenerators)
+    field := CoefficientRing(ambient);
+    q := #field;
+    d := Degree(ambient);
+    matrices := [];
+    for entries in storedGenerators do
+        if #entries ne d^2 then
+            error "a stored matrix has the wrong number of entries";
+        end if;
+        if not forall{entry : entry in entries |
+                entry ge 0 and entry lt q} then
+            error "a stored matrix entry is outside its prime field";
+        end if;
+        Append(~matrices, ambient ! Matrix(field, d, d, entries));
+    end for;
+    if #matrices eq 0 then
+        error "a stored group has no generators";
+    end if;
+    return sub<ambient | matrices>;
+end function;
+
+MatrixGroupFromLists := function(q, d, storedGenerators)
+    return MatrixGroupInAmbient(GL(d, GF(q)), storedGenerators);
+end function;
+
+VectorFromList := function(G, entries)
+    if #entries ne Degree(G) then
+        error "a stored vector has the wrong number of entries";
+    end if;
+    return RSpace(G) ! entries;
+end function;
+
+LargestNilpotentOrder := function(K)
+    if IsNilpotent(K) then
+        return Order(K);
+    end if;
+    return Maximum([subgroupRecord`order
+        : subgroupRecord in Subgroups(K : IsNilpotent := true)]);
+end function;
+
+// The orbit is constructed only when its length is at most
+// floor(sqrt(|J|))+1.  A longer orbit already proves the required inequality.
+AbundanceCertificate := function(J, v)
+    groupOrder := Order(J);
+    isSmall, orbit := OrbitBounded(J, v, Isqrt(groupOrder) + 1);
+    if not isSmall then
+        return true, "order-bound";
+    end if;
+
+    orbitLength := #orbit;
+    stabiliserOrder := groupOrder div orbitLength;
+    if stabiliserOrder eq 1 then
+        return true, "regular";
+    end if;
+    if orbitLength ge stabiliserOrder then
+        return true, "order-bound";
+    end if;
+
+    stabiliser := Stabilizer(J, v);
+    if orbitLength ge LargestNilpotentOrder(stabiliser) then
+        return true, "exact";
+    end if;
+    return false, "";
+end function;
+
+NormalSections := function(J)
+    sections := [];
+    for normalRecordK in NormalSubgroups(J) do
+        K := normalRecordK`subgroup;
+        for normalRecordL in NormalSubgroups(K) do
+            L := normalRecordL`subgroup;
+            if L notin sections then
+                Append(~sections, L);
+            end if;
+        end for;
+    end for;
+    return sections;
+end function;
+
+IsChainAbundantOrbit := function(J, a)
+    orbit := Orbit(J, a);
+    for L in NormalSections(J) do
+        found := false;
+        for v in orbit do
+            stabiliser := Stabilizer(L, v);
+            if Index(L, stabiliser) ge
+                    LargestNilpotentOrder(stabiliser) then
+                found := true;
+                break;
+            end if;
+        end for;
+        if not found then
+            return false;
+        end if;
+    end for;
+    return true;
+end function;
+
+VectorsLieInDifferentOrbits := function(J, a, b)
+    // Vectors in one orbit have stabilisers of the same order.  Usually this
+    // decides the question without constructing a large orbit.
+    if Order(Stabilizer(J, a)) ne Order(Stabilizer(J, b)) then
+        return true;
+    end if;
+    return b notin Orbit(J, a);
+end function;
+
+RegularPairCertificate := function(J, a, b)
+    stabiliserA := Stabilizer(J, a);
+    if Order(stabiliserA) eq Order(Stabilizer(J, b))
+            and b in Orbit(J, a) then
+        return false;
+    end if;
+    return Order(Stabilizer(stabiliserA, b)) eq 1;
+end function;
+
+TwoOrbitCertificate := function(J, a, b)
+    return VectorsLieInDifferentOrbits(J, a, b)
+        and IsChainAbundantOrbit(J, a)
+        and IsChainAbundantOrbit(J, b);
+end function;
+
+// This is the exact minimum of z_L n_L^3 over L normal in K normal in J.
+// It is required only for the nine small actions carrying this certificate.
+CubicConditionMinimum := function(J)
+    nonzeroOrbits := [orbit : orbit in Orbits(J) |
+        not IsZero(Rep(orbit))];
+    RequireEqual("nonzero vector orbits for a cubic-condition group",
+        #nonzeroOrbits, 1);
+
+    firstValue := true;
+    minimum := Rationals() ! 0;
+    for L in NormalSections(J) do
+        largestRatio := Rationals() ! 0;
+        for orbit in nonzeroOrbits do
+            for v in orbit do
+                stabiliser := Stabilizer(L, v);
+                ratio := (Rationals() ! Index(L, stabiliser))
+                    / LargestNilpotentOrder(stabiliser);
+                if ratio gt largestRatio then
+                    largestRatio := ratio;
+                end if;
+            end for;
+        end for;
+        value := largestRatio^3 / LargestNilpotentOrder(L);
+        if firstValue or value lt minimum then
+            minimum := value;
+            firstValue := false;
+        end if;
+    end for;
+    return minimum;
+end function;
+
+MatrixHypothesesHold := function(G, q, d)
+    return Degree(G) eq d
+        and #CoefficientRing(G) eq q
+        and IsSoluble(G)
+        and IsIrreducible(G);
+end function;
+
+// Magma's general matrix-group test may return "unknown".  In that event the
+// following calculation is exact.  If an irreducible linear group is
+// imprimitive, it has a block system whose block stabiliser is maximal.  It
+// is therefore enough to examine maximal subgroups M for which |G:M| divides
+// the degree.  An M-invariant subspace is a block precisely when its G-orbit
+// has |G:M| members and their sum is the whole natural module.
+IsLinearlyPrimitive := function(G)
+    answer := IsPrimitive(G);
+    if Type(answer) eq BoolElt then
+        return answer;
+    end if;
+
+    d := Degree(G);
+    for maximalRecord in MaximalSubgroups(G) do
+        M := maximalRecord`subgroup;
+        numberOfBlocks := Index(G, M);
+        if numberOfBlocks gt 1 and d mod numberOfBlocks eq 0 then
+            blockDimension := d div numberOfBlocks;
+            restrictedModule := GModule(M);
+            for submodule in Submodules(restrictedModule) do
+                if Dimension(submodule) eq blockDimension then
+                    block := RowSpace(Matrix(
+                        Morphism(submodule, restrictedModule)));
+                    blockOrbit := Orbit(G, block);
+                    if #blockOrbit eq numberOfBlocks
+                            and Dimension(&+blockOrbit) eq d then
+                        return false;
+                    end if;
+                end if;
+            end for;
+        end if;
+    end for;
+    return true;
+end function;
+
+residualRows := eval Read("residual_action_data.m");
+expectedRows := [
+    <"1E+",  3, 16, 12>,
+    <"3",    2, 18, 40>,
+    <"9E+",  3,  8, 27>,
+    <"9E-",  3,  8, 71>,
+    <"10",   5,  8, 22>,
+    <"19E+", 3,  4, 14>,
+    <"19E-", 3,  4,  9>,
+    <"20",   5,  4, 22>,
+    <"21E+", 7,  4, 16>,
+    <"22",   3,  8, 74>,
+    <"23E+",11,  4,  4>,
+    <"24",  13,  4,  5>,
+    <"25",  17,  4,  4>,
+    <"28",   5,  8,  3>,
+    <"48",   2,  6,  7>,
+    <"49",   7,  3,  4>,
+    <"50",  13,  3,  2>,
+    <"51",   2, 12,  8>,
+    <"52",  19,  3,  1>,
+    <"53",   5,  6,  3>,
+    <"62",   3,  2,  2>,
+    <"63",   5,  2,  2>,
+    <"64",   7,  2,  2>,
+    <"65",   3,  4, 11>,
+    <"66",  11,  2,  2>,
+    <"67",  13,  2,  2>,
+    <"68",  17,  2,  3>,
+    <"69",  19,  2,  2>,
+    <"71",   5,  4, 16>,
+    <"72",   3,  6,  2>,
+    <"74",   7,  4,  7>,
+    <"75",   3,  8, 10>,
+    <"117",  3,  8,  2>
+];
+
+RequireEqual("the number of residual rows", #residualRows, 33);
+RequireEqual("the row specification count", #expectedRows, 33);
+RequireEqual("the number of residual actions",
+    &+[#row[4] : row in residualRows], 411);
+
+regularCount := 0;
+orderBoundCount := 0;
+exactCount := 0;
+regularPairCount := 0;
+twoOrbitCount := 0;
+cubicConditionCount := 0;
+cubicCases := [];
+actionCount := 0;
+
+for rowNumber in [1 .. #residualRows] do
+    rowData := residualRows[rowNumber];
+    expected := expectedRows[rowNumber];
+    row := rowData[1];
+    q := rowData[2];
+    d := rowData[3];
+    actions := rowData[4];
+
+    RequireEqual("the description of residual row " cat Sprint(rowNumber),
+        <row, q, d, #actions>, expected);
+
+    for actionNumber in [1 .. #actions] do
+        action := actions[actionNumber];
+        G := MatrixGroupFromLists(q, d, action[1]);
+        description := "row " cat row cat ", action "
+            cat Sprint(actionNumber);
+        actionCount +:= 1;
+
+        RequireEqual("matrix hypotheses for " cat description,
+            MatrixHypothesesHold(G, q, d), true);
+        RequireEqual("linear primitivity for " cat description,
+            IsLinearlyPrimitive(G), true);
+
+        if row eq "62" and actionNumber eq 2 then
+            row62Action2 := G;
+        end if;
+
+        abundantVector := VectorFromList(G, action[2]);
+        abundant, kind := AbundanceCertificate(G, abundantVector);
+        RequireEqual("the stated abundant vector for " cat description,
+            abundant, true);
+        if kind eq "regular" then
+            regularCount +:= 1;
+        elif kind eq "order-bound" then
+            orderBoundCount +:= 1;
+        elif kind eq "exact" then
+            exactCount +:= 1;
+        else
+            error "an unknown abundance certificate occurs in "
+                cat description;
+        end if;
+
+        balance := action[3];
+        if balance eq "regular-pair" then
+            first := VectorFromList(G, action[4]);
+            second := VectorFromList(G, action[5]);
+            RequireEqual("regular pair for " cat description,
+                RegularPairCertificate(G, first, second), true);
+            regularPairCount +:= 1;
+        elif balance eq "two-orbits" then
+            first := VectorFromList(G, action[4]);
+            second := VectorFromList(G, action[5]);
+            RequireEqual("two chain-abundant orbits for " cat description,
+                TwoOrbitCertificate(G, first, second), true);
+            twoOrbitCount +:= 1;
+        elif balance eq "cubic-condition" then
+            Append(~cubicCases,
+                <row, actionNumber, q, d, Order(G)>);
+            profileMinimum := CubicConditionMinimum(G);
+            if profileMinimum lt 1 then
+                error "the cubic-condition inequality fails for "
+                    cat description cat ": the minimum is "
+                    cat Sprint(profileMinimum);
+            end if;
+            cubicConditionCount +:= 1;
+        else
+            error "an unknown local certificate occurs in " cat description;
+        end if;
+    end for;
+    printf "Row %o: %o primitive actions.\n", row, #actions;
+end for;
+
+RequireEqual("the residual-action count", actionCount, 411);
+RequireEqual("actions requiring the cubic condition", cubicCases,
+    [<"19E-", 2, 3, 4, 640>,
+     <"19E-", 5, 3, 4, 320>,
+     <"19E-", 6, 3, 4, 160>,
+     <"62", 1, 3, 2, 48>,
+     <"62", 2, 3, 2, 24>,
+     <"63", 1, 5, 2, 96>,
+     <"63", 2, 5, 2, 48>,
+     <"64", 1, 7, 2, 144>,
+     <"66", 1, 11, 2, 240>]);
+RequireEqual("row 62 action 2 is isomorphic to SL(2,3)",
+    IsIsomorphic(row62Action2, SL(2, 3)), true);
+RequireEqual("regular abundance certificates", regularCount, 0);
+RequireEqual("order-bound abundance certificates", orderBoundCount, 401);
+RequireEqual("exact abundance certificates", exactCount, 10);
+RequireEqual("regular-pair certificates", regularPairCount, 394);
+RequireEqual("two-orbit certificates", twoOrbitCount, 8);
+RequireEqual("balanced-pair certificates",
+    regularPairCount + twoOrbitCount, 402);
+RequireEqual("cubic-condition certificates", cubicConditionCount, 9);
+
+print "All 411 residual actions are linearly primitive and have an abundant "
+    cat "vector.  Of these, 402 have a balanced-pair certificate: 394 from "
+    cat "a regular pair and 8 from two distinct chain-abundant orbits.  The "
+    cat "remaining 9 satisfy the cubic condition.";
+quit;

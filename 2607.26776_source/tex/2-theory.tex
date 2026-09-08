@@ -1,0 +1,352 @@
+
+
+\section{Category theory and FCA}
+
+Formal concept analysis has attracted interest by category theorists for being a natural and useful application of their abstract tools. Category theory was introduced by Eilenberg and MacLane in \cite{eilenberg-maclane_1945}, and is an abstract mathematical theory for understanding compositional structure -- see \cite{maclane_1998} for a comprehensive introduction. 
+
+A category consists of \emph{objects} and \emph{morphisms}, which are abstract relationships between objects. Category theory can then be thought of as studying objects by understanding how they relate to all other objects of the same defined type. We will assume that the reader is familiar with basic categorical constructions. 
+
+For a category theorist, the objects $G$ and attributes $M$ can be viewed as discrete categories. Any relation can be described as a $\2 = \{0,1\}$-valued profunctor, also called \emph{boolean} profunctors. In our case the profunctor $R\: G\nrightarrow M$ is a functor $G\op\times M\to \2$, which takes a pair $(g,m)$ to $1$ if $g$ has the attribute $m$ -- see \cite{ferrer_2023} for details. This will be our running definition of a formal context. 
+
+\begin{definition}
+    A \emph{formal context} $(G,M,R)$ consists of two discrete categories $G$ and $M$ and a boolean profunctor $R\: G\nrightarrow M$. We will say an object $g\in G$ has attribute $m\in M$ if $R(g,m)=1$, usually written $gRm$. 
+\end{definition}
+
+From this perspective we can also produce the formal concepts associated to any formal context, as we show in the next section. This is fairly standard in categorical FCA. 
+
+\subsection{The closure operators}
+
+Fix a formal context $(G,M,R)$. To construct the associated formal concepts, notice that the profunctor $R$ is by currying equivalent to two functors 
+\[R^{-}\: G \to [M, \2]\op \text{ and } R_{-}\: M \to [G\op, \2].\]
+We also have two Yoneda embeddings, giving a diagram
+\begin{center}
+\begin{tikzcd}
+G \arrow[r, "R^{-}"] \arrow[d, "y"'] & {[M,\2]\op} \\
+{[G\op, \2]} & M \arrow[l, "R_{-}"] \arrow[u, "cy"']       
+\end{tikzcd}
+\end{center}
+where $y$ is the Yoneda embedding and $cy$ is the Yoneda coembedding into the presheaf and opcopresheaf categories respectively. As $G$ and $M$ are discrete, the functor categories are precisely the powersets of $G$ and $M$ respectively: $[G\op, \2] = P(G)$ and $[M, \2]\op = P(M)\op$. 
+
+\begin{remark}
+    As there are a lot of notational embellishments in this paper we here give a brief overview of the notation we will use. The relation, as well as its associated boolean profunctor is always denoted by $R$. The two curryings are denoted $R^-$ and $R_-$. Their right Kan extensions will be denoted by $R^*$ and $R_*$ respectively, while their left Kan extensions are denoted by $R^!$ and $R_!$ respectively. Hence, all functors with a superscripted embellishment denotes an operator on objects, while all functors with a subscript embellishment denotes an operator on attributes. The same notation is used for the complement relation $\oR$. 
+\end{remark}
+
+As $[G\op, \2]$ is complete, there is a right Kan extension of $R^-$ along the Yoneda embedding $y$. The following lemma shows that this gives the standard FCA derivation on $P(G)$. 
+
+\begin{lemma}
+    \label{lm:upper-Delta}
+    The right Kan extension $R^*$ of $R^-$ is the standard FCA derivation operator $(-)^\Delta$. 
+\end{lemma}
+\begin{proof}
+    By \cite[Section X.4]{maclane_1998} (see also \cite[Section 4]{kelly_1982}), the functor $R^*$ is given pointwise by a categorical end-formula, which for a presheaf $A\in [G\op, \2]$ is
+    \[R^*(A)(m) = \int_{g\in G} \2(A(g), gRm).\]
+    In $\2$, the internal hom is given by \emph{implication}, reducing it to the conjunction 
+    \[R^*(A)(m) = \bigwedge_{g\in G}(A(g) \implies gRm).\]
+    In other words, having $m\in R^*(A)$ is equivalent to having that for all $g$, if $g\in A$ then $g$ has the attribute $m$. This is precisely the FCA derivation operation $(-)^\Delta$ on $P(G)$ as defined earlier. 
+\end{proof}
+
+Similarly, the other curried functor $R_{-}$ has a right Kan extension $R_*$ along the coYoneda embedding $cy\: M\to [M,\2]\op$. This gives the other standard FCA derivation operation, as the following lemma shows.  
+
+\begin{lemma}
+    \label{lm:lower-Delta}
+    The right Kan extension $R_*$ of $R_-$ is the standard FCA derivation operator $(-)_\Delta$. 
+\end{lemma}
+\begin{proof}
+    The proof is completely analogous to \cref{lm:upper-Delta}, as the right Kan extension has the formula
+    \[R_*(B)(g)=\int_{m\in M}\2(B(m), gRm).\]
+    Hence, the same argument works, giving $R_* = (-)_\Delta$.
+\end{proof}
+
+These two functors are not unrelated, but form an adjoint pair on the powerset categories. 
+
+\begin{lemma}
+    \label{lm:adjoint-Delta}
+    The two operators $R^*$ and $R_*$ form an adjoint pair
+    \begin{center}
+    \begin{tikzcd}
+    {[G\op, \2]} \arrow[r, "R^*", yshift=2pt] & {[M, \2]\op} \arrow[l, "R_*", yshift=-2pt].
+    \end{tikzcd}
+    \end{center}
+\end{lemma}
+\begin{proof}
+    We need to show that for any objects $A\in [G\op, \2]$ and $B\in [M, \2]\op$, we have $R^*(A)\leq B$ if and only if $A\leq R_*(B)$. By the definition of $R^*$, we have $R^*(A)\leq B$ if and only if for all $m\in M$, 
+    \[\bigwedge_{g\in G}(A(g)\implies gRm)\leq B(m).\]
+    The meet is below if and only if each factor is, hence this is equivalent to the statement that for all $m\in M$ and $g\in G$,
+    \[(A(g)\implies gRm) \leq B(m).\]
+    By residuation, this is again equivalent to the statement that for all $g\in G$, 
+    \[A(g) \leq \bigwedge_{m\in M} (B(m) \implies gRm).\]
+    The right hand side is the pointwise definition of $R_*$, giving finally $A\leq R_*(B)$. 
+\end{proof}
+
+We can now, as is standard in categorical FCA, recognize the formal concepts of $(G,M,R)$ as the fixedpoints of the adjunction $R^*\dashv R_*$, often called the \emph{nucleus} of the profunctor $R$, see \cite[Chapter 5]{ferrer_2023}. 
+
+More formally, the composition $R_* R^*$ is a monad on $P(G)$, and the extents of the formal concepts are the objects in the Eilenberg--Moore category of this monad. Similarly, the composition $R^* R_*$ is a comonad on $[M,\2]\op$, and hence a monad on $[M,\2] = P(M)$. Its Eilenberg--Moore category gives the intents of the formal concepts. The nucleus consists of pairs of such objects and attributes, in other words: an object in $\mathrm{Nuc}(R)$ is of the form $(A,B)$ where $A = R_*(R^*(B))$ and $B=R^* (R_* (A))$. By adjunction, however, these determine each other, so we can focus only on one of them, choosing throughout the paper to focus on the object side. 
+
+To summarize, the formal concepts arise completely naturally via standard categorical constructions from the profunctor $R$ via the fixedpoints of the monad $R_*R^*$ on $[G\op, \2]$, defined using right Kan extensions of the two associated curryings. 
+
+\subsection{Two more operators}
+
+Above we defined the functors $R^*$ and $R_*$ as the right Kan extensions of the two curried functors $R^-$ and $R_-$ along the respective Yoneda embeddings. As $[G\op, \2]$ also is cocomplete, this prompts the idea to further consider the \emph{left} Kan extensions of the two curried functors. This will give us another two of the eight operations described by Dubois--Prade. 
+
+\begin{lemma}
+    \label{lm:upper-Pi}
+    Given a formal context $R\: G\nrightarrow M$, the left Kan extension $R^!$ of the functor $R^-$ coincides with the possibilistic operator $(-)^\Pi$.  
+\end{lemma}
+\begin{proof}
+    For the functor $R^-$, the left Kan extension is defined by the coend formula
+    \[R^!(A)(m) = \int^{g\in G}(A(g)\otimes gRm).\]
+    The monoidal structure in $\2$ is the \emph{and} operation, and as $[M,\2]\op$ is a complete lattice, the coend is the disjunction
+    \[R^!(A)(m) = \bigvee_{g\in G}(A(G)\wedge gRm).\]
+    In words, we have $m\in R^!(A)$ if and only if there is some $g\in A$ such that $g$ has the attribute $m$, which is precisely the definition of the operator $(-)^\Pi$.
+\end{proof}
+
+Similar to before, we also have the left Kan extension of the other curried functor $R_-$. As above, this coincides with the possibilistic operator $(-)_\Pi$. 
+
+\begin{lemma}
+    \label{lm:lower-Pi}
+    The left Kan extension $R_!$ of the functor $R_-$ coincides with the possibilistic operator $(-)_\Pi$. 
+\end{lemma}
+\begin{proof}
+    The left Kan extension is given by
+    \[R_!(B)(g) = \int^{m\in M}(B(m)\otimes gRm),\]
+    which is equivalent to 
+    \[R_!(B)(g)=\bigvee_{m\in M}B(m)\wedge gRm,\]
+    which is the pointwise definition of $(-)_\Pi$. 
+\end{proof}
+
+As opposed to the previous two functors $(-)^\Delta$ and $(-)^\Delta$, these are not adjoint to each other. We will later, however, prove that they are part of adjoint pairs. 
+
+
+\subsection{The complement profunctor}
+
+For any boolean profunctor $R$ one can also define its \emph{complement} $\oR\: G\nrightarrow M$, defined by $g\oR m := \neg gRm$. This defines the \emph{complement} formal context $(G,M,\oR)$ as discussed in \cite{djouadi_prade_2011,yakub-djouadi-dubois-prade_2016}. 
+
+As $\oR$ is a boolean profunctor in its own right, it also has four associated functors, $\oR^*$, $\oR_*$, $\oR^!$ and $\oR_!$, coming from the right and left Kan extensions. In the following lemmas we show that these give the remaining four possibilistic operators via a negation duality $\neg$ between operators on $(G,M,R)$ and operators on the complement context $(G,M,\oR)$. 
+
+The negation is defined pointwise on any presheaf $A$ as $\neg A(g)$. Given an operator $F$ on $P(G)$, we will call precomposing with the complement operator the \emph{right dual} of $F$, and denote it $F\neg$. Similarly we define the \emph{left dual} to be $\neg F$. 
+
+\begin{lemma}
+    \label{lm:upper-N}
+    The right dual of the operator $\oR^*$ coincides with the possibilistic operator $(-)^N$. 
+\end{lemma}
+\begin{proof}
+    The functor is given pointwise by 
+    \[\oR^*(\neg A)(m) = \bigwedge_{g\in G}(\neg A(g)\implies g\oR m).\] 
+    By definition we have $g\oR m = \neg gRm$, which by the equivalence $\neg P\implies \neg Q \iff Q\implies P$, gives 
+    \[\oR^*(\neg A)(m) = \bigwedge_{g\in G}(gRm \implies A(g)),\]
+    which is the definition of $(-)^N$. 
+    \end{proof}
+
+Similarly, for the Kan extension of the other curried functor $\oR_-$, we obtain the operator $(-)_N$.
+
+\begin{lemma}
+    \label{lm:lower-N}
+    The right dual $\oR_*\neg$ of the right Kan extension of the curried functor $\oR_-$, coincides with the possibilistic operator $(-)_N$.
+\end{lemma}
+\begin{proof}
+    The proof is the same as \cref{lm:upper-N}. 
+\end{proof}
+
+Now we have but two operators left, which arise from the two left Kan extensions associated to the two curryings of $\oR$. The proofs are essentially just using the definitions of the operators. 
+
+\begin{lemma}
+    \label{lm:upper-nabla}
+    The right dual $\oR^!\neg$ of the left Kan extension of the curried functor $\oR^-$, is equivalent to the possibilistic operator $(-)^\nabla$.
+\end{lemma}
+\begin{proof}
+    By definition we have 
+    \[\oR^!(\neg A)(m)=\bigvee_{g\in G} (\neg A(g)\wedge g\oR m).\]
+    which is the pointwise definition of $(-)^\nabla$.   
+\end{proof}
+
+\begin{lemma}
+    \label{lm:lower-nabla}
+    The right dual $\oR_!\neg$ of the left Kan extension of the curried functor $\oR_-$, is equivalent to the possibilistic operator $(-)_\nabla$.
+\end{lemma}
+\begin{proof}
+    The proof is the same as \cref{lm:upper-nabla}. 
+\end{proof}
+
+To summarize then, we have four pairs of adjoint functors, arising from two boolean profunctors. This gives \cref{tab:lan-ran}, where we have denoted operators as either a right Kan extension (Ran) or a left Kan extension (Lan) and omitted the duals. 
+
+\begin{table}[ht]
+\centering
+\begin{tabular}{l|ll}
+& Ran & Lan\\
+\hline
+$R^-$   & $(-)^\Delta$ & $(-)^\Pi$ \\
+$R_-$   & $(-)_\Delta$ & $(-)_\Pi$  \\
+$\oR^-$ & $(-)^N$      &  $(-)^\nabla$ \\
+$\oR_-$ & $(-)_N$    & $(-)_\nabla$
+\end{tabular}
+\caption{Possibilistic operators as Kan extensions}
+\label{tab:lan-ran}
+\end{table}
+
+
+
+\subsection{Properties}
+
+In \cite{djouadi_prade_2011}, several properties and relations between the eight possibilistic operators were proven. In this section we reprove some of these from standard categorical properties. First, however, we prove that this categorical perspective also recovers the De Morgan dualities between these eight operators, as is their usual classical definitions in possibility theory -- the necessity is usually defined as $N(A) = 1-\Pi(\neg A)$, and similarly, $\nabla(A)=1-\Delta(\neg A)$. 
+
+\begin{lemma}
+    \label{lm:De-Morgan-duality}
+    The eight possibilistic operators are related by De Morgan dualities: $(-)^N = \neg (-)^\Pi \neg$ and $(-)^\nabla = \neg (-)^\Delta \neg$, and similarly for the lower-case operators. 
+\end{lemma}
+\begin{proof}
+    We only prove the relations for the upper-case operators, as the others follow by symmetry. 
+
+    Let $A\in [G\op, \2]$ be a presheaf. By definition we have 
+    \[\oR^*(A)(m) = \bigwedge_{g\in G}(A(g)\implies g\oR m).\]
+    Using $g \oR m = \neg gRm$ and the boolean equivalence $P\implies \neg Q \iff \neg (P\wedge Q)$, we have 
+    \[\oR^*(A)(m) = \bigwedge_{g\in G}\neg (A(g)\wedge g R m).\]
+    This is, by De Morgan duality, equivalent to 
+    \[\oR^*(A)(m) = \neg\bigvee_{g\in G}(A(g)\wedge g R m),\]
+    which we can recognize as $\neg R^!$. 
+
+    By \cref{lm:upper-N} and \cref{lm:upper-Pi} we have $(-)^N = \oR^*\neg$ and $(-)^\Pi = R^!$, giving 
+    \[(-)^N = \oR^*\neg = \neg R^!\neg = \neg (-)^\Pi\neg,\]
+    proving the first duality. 
+
+    For the second claim we have by definition that 
+    \[R^*(A)(m) = \bigwedge_{g\in G}(A(g)\implies gRm),\]
+    which by the equivalence $P\implies Q \iff \neg P\vee Q$ gives 
+    \[R^*(A)(m) = \bigwedge_{g\in G}(\neg A(g)\vee gRm).\]
+    By De Morgan duality, we have a boolean equality $\neg A(g)\vee gRm = \neg(A(g)\wedge g\oR m)$, which by another use of De Morgan duality gives 
+    \[R^*(A)(m) = \neg\bigvee_{g\in G}(A(g)\wedge g\oR m),\]
+    which by definition is $\neg \oR^!(A)(m).$ Hence, $R^* = \neg \oR^!$. To conclude then, we have
+    \[(-)^\Delta = R^* =\neg\oR^! = \neg \oR^! \neg\neg = \neg (-)^\nabla \neg\] 
+    which finishes the proof. 
+\end{proof}
+
+\begin{remark}
+    Purely in terms of the Kan extensions, and not the possibilistic operators, these dualities are: 
+    \begin{multicols}{2}
+    \begin{enumerate}
+        \item $R^* = \neg \oR^!$
+        \item $R_* = \neg \oR_!$
+        \item $R^! = \neg \oR^*$
+        \item $R_! = \neg \oR_*$
+    \end{enumerate}
+    \end{multicols}
+\end{remark}
+
+The following reproves \cite[5.1]{dubois-dupin-prade_2007}. 
+
+\begin{proposition}
+    Let $(G,M,R)$ be a formal context. For all subsets $A_1, A_2$ of $G$, we have: 
+    \begin{enumerate}
+        \item $(A_1\cup A_2)^\Delta = A_1^\Delta \cap A_2^\Delta$,
+        \item $(A_1\cap A_2)^N = A_1^N \cap A_2^N$,
+        \item $(A_1\cup A_2)^\Pi = A_1^\Pi \cup A_2^\Pi$, and
+        \item $(A_1\cap A_2)^\nabla = A_1^\nabla \cup A_2^\nabla$.
+    \end{enumerate}
+\end{proposition}
+\begin{proof}
+    We prove these one by one in the order presented. 
+    \begin{enumerate}
+        \item As $(-)^\Delta\: [G\op, \2]\to [M,\2]\op$ is a left adjoint it preserves colimits, which in $[G\op,\2]$ are unions and in $[M,\2]\op$ are intersections. 
+        \item The functor $(-)^N = \oR^*\neg$ is the dual of a left adjoint. As $\neg\: [G\op, \2]\to [G\op, \2]\op$ is an involution, it preserves both limits and colimits. Hence, intersections, which are limits in $[G\op, \2]$, are sent to colimits in $[M,\2]\op$, which are also intersections.
+        \item Follows from (2) and the De Morgan duality of \cref{lm:De-Morgan-duality}.
+        \item Follows from (1) and \cref{lm:De-Morgan-duality}. \qedhere
+    \end{enumerate}
+\end{proof}
+
+We have already seen that the two functors $R^*$ and $R_*$ formed an adjoint pair, giving a categorical definition of formal concepts as the Eilenberg--Moore category of the associated idempotent monad. Let us also investigate the other operators. 
+
+\begin{lemma}
+    \label{lm:adjoint-Pi-N}
+    The two possibilistic operators $(-)^\Pi$ and $(-)_N$ form an adjoint pair
+    \begin{center}
+    \begin{tikzcd}
+    {[G\op, \2]} \arrow[r, "(-)^\Pi", yshift=2pt] & {[M, \2]\op} \arrow[l, "(-)_N", yshift=-2pt].
+    \end{tikzcd}
+    \end{center}
+\end{lemma}
+\begin{proof}
+    We need to show that for all $A\in [G\op,\2]$ and $B\in [M,\2]\op$ we have $A\leq B_N$ if and only if $A^\Pi\leq B$. 
+    
+    By definition, $A^\Pi\leq B$ holds if and only if for all attributes $m\in M$ we have $\bigvee_g(A(g)\wedge gRm)\implies B(m)$ -- this is just the pointwise condition. 
+
+    Since implication out of a join is equivalent to
+    implication out of each summand, this holds if and only if
+    \[\forall g\in G,\;\forall m\in M,\;(A(g)\wedge gRm)\implies B(m)\]
+
+    Rewriting the implication, we get
+    \[\forall g\in G,\;A(g)\implies (gRm\implies B(m))\]
+    for all $m\in M$, and therefore
+    \[\forall g\in G,\;A(g)\implies\bigwedge_{m\in M}(gRm\implies B(m)),\]
+    which is the pointwise definition of $(-)_N$. This gives $A^\Pi\leq B$ if and only if $A\leq B_N$, proving that we have an adjunction $(-)^\Pi\dashv (-)_N$.
+\end{proof}
+
+From this we automatically obtain one of the main results from \cite{yakub-djouadi-dubois-prade_2016}. The categorical viewpoint reveals, in our opinion, more clearly why this results appears. This was one of our motivations for this paper. 
+
+\begin{corollary}
+    An object $A \in [G\op, \2]$ is a fixed point of $(-)_\Pi (-)^N$, i.e. it is a part of an $N\Pi$-pair, if and only if $\neg A$ is a formal concept of $(G,M,\oR)$.
+\end{corollary}
+\begin{proof}
+    A formal concept in $(G,M,\oR)$ is a fixedpoint of $\oR_*\oR^*$. By inserting negations, this is equivalent to having $\neg A = \neg\oR_*\oR^* \neg (\neg A)$. Moreover, we have $\neg\oR_*\oR^*\neg = \neg\oR_* \neg\neg\oR^*\neg$, which by the De Morgan duality of \cref{lm:De-Morgan-duality} gives 
+    \[\neg\oR_* \neg \neg \oR^*\neg = \neg (-)_N \neg (-)^N = (-)_\Pi (-)^N,\]
+    showing that the $N\Pi$-pairs are exactly the formal concepts on the complement context. 
+\end{proof}
+
+\begin{remark}
+    Completely analogously, we have that $A$ is part of a $\Pi N$-pair if and only if $A$ is a formal concept of $(G,M,\oR)$. This is also obtained by De Morgan duality: 
+    \[\oR_* \oR^*= \oR_*\neg\neg \oR^* \neg\neg= (-)_N \neg (-)^N\neg = (-)_N (-)^\Pi.\]
+\end{remark}
+
+The other two functors $(-)^N$ and $(-)_\Pi$, as well as the functors $(-)^\nabla$ and $(-)_\nabla$, also form adjoint pairs. This follows from the De Morgan dualities of \cref{lm:De-Morgan-duality} together with the following lemma. 
+
+\begin{lemma}
+    Let $\C$ and $\D$ be lattices with an order-reversing involution $\neg$. If $F\dashv G\: \D \rightleftarrows \C$ is an adjoint pair of functors, then their De Morgan duals form an adjoint pair $\neg G\neg \dashv \neg F\neg$. 
+\end{lemma}
+\begin{proof}
+    Assume $\neg G(\neg B)\leq A$. As $\neg$ is order-reversing, this is equivalent to $\neg A \leq  G(\neg B)$. As $F$ and $G$ are adjoint, this is equivalent to $F(\neg A) \leq \neg B$, which by the order-reversing negation gives finally $B \leq \neg F(\neg A)$.
+\end{proof}
+
+This immediately gives the following two corollaries from \cref{lm:De-Morgan-duality} together with \cref{lm:adjoint-N-Pi} and \cref{lm:adjoint-Delta} respectively. 
+
+\begin{corollary}
+    \label{lm:adjoint-N-Pi}
+    The two possibilistic operators $(-)^N$ and $(-)_\Pi$ form an adjoint pair $(-)_\Pi \dashv (-)^N$.
+\end{corollary} 
+
+\begin{corollary}
+    \label{lm:adjoint-nabla}
+    The two possibilistic operators $(-)^\nabla$ and $(-)_\nabla$ form an adjoint pair $(-)_\nabla \dashv (-)^\nabla$.
+\end{corollary}
+
+We then get the usual inclusion properties of the possibilistic operators from standard categorical observations. 
+
+\begin{proposition}
+    \label{prop:closure-interior}
+    Let $(G,M,R)$ be a formal context. For all subsets $A$ of $G$, we have: 
+    \begin{multicols}{2}
+    \begin{enumerate}
+        \item $A\leq A^\Delta_\Delta$
+        \item $A\leq A^\Pi_N$
+        \item $A^N_\Pi \leq A$
+        \item $A^\nabla_\nabla \leq A$
+    \end{enumerate}
+    \end{multicols}
+\end{proposition}
+\begin{proof}
+    Again we prove these in the order presented. 
+    \begin{enumerate}
+        \item Follows immediately from the unit of the adjunction $\Id \leq (-)_\Delta (-)^\Delta$. 
+        \item Same as (1), it follows from the adjunction unit of $(-)^\Pi \dashv (-)_N$. 
+        \item This follows now immediately from the adjunction counit $(-)_\Pi (-)^N \leq \Id$. 
+        \item As for (3), this follows from the adjunction counit of the adjunction $(-)_\nabla \dashv (-)^\nabla$. \qedhere
+    \end{enumerate}
+\end{proof}
+
+\begin{remark}
+    The fact that there is a sequence of natural transformations $(-)_\Pi (-)^N \leq \Id \leq (-)_N (-)^\Pi$ was used by Yao in \cite{yao_2004} to introduce rough set structure on formal contexts -- though not phrased in the categorical language.
+\end{remark}
+
+
+ 
+
+
+
+

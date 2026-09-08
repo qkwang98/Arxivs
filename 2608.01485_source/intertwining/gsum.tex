@@ -1,0 +1,1300 @@
+% !TEX root = ../intertwining.tex
+
+\section{Computation of Matrix Gauss Sums} \label{sec:gsum}
+As before, let $\FF_q$ denote the finite field with $q$ elements, where $q$ is an odd prime power. For characters $\omega\colon\FF_q^\times\to\CC^\times$ and $\psi\colon\FF_q\to\CC$, we are interested in computing sums of the form
+\[\sum_A\omega(\det A)\psi(\tr AT),\]
+where $A$ and $T$ are possibly subject to certain constraints (e.g., symmetric or alternating). To be explicit, our sums will be done for the following three cases:
+\begin{itemize}
+    \item $\GL_n(\FF_q)$.
+    \item $\Sym_n^\times(\FF_q)$, the set of invertible $n\times n$ symmetric matrices with coefficients in $\FF_q$.
+    \item $\Alt_{2n}^\times(\FF_q)$, the set of invertible $2n\times 2n$ alternating matrices with coefficients in $\FF_q$. (Note that there are no invertible alternating matrices of odd dimension.)
+\end{itemize}
+For brevity, we will remove $\FF_q$ from our notation as much as possible.
+
+Note that the sum over $A\in\GL_n$ has already been considered by \cite{kim-gauss-sum} and many authors before; see \cite[Section 1]{kim-gauss-sum}. Additionally, the sum over symmetric matrices was considered in \cite{saito-sym-gauss-sum}; their method is based on a rather lengthy computation with the Bruhat decomposition. To the authors' knowledge, the sum over alternating matrices has not been previously evaluated.
+
+Our method is rather uniform over all kinds of sums considered. We will induct on the size of $A$ via an explicit row-reduction. As such, the arguments are essentially the same as the spirit of the arguments in \cite{kim-gauss-sum} in the case of $\GL_n$. However, we believe that it is expositionally justified to include our proofs here because they motivate the rest of the section.
+
+\subsection{Miscellaneous Computations}
+We take a moment to discuss a few sums which will be used frequently in the sequel. For characters $\omega\colon\FF_q^\times\to\CC^\times$ and $\psi\colon\FF_q\to\CC^\times$, we denote the usual Gauss sum by
+\[g(\omega,\psi)\coloneqq\sum_{a\in\FF_q^\times}\omega(a)\psi(a).\]
+We will utilize several identities for Gauss sums, which we lay out now. The first is a well-known identity for quadratic Gauss sums.
+% It will be helpful to have the following well-known identity about the quadratic Gauss sum. Because the proof is so quick, we include the proof.
+\begin{prop} \label{prop:mag-gauss-sum}
+    Let $\omega\colon\FF_q^\times\to\CC^\times$ and $\psi\colon\FF_q\to\CC^\times$ denote nontrivial characters. Then
+    \[g(\omega,\psi)g\left(\omega^{-1},\psi^{-1}\right)=q.\]
+    Thus, if $\chi\colon\FF_q^\times\to\CC^\times$ denotes the nontrivial quadratic character, then $g(\chi,\psi)^2=\chi(-1)q$.
+\end{prop}
+\begin{proof}
+    These are standard facts about Gauss sums.
+    % For the first claim, we want to show
+    % \[\sum_{a,b\in\FF_q^\times}\omega(a/b)\psi(a-b)\stackrel?=q.\]
+    % Well, set $c\coloneqq a/b$ so that the sum is
+    % \[\sum_{c\in\FF_q^\times}\Bigg(\omega(c)\sum_{a\in\FF_q^\times}\psi(a-ac)\Bigg).\]
+    % If $c\ne1$, then the inner sum is $-\psi(0)+\sum_{a\in\FF_q}\psi(a-ac)=-1$. Otherwise, if $c=1$, then the inner sum is $q-1$. In total, we are left with
+    % \[(q-1)+\sum_{c\in\FF_q^\times\setminus\{1\}}-\omega(c)=q-\sum_{c\in\FF_q^\times}\omega(c)=q,\]
+    % which is what we wanted.
+    %
+    % For the second claim, we see
+    % \[g\left(\chi^{-1},\psi^{-1}\right)=\sum_{a\in\FF_q^\times}\chi(a)\psi(-a)=\chi(-1)\sum_{a\in\FF_q^\times}\chi(a)\psi(a)=\chi(-1)g(\chi,\psi),\]
+    % so the second claim follows from the first.
+\end{proof}
+The computation of the Gauss sums over $\Sym_n^\times$ will use the following fact.
+\begin{prop} \label{prop:quad-twist-gauss-sum}
+    Let $\omega\colon\FF_q^\times\to\CC^\times$ and $\psi\colon\FF_q\to\CC^\times$ be characters, and let $\chi\colon\FF_q^\times\to\CC^\times$ denote the nontrivial quadratic character. Then
+    \[\omega(4)g(\omega,\psi)g(\omega\chi,\psi)=g\left(\omega^2,\psi\right)g(\chi,\psi).\]
+\end{prop}
+\begin{proof}
+    Expanding out the Gauss sums, we are trying to show that
+    \[\sum_{a,b\in\FF_q^\times}\omega(4ab)\chi(b)\psi(a+b)\stackrel?=\sum_{a,b\in\FF_q^\times}\omega\left(a^2\right)\chi(b)\psi(a+b).\]
+    Fixing some $d\in\FF_q^\times$ and $t\in\FF_q$, it is enough to show that
+    \begin{equation}
+        \sum_{\substack{a+b=t\\4ab=d}}\chi(b) \stackrel?= \sum_{\substack{a+b=t\\a^2=d}}\chi(b) \label{eq:combo-quad-twist-gauss-sum}
+    \end{equation}
+    and then sum over all possible values of $d$ and $t$. At this point, the proof has become combinatorial number theory. For convenience, extend $\chi$ to $\FF_q$ by $\chi(0)\coloneqq0$, and allow $a,b\in\FF_q$ in the right-hand sum above; this will not change its value. We begin with some reductions.
+    \begin{itemize}
+        \item Suppose that $d$ is not a square. Then the right-hand side of \eqref{eq:combo-quad-twist-gauss-sum} is empty and hence zero. We claim that the left-hand side is zero. For any $(a,b)$ solving $a+b=t$ and $4ab=d$, we see that $(b,a)$ also solves the system. Then because $d$ is not a square, we have $\{\chi(a),\chi(b)\}=\{+1,-1\}$, so the terms in the sum cancel out.
+        % Let $(a_1,b_1),\ldots,(a_m,b_m)$ denote the solutions to the system of equations $a+b=t$ and $4ab=d$. Because $d$ is not a square, $a_k\ne b_k$ for each $k$---in fact, if $a_k$ is a square, then $b_k$ is not a square (and vice versa). Thus, if $(a,b)$ is a solution, then $(b,a)$ is a distinct solution with $\{\chi(a),\chi(b)\}=\{1,-1\}$, so the two pairs $(a,b)$ and $(b,a)$ contribute $1-1=0$ to the left-hand side of \eqref{eq:combo-quad-twist-gauss-sum}. It follows that the left-hand side vanishes.
+        \item In the rest of the proof, we may assume that $d=x^2$ where $x\in\FF_q^\times$, so the right-hand side of \eqref{eq:combo-quad-twist-gauss-sum} is $\chi(t+x)+\chi(t-x)$.
+        
+        To continue, observe that solving the system of equations $a+b=t$ and $4ab=d$ is equivalent to having $a=t-b$ and
+        \[(2b-t)^2=t^2-d.\]
+        As such, for our next case, suppose that $t^2-d$ fails to be a square. Then the left-hand side of \eqref{eq:combo-quad-twist-gauss-sum} is empty and hence vanishes, so we want to show that the right-hand side also vanishes. But if $t^2-d=(t+x)(t-x)$ is non-square, then $\{\chi(t+x),\chi(t-x)\}=\{+1,-1\}$, so the summands on the right-hand side cancel out.
+        \item In the rest of the proof, we may assume that $t^2-d=y^2$ for some $y\in\FF_q$. For example, if $y=0$, then the left-hand side equals $\chi(t/2)$, and the right-hand side equals $\chi(2t)$.
+        % On one hand, we have $t^2=d$, so $t=\pm x$, so the right-hand side of \eqref{eq:combo-quad-twist-gauss-sum} is $\chi(2t)$. On the other hand, we see the left-hand side of \eqref{eq:combo-quad-twist-gauss-sum} is $\chi(t/2)$, so we finish by noting $\chi(2t)=\chi(t/2)$.
+    \end{itemize}
+    At the current point, we can now say that $t^2=x^2+y^2$ where $x,y\in\FF_q^\times$. Every solution $(a,b)$ to the system of equations on the left can be written as $\left(\frac{t+y}{2}, \frac{t-y}{2}\right)$, while those for the system of equations on the right can be written as $(t+x,t-x)$. Thus, to show \eqref{eq:combo-quad-twist-gauss-sum}, it is enough to show
+    \begin{equation*}
+        \chi\left(\frac{t+y}2\right)+\chi\left(\frac{t-y}2\right)\stackrel?=\chi(t+x)+\chi(t-x). \label{eq:last-combo-quad-twist-case}
+    \end{equation*}
+    Because $(t-x)(t+x)=y^2$ and $\left(\frac{t+y}2\right)\left(\frac{t-y}2\right)=\frac14x^2$, we see $\chi\left(\frac{t+y}2\right)=\chi\left(\frac{t-y}2\right)$ and $\chi(t+x)=\chi(t-x)$. As these values are in $\{\pm1\}$, it is enough to show that $\chi(t+x)=1$ if and only if $\chi\left(\frac{t+y}2\right)=1$. We will show the forward implication; the reverse implication is similar.
+
+    Suppose $\chi(t+x) = 1$. As both $t+x$ and $t-x$ are squares, we can write $t+x=x_1^2$ and $t-x=x_2^2$ for $x_1,x_2\in\FF_q^\times$. Adjusting signs, we may assume that $y=x_1x_2$. Thus,
+    \[\frac{t+y}2=\left(\frac{x_1+x_2}2\right)^2\]
+    is a square, hence $\chi\left(\frac{t+y}{2}\right) = 1$ as desired.
+    % , and we know $\frac{t+y}2$ is nonzero from the above logic, so $\chi\left(\frac{t+y}2\right)=1$, as desired.
+    %
+    % To finish the proof, we must show the reverse implication: we claim that $\chi\left(\frac{t+y}2\right)=1$ implies $\chi(t+x)=1$. Well, we see that $\left(\frac x2\right)^2+\left(\frac y2\right)^2=\left(\frac t2\right)^2$, so the argument of the previous paragraph tells us that $\chi\left(\frac t2+\frac y2\right)=1$ implies
+    % \[\chi(t+x)=\chi\left(\frac{t+x}4\right)=\chi\left(\frac{\frac t2+\frac x2}2\right)=1,\]
+    % as desired.
+\end{proof}
+All of our computations will frequently sum over vectors in some way, so we pick up the following fact.
+\begin{lemma} \label{lem:matrix-char-sum}
+    Fix a character $\psi\colon\FF_q\to\CC^\times$ and some $A\in\FF_q^{n\times m}$. Then
+    \[\sum_{B\in\FF_q^{m\times n}}\psi(\tr AB)=\begin{cases}
+        0 & \text{if }A\ne0\text{ and }\psi\ne1, \\
+        q^{mn} & \text{if }A=0\text{ or }\psi=1.
+    \end{cases}\]
+\end{lemma}
+\begin{proof}
+    Note that
+    \[\tr AB=\sum_{i=1}^m\sum_{j=1}^nA_{ji}B_{ij},\]
+    so
+    \[\sum_{B\in\FF_q^{m\times n}}\psi(\tr AB)=\prod_{i=1}^m\prod_{j=1}^n\sum_{B_{ij} \in \FF_q}\psi(A_{ji}B_{ij}).\]
+    If $A=0$ or $\psi=1$, then all summands are $1$, so we total to $q^{mn}$. Otherwise, say $A_{ji}\ne0$ for some given $(i,j)$. Then the factor $\sum_{B_{ij}}\psi(A_{ji}B_{ij})$ in the product will vanish, as desired.
+\end{proof}
+
+\subsection{The Sum Over \texorpdfstring{$\GL_n$}{GL}}
+For the purposes of this subsection, we define
+\[g_n(\omega,\psi,T)\coloneqq\sum_{A\in\GL_n}\omega(\det A)\psi(\tr AT)\]
+where $\omega\colon\FF_q^\times\to\CC^\times$ and $\psi\colon\FF_q\to\CC^\times$ are characters, and $T\in\GL_n$. Even though our method to compute $g_n(\omega,\psi,T)$ is essentially equivalent to the one presented in \cite{kim-gauss-sum}, we present it here because it provides a reasonable background to the approach.
+
+The following general results will be helpful.
+\begin{lemma} \label{lem:gsum-gl-basic}
+    Fix characters $\omega\colon\FF_q^\times\to\CC^\times$ and $\psi\colon\FF_q\to\CC^\times$ and some $T\in\GL_n$.
+    \begin{listalph}
+        \item For any $g,h\in\GL_n$, we have
+        \[g_n(\omega,\psi,gTh)=\omega(\det gh)^{-1}g_n(\omega,\psi,T).\]
+        \item If $\psi=1$, then $g_n(\omega,\psi,T)=0$ unless $\omega=1$.
+    \end{listalph}
+\end{lemma}
+\begin{proof}
+    Here, (a) follows from some quick rearranging, and (b) follows because $g_n(\omega,\psi,T)$ is the sum of the character $\omega$ on the group $\GL_n$.
+    % Here we go.
+    % \begin{listalph}
+    %     \item We compute
+    %     \begin{align*}
+    %         g_n(\omega,\psi,gTh) &= \sum_{A\in\GL_n}\omega(\det A)\psi(\tr AgTh) \\
+    %         &= \sum_{A\in\GL_n}\omega\left(\det h^{-1}Ag^{-1}\right)\psi(\tr AT) \\
+    %         &= \omega(\det gh)^{-1}g_n(\omega,\psi,T).
+    %     \end{align*}
+    %     \item With $\psi=1$, we see that $g_n(\omega,\psi,T)=\sum_{A\in\GL_n}\omega(\det A)$ is the sum of a character $\omega$ over a group $\GL_n$, from which the result follows.
+    %     \qedhere
+    % \end{listalph}
+\end{proof}
+We wish to express the matrix Gauss sums $g_n(\omega, \psi, T)$ in terms of the standard Gauss sums $g(\omega,\psi)$. We do this by relating $g_n$ to $g_{n-1}$ via row-reduction. We split the Gauss sum $g_n$ into two cases: $A_{nn}\ne0$ and $A_{nn}=0$. We treat the case $A_{nn}\neq0$ first.
+\begin{lemma} \label{lem:gsum-gl-not-0}
+    Fix characters $\omega\colon\FF_q^\times\to\CC^\times$ and $\psi\colon\FF_q\to\CC^\times$. If $\psi\ne1$, then
+    \[\sum_{\substack{A\in\GL_{n+1}\\A_{n+1,n+1}\ne0}}\omega(\det A)\psi(\tr A)=q^ng(\omega,\psi)g_n(\omega,\psi,1_n).\]
+    % \begin{cases}
+    %     q^ng(\omega,\psi)g_n(\omega,\psi,1_n) & \text{if }\psi\ne1, \\
+    %     q^{2n}(q-1)g_n(1,1,1_n) & \text{if }\omega=\psi=1.
+    % \end{cases}.\]
+\end{lemma}
+\begin{proof}
+    The main idea is that
+    \[\arraycolsep=1.4pt\begin{array}{ccccccccc}
+        \GL_n &\times& \FF_q^n &\times& \FF_q^n &\times& \FF_q^\times &\to& \GL_{n+1} \\
+        (B &,& v &,& w &,& c) &\mapsto& \begin{bsmallmatrix}
+            1_n & v \\
+            & 1
+        \end{bsmallmatrix}\begin{bsmallmatrix}
+            B \\ & c
+        \end{bsmallmatrix}\begin{bsmallmatrix}
+            1_n \\
+            w^\intercal & 1
+        \end{bsmallmatrix}
+    \end{array}\]
+    is a bijection onto elements of $A\in\GL_{n+1}$ with nonzero entry $A_{n+1,n+1}$.
+    % Indeed, we can compute
+    % \[\begin{bmatrix}
+    %     1_n & v \\ & 1
+    % \end{bmatrix}\begin{bmatrix}
+    %     B \\ & c
+    % \end{bmatrix}\begin{bmatrix}
+    %     1_n \\ w^\intercal & 1
+    % \end{bmatrix}=\begin{bmatrix}
+    %     B+cvw^\intercal & cv \\
+    %     cw^\intercal & c
+    % \end{bmatrix},\]
+    % so we can see that any $A\in\GL_{n+1}$ with nonzero $c\coloneqq A_{n+1,n+1}$ is uniquely given by some choice $(B,v,w)$.
+    Our sum becomes
+    \[\underbrace{\sum_{B\in\GL_n}\omega(\det B)\psi(\tr B)}_{g_n(\omega,\psi,1_n)}\sum_{c,v,w}\omega(c)\psi(c)\psi(\tr cvw^\intercal).\]
+    % If $(\omega,\psi)=(1,1)$, then our term is always $1$, so we total to $q^{2n}(q-1)g_n(1,1,1_n)$. Otherwise, we suppose
+    With $\psi\ne1$, we can get cancellation by summing over $w$
+    % : this produces an internal sum of the form
+    % \[\sum_{w\in\FF_q^n}\psi(\tr v\cdot cw^\intercal)=\begin{cases}
+    %     0 & \text{if }v\ne0, \\
+    %     q^n & \text{if }v=0,
+    % \end{cases}\]
+    by \Cref{lem:matrix-char-sum}. In particular, we only get a nonzero contribution when $v=0$, leaving us with $q^ng_n(\omega,\psi,1_n)g(\omega,\psi)$
+    % Thus, our total is
+    % \[q^ng_n(\omega,\psi,1_n)\underbrace{\sum_{c\in\FF_q^\times}\omega(c)\psi(c)}_{g(\omega,\psi)}\]
+    after summing over $c$ as well.
+\end{proof}
+We now handle $A_{nn}=0$. This requires more care because the rightmost column must have a nonzero entry.
+\begin{lemma} \label{lem:gsum-gl-0}
+    Fix characters $\omega\colon\FF_q^\times\to\CC^\times$ and $\psi\colon\FF_q\to\CC^\times$. Suppose $\psi \neq 1$. Choosing some nonzero $\ov v,\ov w\in\FF_q^{n+2}$ such that $\ov v_{n+2}=\ov w_{n+2}=0$, we have
+    \[\sum_{\substack{A\in\GL_{n+2}\\Ae_{n+2}=\ov v\\A^\intercal e_{n+2}=\ov w}}\omega(\det A)\psi(\tr A)=0.\]
+    % \begin{cases}
+    %     0 & \text{if }\psi\ne1, \\
+    %     q^{2n+1}g_n(1,1,1_n) & \text{if }(\psi,\omega)=(1,1).
+    % \end{cases}\]
+\end{lemma}
+\begin{proof}
+    We will transform our sum into
+    \[\sum_{\substack{A\in\GL_{n+2}\\Ae_{n+2}=\ov v\\A^\intercal e_{n+2}=\ov w}}\omega(\det A)\psi(\tr AT),\]
+    where $\ov v_{n+1},\ov w_{n+1}\ne0$, at the cost of allowing $T$ to be specified a permutation matrix.
+    % In particular, 
+    % By allowing $T=1_{n+2}$ to be a permutation matrix,
+    % we will choose $T$ to allow us to assume $\ov v_{n+1},\ov w_{n+1}\ne0$.
+    We may rearrange the coordinates of $\ov v$ and $\ov w$ so that $\ov v_{n+1},\ov w_{n+1}\ne0$ by replacing $A$ with $\tau A\sigma$ for suitable permutation matrices $\tau$ and $\sigma$.
+    % (One can use $\tau$ to achieve $\ov v_{n+1}\ne0$ and use $\sigma$ to achieve $\ov w_{n+2}\ne0$.)
+    Looking at the original sum, this does not change $\det A$ (one can add a sign to $\ov v$ or $\ov w$ if necessary), but it transforms $\tr A$ into $\tr A\sigma\tau$. For brevity, we set $T\coloneqq\sigma\tau$. Note the construction promises that $\sigma(n+2)=n+2$.
+
+    The rest of the argument proceeds as before. Write $\ov v=(cv,c,0)^\intercal$ and $\ov w=(dw,d,0)^\intercal$. Then, the point is that
+    \[\arraycolsep=1.4pt\begin{array}{ccccccccccccc}
+        \GL_n &\times& \FF_q^n &\times& \FF_q^n &\times& \FF_q &\to& \GL_{n+2} \\
+        (B &,& v' &,& w' &,& e) &\mapsto& \begin{bsmallmatrix}
+            1_n & v & v' \\
+            & 1 \\ && 1
+        \end{bsmallmatrix}\begin{bsmallmatrix}
+            B \\ & e & c \\ & d
+        \end{bsmallmatrix}\begin{bsmallmatrix}
+            1_n \\
+            w^\intercal & 1 \\ (w')^\intercal && 1
+        \end{bsmallmatrix}
+    \end{array}\]
+    is a bijection onto $A\in\GL_{n+2}$ satisfying $Ae_{n+2}=\ov v$ and $A^\intercal e_{n+2}=\ov w$.
+    % Indeed, we compute
+    % \[\begin{bmatrix}
+    %     1_n & v & v' \\
+    %     & 1 \\ && 1
+    % \end{bmatrix}\begin{bmatrix}
+    %     B \\ & e & c \\ & d
+    % \end{bmatrix}\begin{bmatrix}
+    %     1_n \\ w^\intercal & 1 \\
+    %     (w')^\intercal && 1
+    % \end{bmatrix}=\begin{bmatrix}
+    %     B+cv'w^\intercal+dv(w')^\intercal+ecdvw^\intercal & ev+cv' & cv \\
+    %     ew^\intercal+d(w')^\intercal & e & c \\
+    %     dw^\intercal & d & 0
+    % \end{bmatrix},\]
+    % so we can see that any $A\in\GL_{n+2}$ with $Ae_{n+2}=\ov v$ and $A^\intercal e_{n+2}=\ov w$ is uniquely given by some choice of $(B,v',w',e)$.
+    
+    % Quickly, if $\omega=\psi=1$, then we are just counting, so we total to $q^{2n+1}g_n(1,1,1_n)$. Otherwise
+    We now show that the sum vanishes, splitting into two cases for the permutation matrix $\sigma$.
+    \begin{itemize}
+        \item Suppose that $\sigma(n+1)=n+1$. Then we may write $\sigma$ as $\begin{bsmallmatrix}
+            T_n \\ & 1_2
+        \end{bsmallmatrix}$. Then our sum looks like
+        \begin{align*}
+            & \sum_{B\in\GL_n}\omega(\det B)\psi(\tr BT_n) \\
+            \times{}& \sum_{v',w',e}\omega(-cd)\psi(\tr cv(w')^\intercal T_n)\psi(\tr dv'w^\intercal T_n)\psi(\tr ecdvw^\intercal T_n)\psi(e).
+        \end{align*}
+        By \Cref{lem:matrix-char-sum}, we see that the sum over $w'$ will only produce nonzero contribution if $v=0$. But in this case, the sum over $e$ is just $\sum\psi(e)=0$, so the total sum vanishes.
+        
+        \item Suppose $\sigma(n+1)\ne n+1$; say $\sigma(i_0)=n+1$ for $i_0<n+1$. Here, we sum over $v'$ while holding all other variables fixed. The determinant does not depend on $v'$, so we are left summing over the $\psi$ terms. Only paying attention to $v'$, we see that we are computing
+        \[\sum_{v'\in\FF_q^n}\prod_{i=1}^{n+2}\psi\left(e_i^\intercal \begin{bmatrix}
+            dv'w^\intercal & dv' & 0 \\
+            0 & 0 & 0 \\
+            0 & 0 & 0
+        \end{bmatrix}e_{\sigma(i)}\right).\]
+        We now sum over $v'_{i_0}$ and hold the remaining coordinates $v'_\bullet$ constant. Then the only non-constant factor in the product is $i=i_0$, where $\sigma(i)=n+1$, thus producing the sum $\sum\psi(dv'_{i_0})=0$.
+        \qedhere
+    \end{itemize}
+\end{proof}
+We now synthesize our cases to evaluate our Gauss sums.
+\begin{theorem} \label{thm:gsum-gl}
+    Fix characters $\omega\colon\FF_q^\times\to\CC^\times$ and $\psi\colon\FF_q\to\CC^\times$ and some $T\in\GL_n$.
+    \begin{listalph}
+        \item Suppose $\psi\ne1$. Then
+        \[g_n(\omega,\psi,T)=\frac{q^{n(n-1)/2}}{\omega(\det T)}\cdot g(\omega,\psi)^n.\]
+        \item Suppose $\psi=1$ and $\omega=1$. Then
+        \[g_n(\omega,\psi,T)=\prod_{i=0}^{n-1}\left(q^n-q^i\right).\]
+    \end{listalph}For any $(\psi,\omega)$ not in the above list, the sum vanishes when $n$ is positive
+\end{theorem}
+\begin{proof}
+    Note the last sentence follows by \Cref{lem:gsum-gl-basic}. Note both (a) and (b) reduce to the case where $T=1_n$ by \Cref{lem:gsum-gl-basic} because both sides are invariant under replacing $T$ by $gT$ for some $g\in\GL_n$. Now, the sum in (b) is simply enumerating $\GL_n$, so the result follows from \cite[Proposition~7.1.1]{hach-gf}.
+
+    It remains to show (a). For $n=0$, there is nothing to prove. Thus, by induction, it is enough to show that
+    \[g_{n+1}(\omega,\psi,1_{n+1})\stackrel?=q^ng(\omega,\psi)g_n(\omega,\psi,1_n)\]
+    for $n\ge0$, which follows by summing \Cref{lem:gsum-gl-not-0,lem:gsum-gl-0}.
+    % , so taking $g=T^{-1}$ allows us to take $T=1_n$. We now proceed with our cases separately.
+    % \begin{listalph}
+    %     \item For $n=0$, there is nothing to prove. Thus, by induction, it is enough to show that
+    %     \[g_{n+1}(\omega,\psi,1_{n+1})\stackrel?=q^ng_n(\omega,\psi,T),\]
+    %     which follows by summing \Cref{lem:gsum-gl-not-0,lem:gsum-gl-0}.
+    %     \item For $n\in\{0,1\}$, there is not much to say. We now induct, noting that summing \Cref{lem:gsum-gl-not-0,lem:gsum-gl-0} produces
+    %     \[g_{n+2}(1,1,1_{n+2})=q^{2n+2}(q-1)g_{n+1}(1,1,1_{n+1})+q^{2n+1}\left(q^{n+2}-1\right)^2g_n(1,1,1_n),\]
+    %     so it is enough to show that our right-hand side also satisfies this recurrence relation. Well, the right-hand side of the above equation is
+    %     \begin{align*}
+    %         & q^{2n+2}(q-1)\prod_{i=0}^{n+1}\left(q^{n+1}-q^i\right)+q^{2n+1}\left(q^{n+2}-1\right)^2\prod_{i=0}^n\left(q^n-q^i\right) \\
+    %         ={}& \left(q^{n+1}(q-1)\left(q^{n+2}-q\right)+q\left(q^{n+1}-1\right)^{2}\right)\prod_{i=2}^{n+1}\left(q^{n+2}-q^{i}\right) \\
+    %         ={}& \left(q^{n+1}(q-1)+\left(q^{n+1}-1\right)\right)\prod_{i=1}^{n+1}\left(q^{n+2}-q^{i}\right) \\
+    %         ={}& \prod_{i=0}^{n+1}\left(q^{n+2}-q^{i}\right),
+    %     \end{align*}
+    %     as required.
+    %     \qedhere
+    % \end{listalph}
+\end{proof}
+\begin{remark}
+    It is possible to prove (b) in the theorem by tracking the case $(\omega,\psi)=(1,1)$ through \Cref{lem:gsum-gl-not-0,lem:gsum-gl-0}. We have not done so for brevity.
+\end{remark}
+We close this subsection with a combinatorial application; note there is a similar result in \cite[Theorem~6.2]{kim-gauss-sum}.
+\begin{corollary}
+    Let $n$ be a nonnegative integer, and fix some $T\in\GL_n$. Further, fix $d\in\FF_q^\times$ and $t\in\FF_q$. Then the number $N(d,t)$ of $A\in\GL_n$ such that $\det A=d$ and $\tr AT=t$ is
+    \begin{align*}
+        &\frac1{q(q-1)}\left(\prod_{i=0}^{n-1}\left(q^n-q^i\right)-q^{n(n-1)/2}(q-1)^n\right) \\
+        &+q^{n(n-1)/2}\cdot\#\left\{(y_1,\ldots,y_n)\in\FF_q^n:(y_1+\cdots+y_n)=t,\frac{y_1\cdots y_n}{\det T}=d\right\}.
+    \end{align*}
+\end{corollary}
+\begin{proof}
+    For any characters $\omega\colon\FF_q^\times\to\CC^\times$ and $\psi\colon\FF_q\to\CC^\times$, we claim that $g_n(\omega,\psi,T)$ equals
+    \begin{align*}
+        &\frac1{q(q-1)}\left(\prod_{i=0}^{n-1}\left(q^n-q^i\right)-q^{n(n-1)/2}(q-1)^n\right)\sum_{a\in\FF_q^\times,b\in\FF_q}\omega(a)\psi(b) \\
+        &+ \frac{q^{n(n-1)/2}}{\omega(\det T)}\cdot g(\omega,\psi)^n
+    \end{align*}
+    If $\psi\ne1$, then this is (a) of \Cref{thm:gsum-gl}; if $\psi=1$, then both sides vanish unless $\omega=1$, in which case this is (b) of \Cref{thm:gsum-gl}. Now, we notice that full expansion gives
+    \[\frac1{\omega(\det T)}\cdot g(\omega,\psi)^n=\sum_{y_1,\ldots,y_n\in\FF_q^\times}\omega\left(\frac{y_1\cdots y_n}{\det T}\right)\psi(y_1+\cdots+y_n),\]
+    so the result follows by summing appropriately over all $\omega$ and $\psi$.
+\end{proof}
+
+\subsection{The Sum Over \texorpdfstring{$\Sym_n^\times$}{ Sym}}
+For the purposes of this subsection, we define
+\[g_n(\omega,\psi,T)\coloneqq\sum_{A\in\Sym_n^\times}\omega(\det A)\psi(\tr AT)\]
+where $\omega\colon\FF_q^\times\to\CC^\times$ and $\psi\colon\FF_q\to\CC^\times$ are characters, and $T\in\Sym_n^\times$. Additionally, throughout we let $\chi\colon\FF_q^\times\to\CC^\times$ denote the nontrivial quadratic character.
+
+We follow the arguments of the previous subsection on $\GL_n$.
+\begin{lemma} \label{lem:gsum-sym-basic}
+    Fix characters $\omega\colon\FF_q^\times\to\CC^\times$ and $\psi\colon\FF_q\to\CC^\times$ and some $T\in\Sym_n^\times$.
+    \begin{listalph}
+        \item For any $g\in\GL_n$, we have
+        \[g_n(\omega,\psi,gTg^\intercal)=\omega(\det g)^{-2}g_n(\omega,\psi,T).\]
+        \item If $\psi=1$ and $\omega\ne1$, then $g_n(\omega,\psi,T)=0$ unless $\omega^2=1$ and $n$ is even.
+    \end{listalph}
+\end{lemma}
+\begin{proof}
+    Here, (a) follows by some elementary rearrangement upon noticing that $\op{GL}_n$ acts on $\op{Sym}_n^\times$ by $g\cdot A=gAg^\intercal$. For (b), we handle the two listed cases separately.
+    \begin{itemize}
+        \item Suppose $\omega^2\ne1$. Then the rearrangement which shows (a) is able to show that $g_n(\omega,1,T)=\omega(\det g)^2g_n(\omega,1,T)$ for any $g\in\GL_n$ (because $\psi=1$), so the $g_n(\omega,1,T)=0$ follows.
+        % Then for any $g\in\GL_n$, we see that $A\in\Sym_n^\times$ if and only if $gAg^\intercal\in\Sym_n^\times$, so
+        % \[g_n(\omega,1,T)=\sum_{A\in\Sym_n^\times}\omega(\det A)=\sum_{A\in\Sym_n^\times}\omega(\det gAg^\intercal)=\omega(\det g)^2g_n(\omega,1,T).\]
+        % Thus, to conclude $g_n(\omega,1,T)=0$, it suffices to find $g\in\GL_n$ with $\omega(\det g)^2\ne1$. Well, $\omega^2\ne1$, so find $c\in\FF_q^\times$ such that $\omega(c)^2\ne1$ and then set $g\coloneqq\operatorname{diag}(c,1,\ldots,1)$.
+        \item Suppose $n$ is odd and $\omega^2=1$. Now, for any $c\in\FF_q^\times$, we see that $A\in\Sym_n^\times$ if and only if $cA\in\Sym_n^\times$, so some rearrangement shows $g_n(\omega,1,T)=\omega(c)^ng_n(\omega,1,T)$ for any $c\in\FF_q^\times$. However, $n$ is odd, so $\omega^n=\omega$ is nontrivial, so this forces $g_n(\omega,1,T)=0$.
+        % \[g_n(\omega,1,T)=\sum_{A\in\Sym_n^\times}\omega(\det A)=\sum_{A\in\Sym_n^\times}\omega(c\det A)=\omega(c)^ng_n(\omega,1,T).\]
+        % Now, if we did have $g_n(\omega,1,T)\ne0$, then we would have $\omega(c)^n=1$ for all $c\in\FF_q^\times$ and hence $\omega^n=1$; however, $n$ is odd and $\omega^2=1$ already, so it would follow $\omega=1$. However, $\omega\ne1$ by hypothesis.
+        \qedhere
+    \end{itemize}
+    % \begin{listalph}
+    %     \item We directly compute
+    %     \begin{align*}
+    %         g_n(\omega,\psi,gTg^\intercal) &= \sum_{A\in\Sym_n^\times}\omega(\det A)\psi(\tr AgTg^\intercal) \\
+    %         &= \sum_{A\in\Sym_n^\times}\omega(\det A)\psi(\tr g^\intercal AgT) \\
+    %         &= \sum_{A\in\Sym_n^\times}\omega(\det g^{-\intercal}Ag^{-1})\psi(\tr AT) \\
+    %         &= \omega(\det g)^{-2}g_n(\omega,\psi,T).
+    %     \end{align*}
+    %     \item We have two cases.
+    %     \begin{itemize}
+    %         \item Suppose $\omega^2\ne1$. Then for any $g\in\GL_n$, we see that $A\in\Sym_n^\times$ if and only if $gAg^\intercal\in\Sym_n^\times$, so
+    %         \[g_n(\omega,1,T)=\sum_{A\in\Sym_n^\times}\omega(\det A)=\sum_{A\in\Sym_n^\times}\omega(\det gAg^\intercal)=\omega(\det g)^2g_n(\omega,1,T).\]
+    %         Thus, to conclude $g_n(\omega,1,T)=0$, it suffices to find $g\in\GL_n$ with $\omega(\det g)^2\ne1$. Well, $\omega^2\ne1$, so find $c\in\FF_q^\times$ such that $\omega(c)^2\ne1$ and then set $g\coloneqq\operatorname{diag}(c,1,\ldots,1)$.
+    %         \item Suppose $n$ is odd. By the previous case, we may assume that $\omega^2=1$. Now, for any $c\in\FF_q^\times$, we see that $A\in\Sym_n^\times$ if and only if $cA\in\Sym_n^\times$, so
+    %         \[g_n(\omega,1,T)=\sum_{A\in\Sym_n^\times}\omega(\det A)=\sum_{A\in\Sym_n^\times}\omega(c\det A)=\omega(c)^ng_n(\omega,1,T).\]
+    %         Now, if we did have $g_n(\omega,1,T)\ne0$, then we would have $\omega(c)^n=1$ for all $c\in\FF_q^\times$ and hence $\omega^n=1$; however, $n$ is odd and $\omega^2=1$ already, so it would follow $\omega=1$. However, $\omega\ne1$ by hypothesis.
+    %         \qedhere
+    %     \end{itemize}
+    % \end{listalph}
+\end{proof}
+As before, our row-reduction will have two cases: $A_{nn}\ne0$ and $A_{nn}=0$.
+\begin{lemma} \label{lem:gsum-sym-ind-not-0}
+    Fix characters $\omega\colon\FF_q^\times\to\CC^\times$ and $\psi\colon\FF_q\to\CC^\times$ and diagonal $T_{n+1}\in\Sym_{n+1}^\times$. Letting $T_n\coloneqq\op{diag}(T_{11},\ldots,T_{nn})$, if $\psi\ne1$, then the sum
+    \[\sum_{\substack{A\in\Sym_{n+1}^\times\\A_{n+1,n+1}\ne0}}\omega(\det A)\psi(\tr AT_{n+1})\]
+    equals
+    \[g_n(\omega,\psi,T_n)\frac{\chi(\det T_n)\chi(T_{n+1,n+1})^n}{\omega(T_{n+1,n+1})}g(\omega\chi^n,\psi)g(\chi,\psi)^n.
+    % \begin{cases}
+    %     g_n(\omega,\psi,T_n)\frac{\chi(\det T_n)\chi(T_{n+1,n+1})^n}{\omega(T_{n+1,n+1})}g(\omega\chi^n,\psi)g(\chi,\psi)^n & \text{if }\psi\ne1, \\
+    %     0 & \text{if }(\omega,\psi)=(\chi,1), \\
+    %     q^n(q-1)g_n(1,1,1_n) & \text{if }(\omega,\psi)=1.
+    % \end{cases}
+    \]
+\end{lemma}
+\begin{proof}
+    The main point is that
+    \[\arraycolsep=1.4pt\begin{array}{ccccccc}
+        \operatorname{Sym}_n^\times & \times & \FF_q^n & \times & \FF_q^\times & \to & \Sym_{n+1}^\times \\
+        (B & , & v & , & c) & \mapsto & \displaystyle\begin{bsmallmatrix}
+            1 & v \\
+              & 1
+        \end{bsmallmatrix}\begin{bsmallmatrix}
+            B \\ & c
+        \end{bsmallmatrix}\begin{bsmallmatrix}
+            1 \\ v^\intercal & 1
+        \end{bsmallmatrix}
+    \end{array}\]
+    is a bijection onto $A\in\Sym_{n+1}^\times$ with $A_{n+1,n+1}\ne0$. 
+    % Indeed, we can compute
+    % \[\begin{bmatrix}
+    %     1 & v \\
+    %       & 1
+    % \end{bmatrix}\begin{bmatrix}
+    %     B \\ & c
+    % \end{bmatrix}\begin{bmatrix}
+    %     1 \\ v^\intercal & 1
+    % \end{bmatrix}=\begin{bmatrix}
+    %     B+cvv^\intercal & cv \\
+    %     cv^\intercal & c
+    % \end{bmatrix},\]
+    % from which the bijection follows.
+    Thus, our sum is
+    \[\underbrace{\sum_{B\in\Sym_n^\times}\omega(\det B)\psi(\tr BT_n)}_{g_n(\omega,\psi,T_n)}\sum_{v,c}\omega(c)\psi(\tr cvv^\intercal T_n)\psi(cT_{n+1,n+1}).\]
+    % If $\psi=1$ and $\omega=\chi$, then the right sum is $\sum_{v,c}\chi(c)=0$ because $\chi$ is nontrivial; if $\psi=1$ and $\omega=1$, then the right sum is $q^n(q-1)$ because all terms equal $1$.
+    % 
+    % For the rest of the proof, we may assume that $\psi\ne1$.
+    Now, for brevity, we set $T\coloneqq\op{diag}(d_1,\ldots,d_{n+1})$, so the sum over $v$ and $c$ above equals
+    % . The main point is to compute our sum over $v$ and $c$, which we see is
+    \[\sum_{c\in\FF_q^\times}\omega(c)\psi(cd_{n+1})\prod_{i=1}^n\Bigg(\sum_{a\in\FF_q}\psi\left(cd_ia^2\right)\Bigg)\]
+    after some expansion (of $v\in\FF_q^n$). Quickly, we note that
+    \[\sum_{a\in\FF_q}\psi\left(cd_ka^2\right)\stackrel?=\sum_{a\in\FF_q}(1+\chi(cd_ka))\psi(a),\]
+    where we have extended $\chi$ to $\FF_q$ by $\chi(0)\coloneqq0$; indeed, $(1+\chi(cd_ka))$ is an appropriate indicator for $a/(cd_k)$ being a square. From here, we note $\psi\ne1$ implies
+    % Indeed, for any $b\in\FF_q$, we see that $\psi(b)$ appears on the left-hand side $0$ times if $b$ does not have the form $cd_ka^2$, appears $1$ time if $b=0$, and appears $2$ times if $b$ is nonzero and has the form $cd_ka^2$; these values are exactly $1+\chi(cd_ka)$ in all cases. As such, the claim follows, and because $\psi$ is nontrivial, we actually have
+    \[\sum_{a\in\FF_q}\psi\left(cd_ka^2\right)=\chi(cd_k)g(\chi,\psi).\]
+    Plugging this in, we see that our sum is
+    \[g_n(\omega,\psi,T_n)\sum_{c\in\FF_q^\times}\omega(c)\chi(c)^n\psi(cd_{n+1})\chi(d_1\cdots d_n)g(\chi,\psi)^n,\]
+    which rearranges into the desired.
+    % \begin{align*}
+    %     &\phantom{{}={}} g_n(\omega,\psi,T_n)\sum_{c\in\FF_q^\times}\omega(c)\chi(c)^n\psi(cd_{n+1})\chi(d_1\cdots d_n)g(\chi,\psi)^n \\
+    %     &= g_n(\omega,\psi,T_n)\cdot\frac{\chi(d_1\cdots d_n)\chi(d_{n+1})^n}{\omega(d_{n+1})}\sum_{c\in\FF_q^\times}\omega(c)\chi(c)^n\psi(c)g(\chi,\psi)^n \\
+    %     &= g_n(\omega,\psi,T_n)\cdot\frac{\chi(d_1\cdots d_n)\chi(d_{n+1})^n}{\omega(d_{n+1})}\cdot g\left(\omega\chi^n,\psi\right)g(\chi,\psi)^n,
+    % \end{align*}
+    % as desired.
+\end{proof}
+Next, we handle $A_{nn}=0$.
+\begin{lemma} \label{lem:gsum-sym-ind-0}
+    Fix characters $\omega\colon\FF_q^\times\to\CC^\times$ and $\psi\colon\FF_q\to\CC^\times$ and some diagonal $T_{n+2}\in\Sym^\times_{n+2}$, and let $T_n\coloneqq\op{diag}(T_{11},\ldots,T_{nn})$. Choosing some nonzero $\ov v\in\FF_q^{n+2}$ such that $\ov v_{n+2}=0$, if $\psi\ne1$, we have
+    \[\sum_{\substack{A\in\Sym_{n+2}^\times\\Ae_{n+2}=\ov v}}\omega(\det A)\psi(\tr AT_{n+2})=0.
+    % \begin{cases}
+    %     0 & \text{if }\psi\ne1, \\
+    %     \omega(-1)q^{n+1}g_n(\omega,1,T_n) & \text{if }\psi=1\text{ and }\omega^2=1.
+    % \end{cases}
+    \]
+\end{lemma}
+\begin{proof}
+    We begin by reducing to the case $\ov v_{n+1}\ne0$. Set $T\coloneqq T_{n+2}$ for brevity. We want to rearrange the coordinates of $\ov v$ so that $v_{n+1}\ne0$ by mapping $A\mapsto\sigma^{-1}A\sigma$ for suitable permutation matrix $\sigma$. This does not change $\det A$, but it transforms $\tr AT$ into $\tr A\sigma T\sigma^{-1}$, effectively rearranging the rows and columns of $T$ into a different diagonal matrix. However, the conclusion is independent of $T$, so this rearrangement is legal.
+
+    We may now row-reduce. Write $\ov v=(cv,c,0)$ (as a column vector). The main point is that there is a bijection
+    \[\arraycolsep=1.4pt\begin{array}{ccccccc}
+        \operatorname{Sym}_{n}^\times & \times & \FF_q^{n} & \times & \FF_q & \to & \Sym_{n+2}^\times \\
+        (B & , & w & , & d) & \mapsto &  \begin{bsmallmatrix}
+            1 & v & w \\
+                & 1 &   \\
+                &   & 1
+        \end{bsmallmatrix}\begin{bsmallmatrix}
+            B \\
+                & d & c \\
+                & c
+        \end{bsmallmatrix}\begin{bsmallmatrix}
+            1 \\
+            v^\intercal & 1 \\
+            w^\intercal &   & 1
+        \end{bsmallmatrix}
+    \end{array}\]
+    onto the set of $A\in\Sym_{n+2}^\times$ such that $Ae_{n+2}=\ov v$.
+    % To see that this is a bijection, we expand out the matrix product as
+    % \[\begin{bmatrix}
+    %     B+dvv^\intercal+c(vw^\intercal+wv^\intercal) & cdv+cw & cv \\
+    %     cdv^\intercal+cw^\intercal & d & c \\
+    %     cv^\intercal & c & 0
+    % \end{bmatrix},\]
+    % from which the bijection follows.
+    Thus, we see that our sum is
+    \begin{align*}
+        &\sum_{B}\omega\left(-c^2\det B\right)\psi(\tr BT_n) \\
+        \times{}& \sum_{d}\psi\left(dT_{n+1,n+1}+d\tr vv^\intercal T_n\right)\sum_{w}\psi(2c\tr vw^\intercal T_n).
+    \end{align*}
+    With $\psi\ne1$, we see that the sum over $w$ vanishes by \Cref{lem:matrix-char-sum} unless $v=0$. But in the case where $v=0$, we see that the sum over $d$ will vanish, so the total sum continues to vanish.
+    % Otherwise, $\psi=1$ with $\omega^2=1$. Then our sums over $d$ and $w$ have all terms equal to $1$, so they produce contributions of $\omega(-1)q^{n+1}g_n(\omega,1,T_n)$, as required.
+\end{proof}
+We now synthesize our cases to evaluate our Gauss sums.
+\begin{theorem} \label{thm:gsum-sym}
+    Fix characters $\omega\colon\FF_q^\times\to\CC^\times$ and $\psi\colon\FF_q\to\CC^\times$ and some $T\in\Sym_n^\times$. Let $\chi\colon\FF_q^\times\to\CC^\times$ denote the quadratic character.
+    \begin{listalph}
+        \item Suppose $\psi\ne1$.
+        \begin{itemize}
+            \item If $n=2m$ is a positive even integer, then
+            \[g_{2m}(\omega,\psi,T)=\frac{\chi(-1)^m\chi(\det T)q^{m^2}}{\omega(4^m\det T)}\cdot g\left(\omega^2,\psi\right)^m.\]
+            \item If $n=2m+1$ is an odd nonnegative integer, then
+            \[g_{2m+1}(\omega,\psi,T)=\frac{q^{m(m+1)}}{\omega(4^m\det T)}\cdot g(\omega,\psi)g\left(\omega^2,\psi\right)^m.\]
+        \end{itemize}
+        \item Suppose $\psi=1$ and $\omega=\chi$. If $n=2m$ is even, then
+        \[g_{2m}(\chi,1,T)=\chi(-1)^mq^{m^2}\prod_{k=0}^{m-1}\left(q^{2k+1}-1\right).\]
+        \item Suppose $\psi=1$ and $\omega=1$.
+        \begin{itemize}
+            \item If $n=2m$ is even, then
+            \[g_{2m}(1,1,T)=q^{m^2+m}\prod_{k=0}^{m-1}\left(q^{2k+1}-1\right).\]
+            \item If $n=2m+1$ is odd, then
+            \[g_{2m+1}(1,1,T)=q^{m^2+m}\prod_{k=0}^{m}\left(q^{2k+1}-1\right).\]
+        \end{itemize}
+    \end{listalph}
+    For any $(\psi,\omega)$ not in the above list, the sum vanishes when $n$ is positive
+\end{theorem}
+\begin{proof}
+    Note the last sentence follows by \Cref{lem:gsum-sym-basic}. Additionally, we may quickly handle (b) and (c), where $\psi=1$ because they reduce to the combinatorics of symmetric matrices: (c) is counting invertible symmetric matrices, so the result is \cite[Theorem~7.5.2]{hach-gf}. Similarly, (b) is counting the difference between invertible symmetric matrices with square and non-square determinant, which is computed in \cite[p.~163]{macwilliams-ortho-matrices}.
+    
+    It remains to prove (a). We proceed by indution on $n$, where the case of $n=1$ can be checked directly. We quickly reduce to the case where $T$ is diagonal. By choosing an orthogonal basis for the symmetric bilinear form given by $T$, we receive some $g\in\GL_n$ such that $D\coloneqq gTg^\intercal$ is diagonal. As such, \Cref{lem:gsum-sym-basic} yields
+    \[g_n(\omega,\psi,T) = \omega(\det g)^2g_n(\omega,\psi,D).\]
+    Now, suppose we have proven the theorem for diagonal matrices. In this case, we see $g_n(\omega,\psi,D)=(\det D)^{-1}g_n(\omega,\psi,1)$, so $\det D=(\det g)^2(\det T)$ implies that
+    \[g_n(\omega,\psi,T)=\omega(\det T)^{-1}g_n(\omega,\psi,1),\]
+    which is the theorem for $T$, as desired.
+
+    Thus, we may assume that $T_n\coloneqq\op{diag}(d_1,\ldots,d_n)$; set $T_{n-1}\coloneqq\op{diag}(d_1,\ldots,d_{n-1})$ and define $T_{n-2}$ analogously. We now induct on $n$ in cases.
+    \begin{itemize}
+        \item Suppose that $n=2m$ is an even positive integer. In this case, \Cref{lem:gsum-sym-ind-not-0,lem:gsum-sym-ind-0} and induction show $g_{2m}(\omega,\psi,T)$ equals
+        \[\frac{\chi(\det T)q^{(m-1)m}}{\omega(4^{m-1}\det T)}\cdot g(\omega,\psi)g\left(\omega^2,\psi\right)^{m-1}g(\omega\chi,\psi)g(\chi,\psi)^{2m-1}.\]
+        % \begin{align*}
+        %     g_{2m}(\omega,\psi,T) &= g_{2m-1}(\omega,\psi,T_{2m-1})\cdot\frac{\chi(\det T)}{\omega(d_{n})}\cdot g(\omega\chi,\psi)g(\chi,\psi)^{2m-1} \\
+        %     &= \frac{\chi(\det T)q^{(m-1)m}}{\omega(4^{m-1}\det T)}\cdot g(\omega,\psi)g\left(\omega^2,\psi\right)^{m-1}g(\omega\chi,\psi)g(\chi,\psi)^{2m-1}.
+        % \end{align*}
+        We now recall $g(\chi,\psi)^2=\chi(-1)q$ by \Cref{prop:mag-gauss-sum} and $\omega(4)g(\omega,\psi)g(\omega\chi,\psi)=g\left(\omega^2,\psi\right)g(\chi,\psi)$ by \Cref{prop:quad-twist-gauss-sum}, so rearrangement completes the proof.
+        % By \Cref{prop:quad-twist-gauss-sum}, this is
+        % \[g_{2m}(\omega,\psi,T)=\frac{\chi(\det T)q^{m^2-m}}{\omega(4^m\det T)}\cdot g\left(\omega^2,\psi\right)^mg(\chi,\psi)^{2m}.\]
+        % Lastly, \Cref{prop:mag-gauss-sum} yields
+        % \[g_{2m}(\omega,\psi)=\frac{\chi(-1)^m\chi(\det T)q^{m^2}}{\omega(4^m\det T)}\cdot g\left(\omega^2,\psi\right)^m.\]
+        \item Suppose $n=2m+1$ is an odd positive integer with $m\ge1$. In this case, \Cref{lem:gsum-sym-ind-not-0,lem:gsum-sym-ind-0} and induction show $g_{2m+1}(\omega,\psi,T)$ equals
+        \[\frac{\chi(-1)^mq^{m^2}}{\omega(4^m\det T)}\cdot g\left(\omega^2,\psi\right)^mg(\omega,\psi)g(\chi,\psi)^{2m}.\]
+        We are now done after recalling $g(\chi,\psi)^2=\chi(-1)q$ by \Cref{prop:mag-gauss-sum} and rearranging.
+        \qedhere
+        % \begin{align*}
+        %     g_{2m+1}(\omega,\psi) &= g_{2m}(\omega,\psi)g(\omega,\psi)\cdot\frac{\chi(\det T_{2m-1})}{\omega(d_{n})}\cdot g(\chi,\psi)^{2m} \\
+        %     &= \frac{\chi(-1)^mq^{m^2}}{\omega(4^m\det T)}\cdot g\left(\omega^2,\psi\right)^mg(\omega,\psi)g(\chi,\psi)^{2m}.
+        % \end{align*}
+        % From here, \Cref{prop:mag-gauss-sum} implies
+        % \[g_{2m+1}(\omega,\psi)=\frac{q^{m^2+m}}{\omega(4^m\det T)}\cdot g(\omega,\psi)g\left(\omega^2,\psi\right)^m.\]
+    \end{itemize}
+    % \begin{listalph}
+    %     \item We split our arguments by parity.
+    %     \begin{itemize}
+    %         \item Suppose that $n=2m$ is an even positive integer. In this case, \Cref{lem:gsum-sym-ind-not-0,lem:gsum-sym-ind-0} and induction yields
+    %         \begin{align*}
+    %             g_{2m}(\omega,\psi,T) &= g_{2m-1}(\omega,\psi,T_{2m-1})\cdot\frac{\chi(\det T)}{\omega(d_{n+1})}\cdot g(\omega\chi,\psi)g(\chi,\psi)^{2m-1} \\
+    %             &= \frac{\chi(\det T)q^{(m-1)m}}{\omega(4^{m-1}\det T)}\cdot g(\omega,\psi)g\left(\omega^2,\psi\right)^{m-1}g(\omega\chi,\psi)g(\chi,\psi)^{2m-1}.
+    %         \end{align*}
+    %         By \Cref{prop:quad-twist-gauss-sum}, this is
+    %         \[g_{2m}(\omega,\psi,T)=\frac{\chi(\det T)q^{m^2-m}}{\omega(4^m\det T)}\cdot g\left(\omega^2,\psi\right)^mg(\chi,\psi)^{2m}.\]
+    %         Lastly, \Cref{prop:mag-gauss-sum} yields
+    %         \[g_{2m}(\omega,\psi)=\frac{\chi(-1)^m\chi(\det T)q^{m^2}}{\omega(4^m\det T)}\cdot g\left(\omega^2,\psi\right)^m.\]
+    %         \item Suppose $n=2m+1$ is an odd positive integer with $m\ge1$. In this case, \Cref{lem:gsum-sym-ind-not-0,lem:gsum-sym-ind-0} and induction yields
+    %         \begin{align*}
+    %             g_{2m+1}(\omega,\psi) &= g_{2m}(\omega,\psi)g(\omega,\psi)\cdot\frac{\chi(\det T_{2m-1})}{\omega(d_{n+1})}\cdot g(\chi,\psi)^{2m} \\
+    %             &= \frac{\chi(-1)^mq^{m^2}}{\omega(4^m\det T)}\cdot g\left(\omega^2,\psi\right)^mg(\omega,\psi)g(\chi,\psi)^{2m}.
+    %         \end{align*}
+    %         From here, \Cref{prop:mag-gauss-sum} implies
+    %         \[g_{2m+1}(\omega,\psi)=\frac{q^{m^2+m}}{\omega(4^m\det T)}\cdot g(\omega,\psi)g\left(\omega^2,\psi\right)^m.\]
+    %     \end{itemize}
+    %     \item Because $\psi=1$, the value of $T$ is irrelevant, so we will not adjust it in our notation. By induction, it is enough to show
+    %     \[g_{2m+2}(\chi,1,T)\stackrel?=g_{2m}(\chi,1,T)\cdot\chi(-1)q^{2m+1}\left(q^{2m+1}-1\right),\]
+    %     for all $m$, which is immediate upon summing \Cref{lem:gsum-sym-ind-not-0,lem:gsum-sym-ind-0}.
+    %     \item Again, because $\psi=1$, the value of $T$ is irrelevant, so we will not adjust it in our notation. As with previous parts, we induct. For $n\in\{0,1\}$, there is not much to say. The main point is that
+    %     \[g_{n+2}(1,1,T)=q^{n+1}(q-1)g_{n+1}(1,1,T_{n+1})+q^{n+1}\left(q^{n+1}-1\right)g_n(1,1,T_n)\]
+    %     for any $n$, which we see follows from summing \Cref{lem:gsum-sym-ind-not-0,lem:gsum-sym-ind-0}. Now, to synthesize cases, we note that
+    %     \[q^{m^2+m}\prod_{k=0}^{m}\left(q^{2k+1}-1\right)=q^{\frac12(2m+1)(2m+2)}\prod_{\substack{1\le k\le2m+1\\k\text{ odd}}}\left(1-\frac1{q^k}\right)\]
+    %     and analogously for the even case. Thus, for our induction, we take $n\ge0$ and use the recursive formula to see $g_{n+2}(1,1,T)$ is
+    %     \begin{align*}
+    %         & q^{n+1}(q-1)g_{n+1}(1,1,T)+q^{n+1}\left(q^{n+1}-1\right)g_n(1,1,T) \\
+    %         ={}& q^{\frac12(n+2)(n+1)}\left(q^{n+1}(q-1)\prod_{\substack{n<k\le n+1\\k\text{ odd}}}\left(1-\frac1{q^k}\right)+\left(q^{n+1}-1\right)\right)\prod_{\substack{1\le k\le n\\k\text{ odd}}}\left(1-\frac1{q^k}\right).
+    %     \end{align*}
+    %     If $n$ is odd, we have
+    %     \[q^{\frac12(n+2)(n+1)}\left(q^{n+2}-1\right)\prod_{\substack{1\le k\le n\\k\text{ odd}}}\left(1-\frac1{q^k}\right),\]
+    %     which simplifies correctly. If $n$ is even, we have
+    %     \[q^{\frac12(n+2)(n+1)}\underbrace{\left(q^{n+1}(q-1)\left(1-\frac1{q^{n+1}}\right)+\left(q^{n+1}-1\right)\right)}_{q\left(q^{n+1}-1\right)}\prod_{\substack{1\le k\le n\\k\text{ odd}}}\left(1-\frac1{q^k}\right),\]
+    %     which still simplifies correctly. This completes the induction.
+    %     \qedhere
+    % \end{listalph}
+\end{proof}
+\begin{remark}
+    It is possible to prove (b) and (c) above using the same inductive method which proves (a). % One merely needs to track the cases with $\psi=1$ through \Cref{lem:gsum-sym-ind-0,lem:gsum-sym-ind-not-0}.
+    % Part (c) above has recovered the computation of the number of invertible symmetric matrices; part (b) even recovers the number of invertible symmetric matrices with square and non-square determinant. We have included an inductive proof above to show that our methods are capable of this.
+\end{remark}
+% \begin{remark}
+%     The theorem implies that
+%     \[\sum_{A\in\Sym_n^\times(\FF_q)}\omega\left(\det AT^{-1}\right)\psi(\tr A)=\sum_{B\in\Sym_n^\times(\FF_q)}\omega(\det B)\psi(\tr BT),\]
+%     but this is not obvious: in particular, one cannot apply the variable change $B\coloneqq AT^{-1}$ because $AT^{-1}$ need not be symmetric! We would be interested in a more direct proof of the above equality.
+% \end{remark}
+We conclude this subsection with a combinatorial application.
+\begin{corollary} \label{cor:count-sym}
+    Let $n$ be a nonnegative integer, and fix some $T\in\Sym_n^\times$. Further, fix $d\in\FF_q^\times$ and $t\in\FF_q$.
+    \begin{enumerate}[label=(\alph*)]
+        \item Suppose that $n=2m+1$ is odd. Then the number $N(d,t)$ of $A\in\Sym_{2m+1}^\times$ such that $\det A=d$ and $\tr AT=t$ is
+        \begin{align*}
+            &\frac{q^{m^2+m}}{q(q-1)}\Bigg(\prod_{k=0}^m\left(q^{2k+1}-1\right)-(q-1)^{m+1}\Bigg) \\
+            &+q^{m^2+m}\#\left\{(y_0,\ldots,y_m)\in\FF_q^{m+1}:y_0+\cdots+y_m=t,\frac{y_0(y_1\cdots y_m)^2}{4^m\det T}=d\right\}.
+        \end{align*}
+        \item Suppose that $n=2m$ is even. Let $\chi\colon\FF_q^\times\to\CC^\times$ denote the nontrivial quadratic character. Then the number $N(d,t)$ of $A\in\Sym_{2m}^\times$ such that $\det A=d$ and $\tr AT=t$ is
+        \begin{align*}
+            &\frac{q^{m^2}}{q(q-1)}\Bigg(\left(q^m+\chi(-1)^m\chi(d)\right)\prod_{k=0}^{m-1}\left(q^{2k+1}-1\right) \\
+            & \qquad\qquad\qquad-\chi(-1)^m\left(\chi(d)+\chi(\det T)\right)(q-1)^m\Bigg) \\
+            &+\chi((-1)^m\det T)q^{m^2}\#\left\{(y_1,\ldots,y_m)\in\FF_q^m:y_1+\cdots+y_m=t,\frac{(y_1\cdots y_m)^2}{4^m\det T}=d\right\}.
+        \end{align*}
+    \end{enumerate}
+\end{corollary}
+\begin{proof}
+    We prove these separately.
+    \begin{enumerate}[label=(\alph*)]
+        \item For any characters $\omega\colon\FF_q^\times\to\CC^\times$ and $\psi\colon\FF_q\to\CC^\times$, we claim that $g_n(\omega,\psi,T)$ equals
+        \begin{align*}
+            & \frac{g_n(1,1,T)-q^{m(m+1)}(q-1)^{m+1}}{q(q-1)}\sum_{a\in\FF_q^\times,b\in\FF_q}\omega(a)\psi(b) \\
+            &+ \frac{q^{m(m+1)}}{\omega\left(4^m\det T\right)}\cdot g(\omega,\psi)g\left(\omega^2,\psi\right)^m
+        \end{align*}
+        This is by casework, using \Cref{thm:gsum-sym} repeatedly. If $\psi$ is nontrivial, the sum vanishes, so the claim follows from \Cref{thm:gsum-sym}. If $\psi$ is trivial and $\omega$ is nontrivial, then everything vanishes. Lastly, if both $\psi$ and $\omega$ are trivial, then everything equals $g_n(1,1,T)$.
+
+        Now, we notice that fully expanding $g(\omega,\psi)g\left(\omega^2,\psi\right)^m$ gives
+        \[%\frac1{\omega\left(4^m\det T\right)}\cdot g(\omega,\psi)g\left(\omega^2,\psi\right)^m=
+        \sum_{y_0,y_1,\ldots,y_m\in\FF_q^\times}\omega\left(y_0(y_1\cdots y_m)^2\right)\psi(y_0+\cdots+y_m),\]
+        so we achieve the result by summing appropriately over all $\omega$ and $\psi$ and using the formula for $g_n(1,1,T)$ given in \Cref{thm:gsum-sym}.
+        % by summing appropriately over all $\omega$ and $\psi$, we see that the number of $A\in\Sym_n^\times$ such that $\det A=d$ and $\tr AT=t$ is
+        % \begin{align*}
+        %     &\frac{g_n(1,1,T)-q^{m(m+1)}(q-1)^{m+1}}{q(q+1)} \\
+        %     &+q^{m^2+m}\cdot\#\left\{(x,y_1,\ldots,y_m):x+(y_1+\cdots+y_m)=t,\frac{x(y_1\cdots y_m)^2}{4^m\det T}=d\right\}.
+        % \end{align*}
+        % To finish, we note that we can simplify the first term with from \Cref{thm:gsum-sym}.
+
+        \item For any characters $\omega\colon\FF_q^\times\to\CC^\times$ and $\psi\colon\FF_q\to\CC^\times$, we claim that $g_n(\omega,\psi,T)$ equals
+        \begin{align*}
+            &\frac{\chi(-1)^m\chi(\det T)q^{m^2}}{\omega\left(4^m\det T\right)}\cdot g\left(\omega^2,\psi\right)^m \\
+            &+\frac{g_n(\chi,1,T)-\chi(-1)^mq^{m^2}(q-1)^m}{q(q-1)}\sum_{a\in\FF_q^\times,b\in\FF_q}\chi(a)\omega(a)\psi(b) \\
+            &+\frac{g_n(1,1,T)-\chi((-1)^m\det T)q^{m^2}(q-1)^m}{q(q-1)}\sum_{a\in\FF_q^\times,b\in\FF_q}\omega(a)\psi(b).
+        \end{align*}
+        Again, this is by casework, repeatedly using \Cref{thm:gsum-sym}. If $\psi$ is nontrivial, this is \Cref{thm:gsum-sym}. Otherwise, $\psi$ is trivial. Then if $\omega^2\ne1$, then $\omega\notin\{1,\chi\}$, so everything vanishes. Lastly, if $\omega\in\{1,\chi\}$, then both sides are equal by construction.
+
+        The rest of the proof proceeds as in (a) by expanding out $g\left(\omega^2,\psi\right)^m$ and summing over $\omega$ and $\psi$ appropriately.
+        % Now, as in (a), by full expansion of $\omega\left(4^m\det T\right)^{-1}g\left(\omega^2,\psi\right)^m$ and summing the claim over all $\omega$ and $\psi$ appropriately, we see that the number of $A\in\Sym_n^\times$ such that $\det A=d$ and $\tr AT=t$ is
+        % \begin{align*}
+        %     &\frac{g_n(\chi,1,T)-\chi(-1)^mq^{m^2}(q-1)^m}{q(q-1)}\cdot\chi(d)+\frac{g_n(1,1,T)-\chi(-1)^m\chi(\det T)q^{m^2}(q-1)^m}{q(q-1)}\\
+        %     &+\chi(-1)^m\chi(\det T)q^{m^2}\cdot\#\left\{(y_1,\ldots,y_m):y_1+\cdots+y_m=t,\frac{(y_1\cdots y_m)^2}{4^m\det T}=d\right\}.
+        % \end{align*}
+        % It remains to simplify the first two terms. On one hand, we note \Cref{thm:gsum-sym} gives
+        % \[\frac{g_n(\chi,1,T)-\chi(-1)^mq^{m^2}(q-1)^m}{q(q-1)}\cdot\chi(d)=\frac{\chi(-1)^mq^{m^2}}{q(q-1)}\left(\prod_{k=0}^{m-1}\left(q^{2k+1}-1\right)-(q-1)^m\right)\chi(d).\]
+        % On the other hand, \Cref{thm:gsum-sym} gives
+        % \[\frac{g_n(1,1,T)-\chi(-1)^m\chi(\det T)q^{m^2}(q-1)^m}{q(q-1)}=\frac{q^{m^2}}{q(q-1)}\left(q^m\prod_{k=0}^{m-1}\left(q^{2k+1}-1\right)-\chi(-1)^m\chi(\det T)(q-1)^m\right).\]
+        % Summing the above two equalities completes the simplification.
+        \qedhere
+    \end{enumerate}
+\end{proof}
+
+\subsection{The Sum Over \texorpdfstring{$\Alt_{2n}^\times$}{ Alt}}
+For the purposes of this subsection, we define
+\[g_{2n}(\omega,\psi,T)\coloneqq\sum_{A\in\Alt_{2n}^\times}\omega(\det A)\psi(\tr AT)\]
+where $\omega\colon\FF_q^\times$ and $\psi\colon\FF_q\to\CC^\times$ are characters, and $T\in\Alt_{2n}^\times$. Additionally, throughout we let $J\coloneqq\begin{bsmallmatrix}
+    & -1 \\ 1
+\end{bsmallmatrix}$, which is the $2\times2$ version of the matrix defined in \Cref{sec:rep-theory}.
+
+We would like to follow the outline established for $\GL_n$ and row-reduce, but a more complicated induction will be required because alternating matrices have vanishing diagonal. Instead, our row-reduction will be based on subdividing $A$ into $2\times2$ minors. As such, our casework is based on $A_{2n,2n-1}=-A_{2n-1,2n}$. Otherwise, our outline is the same.
+\begin{lemma} \label{lem:gsum-alt-basic}
+    Fix characters $\omega\colon\FF_q^\times$ and $\psi\colon\FF_q\to\CC^\times$ and some $T\in\Alt_{2n}^\times$.
+    \begin{listalph}
+        \item For any $g\in\GL_{2n}$, we have
+        \[g_{2n}(\omega,\psi,gTg^\intercal)=\omega(\det g)^{-2}g_{2n}(\omega,\psi,T).\]
+        \item If $\psi=1$, then $g_{2n}(\omega,\psi,T)=0$ unless $\omega^2=1$.
+    \end{listalph}
+\end{lemma}
+\begin{proof}
+    Here, (a) follows after some rearrangement using the action of $\GL_{2n}$ on $\op{Alt}_{2n}^\times$ by $g\cdot A\coloneqq gAg^\intercal$. For (b), we use this same rearrangement to show $g_{2n}(\omega,1,T)=\omega(\det g)^2g_{2n}(\omega,1,T)$ for any $g\in\GL_{2n}$, so the result follows.
+    % \begin{listalph}
+    %     \item We directly compute
+    %     \begin{align*}
+    %         g_{2n}(\omega,\psi,gTg^\intercal) &= \sum_{A\in\Alt_{2n}^\times}\omega(\det A)\psi(\tr AgTg^\intercal) \\
+    %         &= \sum_{A\in\Alt_{2n}^\times}\omega(\det A)\psi(\tr g^\intercal AgT) \\
+    %         &= \sum_{A\in\Alt_{2n}^\times}\omega(\det g^{-\intercal}Ag^{-1})\psi(\tr AT) \\
+    %         &= \omega(\det g)^{-2}g_{2n}(\omega,\psi,T).
+    %     \end{align*}
+    %     \item For any $g\in\GL_n$, we see that $A\in\Alt_{2n}^\times$ if and only if $gAg^\intercal\in\Alt_{2n}^\times$, so
+    %     \[g_{2n}(\omega,1,T)=\sum_{A\in\Alt_{2n}^\times}\omega(\det A)=\sum_{A\in\Alt_{2n}^\times}\omega(\det gAg^\intercal)=\omega(\det g)^2g_{2n}(\omega,1,T).\]
+    %     Thus, to conclude $g_{2n}(\omega,1,T)=0$, it suffices to find $g\in\GL_n$ with $\omega(\det g)^2\ne1$. Well, $\omega^2\ne1$, so find $c\in\FF_q^\times$ such that $\omega(c)^2\ne1$ and then set $g\coloneqq\operatorname{diag}(cJ,J,\ldots,J)$.
+    %     \qedhere
+    % \end{listalph}
+\end{proof}
+We now handle $A_{2n,2n-1}\ne0$.
+\begin{lemma} \label{lem:gsum-alt-not-0}
+    Fix characters $\omega\colon\FF_q^\times\to\CC^\times$ and $\psi\colon\FF_q\to\CC^\times$, and set $T_{2i}\coloneqq\op{diag}(J,\ldots,J)\in\Alt^\times_{2i}$ for each $i$. Then if $\psi\ne1$,
+    \[\sum_{\substack{A\in\Alt_{2n+2}^\times\\A_{2n,2n-1}\ne0}}\omega(\det A)\psi(\tr AT_{2n+2})=q^{2n}g\left(\omega^2,\psi^2\right)g_{2n}(\omega,\psi,T_{2n}).
+    % \begin{cases}
+    %     q^{2n}g(\omega^2,\psi)g_{2n}(\omega,\psi,T_{2n}) & \text{if }\psi\ne1, \\
+    %     q^{4n}(q-1)g_{2n}(1,1,T_n) & \text{if }\psi=1\text{ and }\omega^2=1.
+    % \end{cases}
+    \]
+\end{lemma}
+\begin{proof}
+    The point is that the bottom-right $2\times2$ minor of our $A\in\Alt_{2n+2}^\times$ is invertible. Thus, the main point is that
+    \[\arraycolsep=1.4pt\begin{array}{ccccccccccc}
+        \Alt_{2n}^\times &\times& \FF_q^{2n\times2} &\times& \FF_q^\times &\to& \Alt_{2n+2}^\times \\
+        (B &,& V &,& c) &\mapsto& \begin{bsmallmatrix}
+            1_{2n} & V \\ & 1_2
+        \end{bsmallmatrix}\begin{bsmallmatrix}
+            B \\ & cJ
+        \end{bsmallmatrix}\begin{bsmallmatrix}
+            1_{2n} \\ V^\intercal & 1_2
+        \end{bsmallmatrix}
+    \end{array}\]
+    is a bijection onto $A\in\Alt_{2n+2}^\times$ with $A_{2n+2,2n+1}\ne0$. Indeed, letting $V=\begin{bsmallmatrix}
+        v & w
+    \end{bsmallmatrix}$, we find our sum is
+    % \[\begin{bmatrix}
+    %     1_{2n} & v & w \\
+    %     & 1 \\ && 1
+    % \end{bmatrix}\begin{bmatrix}
+    %     B \\ && -c \\ & c
+    % \end{bmatrix}\begin{bmatrix}
+    %     1_{2n} \\ v^\intercal & 1 \\ w^\intercal && 1
+    % \end{bmatrix}=\begin{bmatrix}
+    %     B+cwv^\intercal-cvw^\intercal & cw & -cv \\
+    %     -cw^\intercal && -c \\
+    %     cv^\intercal & c
+    % \end{bmatrix},\]
+    % from which the bijection follows: $A\in\Alt_{2n+2}^\times$ with nonzero $c\coloneqq A_{2n,2n-1}$ is uniquely determined by a choice of $(B,v,w)$. Thus, the sum in question is
+    \begin{align*}
+        & \sum_{B}\omega\left(\det B\right)\psi(\tr BT_{2n}) \\
+        \times{} & \sum_{c,v,w}\omega\left(c^2\right)\psi(-2c)\psi(\tr(cwv^\intercal-cvw^\intercal)T_{2n}).
+    \end{align*}
+    % \[\sum_{B,v,w,c}\omega\left(c^2\det B\right)\psi(\tr BT_{2n})\psi(\tr(cwv^\intercal-cvw^\intercal)T_{2n})\psi(-2c).\]
+    % If $\psi=1$ and $\omega^2=1$, then every term in the sum equals $1$, so we total to $q^{2n}(q-1)g_{2n}(1,1,T_{2n})$. Otherwise, we take $\psi\ne1$. In this case
+    With $\psi\ne1$, we note $-\tr vw^\intercal T_{2n}=\tr wv^\intercal T_{2n}$, so the sum over $v$ and $w$ is
+    \[\sum_{v,w\in\FF_q^{2n}}\psi(-2c\tr vw^\intercal T_{2n}).\]
+    Fixing $v$ and summing over $w$, \Cref{lem:matrix-char-sum} tells us that we only get a nonzero contribution when $v=0$, where we see the sum will evaluate to $q^{2n}$. In this case, the desired sum compresses down to $q^{2n}g\left(\omega^2,\psi^2\right)g_{2n}(\omega,\psi,T_{2n})$, as required.
+\end{proof}
+Next, we handle $A_{2n-1,2n}=0$.
+\begin{lemma} \label{lem:gsum-alt-0}
+    Take $n\ge1$. Fix characters $\omega\colon\FF_q^\times$ and $\psi\colon\FF_q\to\CC^\times$, and set $T_{2i}\coloneqq\op{diag}(J,\ldots,J)\in\Alt^\times_{2i}$ for each $i$. Choosing some nonzero vector $\ov v\in\FF_q^{2n+2}$ such that $\ov v_{2n+1}=\ov v_{2n+2}=0$, if $\psi\ne1$, we have
+    \[\sum_{\substack{A\in\Alt_{2n+2}^\times\\Ae_{n+2}=\ov v}}\omega(\det A)\psi(\tr AT_{2n+2})=0.
+    % \begin{cases}
+    %     0 & \text{if }\psi=1, \\
+    %     q^{2n}g_{2n}(\psi,\omega,T_{2n}) & \text{if }\psi=1\text{ and }\omega^2=1.
+    % \end{cases}
+    \]
+\end{lemma}
+\begin{proof}
+    This argument is similar to \Cref{lem:gsum-gl-0}, but we are more careful with the permutation matrix. We would like to reduce to a case where $\ov v_{2n+1}\ne0$ by adjusting $T$ appropriately. Because $\ov v$ is nonzero, we may find an index $i_0\notin\{2n+1,2n+2\}$ such that $\ov v_{i_0}$ is nonzero. By mapping $A\mapsto\sigma A\sigma$ where $\sigma$ is the permutation matrix associated to some permutation of the form $(2i-1,2j-1)(2i,2j)$, we see that the sum will not change (because $\det\sigma A\sigma=\det A$ and $\sigma T_{2n+2}\sigma=T_{2n+2}$); thus, we may apply such a permutation to assume that $i_0\in\{2n-1,2n\}$. We now set $\sigma\coloneqq(i_0,2n+1)$ and apply $A\mapsto\sigma A\sigma$ to our sum, which does adjust $\ov v$ (so that $\ov v_{2n+1}\ne0$) as well as make our sum change $T_{2n+2}$ to the matrix $\sigma T_{2n+2}\sigma$, which is in
+    \[\left\{\begin{bmatrix}
+        T_{2n-2} \\
+        &&&& -1 \\ &&& 1 \\ && -1 \\ & 1
+    \end{bmatrix},\begin{bmatrix}
+        T_{2n-2} \\
+        &&& -1 \\ &&&& -1 \\ & 1 \\ && 1
+    \end{bmatrix}\right\}\]
+    (The left happens when $i_0=2n-1$, and the right happens when $i_0=2n$.) With our now adjusted $\ov v$, we write $\ov v=(-cv,-c,0)$ where $v\in\FF_q^{2n}$ and $c\in\FF_q^\times$, and we note we want to compute
+    \[\sum_{\substack{A\in\Alt_{2n+2}^\times\\Ae_{n+2}=\ov v}}\omega(\det A)\psi(\tr A\sigma T_{2n+2}\sigma).\]
+    Now, the main point is that
+    \[\arraycolsep=1.4pt\begin{array}{cccccc}
+        \Alt_{2n}^\times &\times& \FF_q^n &\to& \Alt_{2n+2}^\times \\
+        (B &,& w) &\mapsto& \begin{bsmallmatrix}
+            1_{2n} & v & w \\
+            & 1 \\ && 1
+        \end{bsmallmatrix}\begin{bsmallmatrix}
+            B \\ && -c \\ & c
+        \end{bsmallmatrix}\begin{bsmallmatrix}
+            1_{2n} \\ v^\intercal & 1 \\ w^\intercal && 1
+        \end{bsmallmatrix}
+    \end{array}\]
+    is a bijection onto $A\in\Alt_{2n+2}^\times$ with $Ae_{2n+2}=(-cv,-c,0)$.
+    % because we can compute
+    % \[\begin{bmatrix}
+    %     1_{2n} & v & w \\
+    %     & 1 \\ && 1
+    % \end{bmatrix}\begin{bmatrix}
+    %     B \\ && -c \\ & c
+    % \end{bmatrix}\begin{bmatrix}
+    %     1_{2n} \\ v^\intercal & 1 \\ w^\intercal && 1
+    % \end{bmatrix}=\begin{bmatrix}
+    %     B+cwv^\intercal-cvw^\intercal & cw & -cv \\
+    %     -cw^\intercal && -c \\
+    %     cv^\intercal & c
+    % \end{bmatrix}\]
+    % as before. Quickly, if $\psi=1$ and $\omega^2=1$, then the whole business with $\psi$ does not matter, so our sum looks like $\sum_{B,w}\omega(\det B)\omega\left(c^2\right)=q^{2n}g_{2n}(\psi,\omega,T_{2n})$, as required.
+    Now, to find cancellation in our sum, we hold $B$ constant and let $w$ vary.
+    % Thus, with $\psi\ne1$, and we need to produce cancellation in the sum. For this, we hold $B$ constant and let $w$ vary; in fact, we only need to let $w_{2n-1},w_{2n}\in\FF_q$ vary.
+    In particular, after some rearrangement, we see that the sum in question contains the factor
+    \[\sum_{w\in\FF_q^n}\psi\left(\tr\begin{bmatrix}
+        wv^\intercal-cvw^\intercal & cw & -cv \\
+        -cw^\intercal && -c \\
+        cv^\intercal & c
+    \end{bmatrix}\sigma T_{2n+2}\sigma\right),\]
+    which we will show vanishes. In fact, we will look at a factor of this sum. Because $\sigma T_{2n+2}\sigma$ takes the form $\op{diag}(T_{2n-2},T')$ for some $T'\in\Alt_4^\times$ described above, we see that the sum above contains the factor
+    \[\sum_{w_{2n-1},w_{2n}}\psi\left(\tr\begin{bmatrix}
+        & * & cw_{2n-1} & -cv_{2n-1} \\
+        * & & cw_{2n} & -cv_{2n} \\
+        -cw_{2n-1} & -cw_{2n} & & * \\
+        cv_{2n-1} & cv_{2n} & *
+    \end{bmatrix}T'\right)\]
+    by using the bottom-right $4\times4$ minors of our matrices; here $*$s denote terms which do not matter. Now, if $i_0=2n-1$, then one finds that the sum over $w_{2n}$ vanishes; and if $i_0=2n$, then one finds that the sum over $w_{2n-1}$ vanishes.
+    % We now compute this sum in two casework on $i_0$.
+    % \begin{itemize}
+    %     \item If $i_0=2n-1$, our trace is
+    %     \[\tr\begin{bmatrix}
+    %         & cw_{2n-1}v_{2n}-cv_{2n-1}w_{2n} & cw_{2n-1} & -cv_{2n-1} \\
+    %         cw_{2n}v_{2n-1}-cv_{2n}w_{2n-1} & & cw_{2n} & -cv_{2n} \\
+    %         -cw_{2n-1} & -cw_{2n} & & -c \\
+    %         cv_{2n-1} & cv_{2n} & c
+    %     \end{bmatrix}\begin{bmatrix}
+    %         &&& -1 \\ && 1 \\ & -1 \\ 1
+    %     \end{bmatrix},\]
+    %     so our sum is $\sum\psi(-2cv_{2n-1})\psi(-2cw_{2n})$, which vanishes as $w_{2n}\in\FF_q$ varies.
+    %     \item If $i_0=2n$, our trace is
+    %     \[\tr\begin{bmatrix}
+    %         & cw_{2n-1}v_{2n}-cv_{2n-1}w_{2n} & cw_{2n-1} & -cv_{2n-1} \\
+    %         cw_{2n}v_{2n-1}-cv_{2n}w_{2n-1} & & cw_{2n} & -cv_{2n} \\
+    %         -cw_{2n-1} & -cw_{2n} & & -c \\
+    %         cv_{2n-1} & cv_{2n} & c
+    %     \end{bmatrix}\begin{bmatrix}
+    %         && -1 \\ &&& -1 \\ 1 \\ & 1
+    %     \end{bmatrix},\]
+    %     so our sum is $\sum\psi(2cw_{2n-1}-2cv_{2n})$, which vanishes as $w_{2n-1}\in\FF_q$ varies.
+    %     \qedhere
+    % \end{itemize}
+\end{proof}
+% \begin{remark}
+%     In the case where $\psi\ne1$, it may appear suspicious that we induced cancellation in the sum of \Cref{lem:gsum-alt-0} but not in \Cref{lem:gsum-alt-not-0}. Namely, if $\ov v\in\FF_q^{2n+2}$ with $\ov v_{2n+1}=\ov v_{2n+2}=0$ can swap a coordinate with $\ov v_{2n+1}$ to cause the sum to vanish, then it looks like the sum should still vanish in the case where $\ov v_{2n+1}\ne0$. The way out of this apparent contradiction is to note that \Cref{lem:gsum-alt-not-0} shows, for fixed $v$ with $\ov v_{2n+1}\ne0$, the sum will in fact produce no contribution unless all the other coordinates vanish.
+% \end{remark}
+We now synthesize our cases.
+\begin{theorem} \label{thm:gsum-alt}
+    Fix characters $\omega\colon\FF_q^\times\to\CC^\times$ and $\psi\colon\FF_q\to\CC^\times$ and some $T\in\Alt_{2n}^\times$.
+    \begin{listalph}
+        \item Suppose $\psi\ne1$. Then
+        \[g_{2n}(\omega,\psi,T)=\frac{q^{n(n-1)}}{\omega(\det T)}\cdot g\left(\omega^2,\psi^2\right)^n.\]
+        \item Suppose $\psi=1$ and $\omega^2=1$. Then
+        \[g_{2n}(\omega,1,T)=q^{n(n-1)}\prod_{i=1}^{n}\left(q^{2i-1}-1\right).\]
+    \end{listalph}
+    For any $(\psi,\omega)$ not in the above list, the sum vanishes when $n$ is positive.
+\end{theorem}
+\begin{proof}
+    Note the last sentence follows from \Cref{lem:gsum-alt-basic}. We also quickly note that (b) is combinatorics: because any $A\in\op{Alt}_{2n}^\times$ can be written as $g\op{diag}(J,\ldots,J)g^\intercal$ for some $g\in\op{GL}_n$ (by finding a symplectic basis for $A$), we see that $\det A$ is a square always, so (b) is simply counting the number of invertible $2n\times2n$ alternating matrices. Thus, (b) follows from \cite[Theorem~7.5.5]{hach-gf}.
+    
+    It remains to show (a). We note we may reduce to the case where $T=\op{diag}(J,\ldots,J)$ using \Cref{lem:gsum-alt-basic}. We now induct on $n$, where the cases $n=0$ and $n=1$ can be checked directly. The induction now follows from summing \Cref{lem:gsum-alt-not-0,lem:gsum-alt-0}.
+    % For (b), $T$ does not even matter, so we may as well take this value of $T$. For (a), we note that we can find $g\in\GL_{2n}$ such that $\op{diag}(J,\ldots,J)=gTg^\intercal$. Now, \Cref{lem:gsum-alt-basic} and inspection tells us that both sides of our equalities adjust by the same factor of $\omega(\det g)^{-2}$ upon sending $T\mapsto gTg^\intercal$ in (a). Thus, we may as well assume $T=\op{diag}(J,\ldots,J)$.
+    %
+    % We now use induction to show both (a) and (b). Write $T_{2i}\coloneqq\op{diag}(J,\ldots,J)\in\GL_{2i}$ for each $i$.
+    % \begin{listalph}
+    %     \item For $n=0$, there is nothing to say. Now, for our induction, we note that summing \Cref{lem:gsum-alt-not-0,lem:gsum-alt-0} implies
+    %     \[g_{2n+2}(\omega,\psi,T_{2n+2})=q^{2n}g_{2n}(\omega,\psi,T_{2n}),\]
+    %     so the result follows by induction.
+    %     \item For $n\in\{0,1\}$, there is not much to say. Now, for our induction, we note that summing \Cref{lem:gsum-alt-not-0,lem:gsum-alt-0} implies
+    %     \[g_{2n+2}(\omega,\psi,T)=\left(q^{4n}(q-1)+q^{2n}\left(q^{2n}-1\right)\right)g_{2n}(\omega,\psi,T)\]
+    %     for $n\ge1$. Thus, it is enough to show that our right-hand side satisfies the same recurrence. Namely, we would like to show
+    %     \[q^{\left(n+1\right)n}\prod_{i=1}^{n+1}\left(q^{2i-1}-1\right)\stackrel?=\left(q^{4n}\left(q-1\right)+q^{2n}\left(q^{2n}-1\right)\right)q^{n\left(n-1\right)}\prod_{i=1}^{n}\left(q^{2i-1}-1\right),\]
+    %     which we note simplifies down to
+    %     \[q^{2n}\left(q^{2n+1}-1\right)\stackrel?=\left(q^{4n}\left(q-1\right)+q^{2n}\left(q^{2n}-1\right)\right),\]
+    %     which is true after a little more rearrangement.
+    %     \qedhere
+    % \end{listalph}
+\end{proof}
+\begin{remark}
+    One can prove (b) via the same method as (a).
+\end{remark}
+Here is the corresponding combinatorial application.
+\begin{corollary} \label{cor:count-alt}
+    Fix some even nonnegative integer $2n$ and some $T\in\Alt_{2n}^\times$. Further, fix $d\in(\FF_q^{\times})^2$ and $t\in\FF_q$. Then the number $N(d,t)$ of $A\in\Alt_{2n}^\times$ such that $\det A=d$ and $\tr AT=t$ is
+    \begin{align*}
+        &\frac2{q(q-1)}\left(q^{n(n-1)}\prod_{i=1}^{n}\left(q^{2i-1}-1\right)-q^{n(n-1)}(q-1)^n\right) \\
+        &+ q^{n(n-1)}\#\left\{(y_1,\ldots,y_n)\in\FF_q^n:2(y_1+\cdots+y_n)=t,\frac{(y_1\cdots y_n)^2}{\det T}=d\right\}.
+    \end{align*}
+\end{corollary}
+\begin{proof}
+    For any characters $\omega\colon\FF_q^\times$ and $\psi\colon\FF_q\to\CC^\times$, we claim that $g_{2n}(\omega,\psi,T)$ equals
+    \begin{align*}
+        &\frac 2{q(q-1)}
+        \left(g_{2n}(1,1,T)-q^{n(n-1)}(q-1)^n\right)\sum_{a\in(\FF_q^{\times})^2,b\in\FF_q}\omega^2(a)\psi(b) \\
+        &+\frac{q^{n(n-1)}}{\omega(\det T)}\cdot g\left(\omega^2,\psi^2\right)^n.
+    \end{align*}
+    This is the usual casework with \Cref{thm:gsum-alt}: if $\psi\ne1$, then the top row vanishes; if $\psi=1$ and $\omega^2\ne1$, then everything vanishes; and if $\psi=1$ and $\omega^2=1$, then this holds by construction.
+
+    The result now follows by a direct expansion of $g\left(\omega^2,\psi^2\right)$
+    as
+    \[\sum_{y_1,\ldots,y_n}\omega\left((y_1\cdots y_n)^2\right)\psi(2(y_1+\cdots+y_n)),\]
+    and then summing over $\omega$ and $\psi$ appropriately.
+    % so the result follows from summing the claim suitably over all $\omega$ and $\psi$.
+\end{proof}
+
+% \section{Computation of the Symmetric Gauss Sum} \label{sec:sym-gauss-sum}
+
+% Let $\FF_q$ denote the finite field with $q$ elements, where $q$ is an odd prime-power, and let $\operatorname{Sym}_n^\times(\FF_q)$ denote the set of invertible symmetric $n\times n$ matrices with entries in $\FF_q$. The goal of the present section is to compute the ``symmetric'' Gauss sum
+% \[g_n(\omega,\psi,T)\coloneqq\sum_{A\in\operatorname{Sym}_n^\times(\FF_q)}\omega(\det A)\psi(\tr AT)\]
+% where $n\in\ZZ_{\ge0}$ is a nonnegative integer, $\omega\colon\FF_q^\times\to\CC^\times$ and $\psi\colon\FF_q\to\CC^\times$ are characters, and $T\in\Sym_n^\times(\FF_q)$. Here, $\operatorname{Sym}_0^\times$ is understood to consist of a single empty $0\times0$ matrix with trace $0$ and determinant $1$ so that $g_0(\omega,\psi,T)=1$. In the case where $\omega$ is a quadratic character, such sums were considered by \cite{walling-almost-gauss-sum}.
+
+% In the following discussion, we will make use of many Gauss sums, so it will be helpful to have the notation
+% \[g(\omega,\psi)\coloneqq\sum_{a\in\FF_q^\times}\omega(a)\psi(a),\]
+% where $\omega$ and $\psi$ are as above. For example, $g_1(\omega,\psi,1)=g(\omega,\psi)$.
+
+% We now state our main result.
+% \begin{thm} \label{thm:sym-gauss-sum}
+%     Let $\omega\colon\FF_q^\times\to\CC^\times$ and $\psi\colon\FF_q\to\CC^\times$ be characters, and let $\chi\colon\FF_q^\times\to\CC^\times$ denote the nontrivial quadratic character, and fix some $T\in\Sym_n^\times(\FF_q)$. Further, assume that $\psi$ is nontrivial.
+%     \begin{itemize}
+%         \item If $n=2m$ is an even nonnegative integer, then
+%         \[g_{2m}(\omega,\psi,T)=\frac{\chi(-1)^m\chi(\det T)q^{m^2}}{\omega(4^m\det T)}\cdot g\left(\omega^2,\psi\right)^m.\]
+%         \item If $n=2m+1$ is an odd nonnegative integer, then
+%         \[g_{2m+1}(\omega,\psi,T)=\frac{q^{m(m+1)}}{\omega(4^m\det T)}\cdot g(\omega,\psi)g\left(\omega^2,\psi\right)^m.\]
+%     \end{itemize}
+% \end{thm}
+% \begin{remark}
+%     The theorem implies that
+%     \[\sum_{A\in\Sym_n^\times(\FF_q)}\omega\left(\det AT^{-1}\right)\psi(\tr A)=\sum_{B\in\Sym_n^\times(\FF_q)}\omega(\det B)\psi(\tr BT),\]
+%     but this is not obvious: in particular, one cannot apply the variable change $B\coloneqq AT^{-1}$ because $AT^{-1}$ need not be symmetric! We would be interested in a more direct proof of the above equality.
+% \end{remark}
+% \begin{remark} \label{rem:mag-of-sym-gauss-sum}
+%     In the ``generic'' case $\omega^2\ne1$, all Gauss sums have magnitude $\sqrt q$ (see \Cref{prop:mag-gauss-sum}), so \Cref{thm:sym-gauss-sum} implies
+%     \[\left|g_n(\omega,\psi,T)\right|=q^{n(n+1)/4}=q^{\frac12\binom{n+1}2}.\]
+%     This is roughly what we expect to be true from ``square-root cancellation'': $\left|\Sym_n(\FF_q)\right|=q^{\binom{n+1}2}$.
+% \end{remark}
+
+% \subsection{The Main Computation}
+% In this subsection, we prove \Cref{thm:sym-gauss-sum}. The key idea is to use an explicit row-reduction. This is akin to the application of the Bruhat decomposition to compute the relevant Gauss sums for $G\in\{\GL_{2n},\SL_{2n}\}$ done in \cite{kim-gauss-sum}; however, to handle sums of symmetric and alternating matrices, we make the row-reduction more explicit. As such, the hard work is done in the following lemma.
+% \begin{lemma} \label{lem:sym-gauss-sum-ind}
+%     Let $\omega\colon\FF_q^\times\to\CC^\times$ and $\psi\colon\FF_q\to\CC^\times$ be characters, and let $\chi\colon\FF_q^\times\to\CC^\times$ denote the nontrivial quadratic character. Further, assume that $\psi$ is nontrivial. For any positive integer $n$ and $d_1,\ldots,d_{n+1}\in\FF_q^\times$,
+%     \[g_{n+1}(\omega,\psi,\operatorname{diag}(d_1,\ldots,d_{n+1}))=g_n(\omega,\psi,\operatorname{diag}(d_1,\ldots,d_n))\cdot\frac{\chi(d_1\cdots d_n)\chi(d_{n+1})^n}{\omega(d_{n+1})}\cdot g\left(\omega\chi^n,\psi\right)g(\chi,\psi)^n.\]
+% \end{lemma}
+% \begin{proof}
+%     For brevity, set $T\coloneqq\operatorname{diag}(d_1,\ldots,d_{n+1})$. For a matrix square $A\in M_m(\FF_q)$, we use the notation $A_{k\ell}$ denote the entry of $A$ in the $k$th row and $\ell$th column. Now, for some $A\in\operatorname{Sym}_{n+1}^\times$, there are two cases.
+%     \begin{itemize}
+%         \item Suppose $A_{n+1,n+1}\ne0$; here, set $T'\coloneqq\operatorname{diag}(d_1,\ldots,d_n)$ for brevity. For our Gaussian elimination, we note that the map
+%         \[\arraycolsep=1.4pt\begin{array}{rclclcl}
+%             \operatorname{Sym}_n^\times(\FF_q) & \times & \FF_q^n & \times & \FF_q^\times & \to & \{A\in\operatorname{Sym}_{n+1}^\times(\FF_q):A_{n+1,n+1}\ne0\} \\
+%             (A' & , & v & , & c) & \mapsto & \displaystyle\begin{bmatrix}
+%                 1 & v \\
+%                   & 1
+%             \end{bmatrix}\begin{bmatrix}
+%                 A' \\ & c
+%             \end{bmatrix}\begin{bmatrix}
+%                 1 \\ v^\intercal & 1
+%             \end{bmatrix}=\begin{bmatrix}
+%                 A'+cvv^\intercal & cv \\
+%                 cv^\intercal & c
+%             \end{bmatrix}
+%         \end{array}\]
+%         is a bijection. Indeed, $A_{n+1,n+1}$ uniquely determines $c$, the values $A_{k,n+1}$ for $1\le k\le n$ uniquely determine $v$, and then the rest of the matrix uniquely determines $A'$. Using this bijection, we see that
+%         \begin{align*}
+%             S_{\ne0} \coloneqq{}& \sum_{\substack{A\in\operatorname{Sym}_{n+1}^\times(\FF_q)\\A_{n+1,n+1}\ne0}}\omega(\det A)\psi(\tr AT) \\
+%             ={}& \sum_{\substack{A\in\operatorname{Sym}_n^\times(\FF_q)\\v\in \FF_q^n,c\in\FF_q^\times}}\omega(c\det A')\psi\left(\tr A'T'+c\tr vv^\intercal T'+cd_{n+1}\right) \\
+%             ={}& g_n(\omega,\psi,T')\sum_{c\in\FF_q^\times}\omega(c)\psi(cd_{n+1})\sum_{v\in\FF_q^n}\psi\left(c\tr vv^\intercal T'\right) \\
+%             ={}& g_n(\omega,\psi,T')\sum_{c\in\FF_q^\times}\omega(c)\psi(cd_{n+1})\prod_{k=1}^n\Bigg(\sum_{a\in\FF_q}\psi\left(cd_ka^2\right)\Bigg).
+%         \end{align*}
+%         Quickly, we claim that
+%         \[\sum_{a\in\FF_q}\psi\left(cd_ka^2\right)\stackrel?=\sum_{a\in\FF_q}(1+\chi(cd_ka))\psi(a),\]
+%         where we have extended $\chi$ to $\FF_q$ by $\chi(0)\coloneqq0$. Indeed, for any $b\in\FF_q$, we see that $\psi(b)$ appears on the left-hand side $0$ times if $b$ does not have the form $cd_ka^2$, appears $1$ time if $b=0$, and appears $2$ times if $b$ is nonzero and has the form $cd_ka^2$; these values are exactly $1+\chi(cd_ka)$ in all cases. As such, the claim follows, and because $\psi$ is nontrivial, we actually have
+%         \[\sum_{a\in\FF_q}\psi\left(cd_ka^2\right)=\sum_{a\in\FF_q}\chi(cd_ka)\psi(a)=\chi(cd_k)g(\chi,\psi).\]
+%         Plugging this in, we see that
+%         \begin{align*}
+%             S_{\ne0} &= g_n(\omega,\psi,T')\sum_{c\in\FF_q^\times}\omega(c)\chi(c)^n\psi(cd_{n+1})\chi(d_1\cdots d_n)g(\chi,\psi)^n \\
+%             &= g_n(\omega,\psi,T')\cdot\frac{\chi(d_1\cdots d_n)\chi(d_{n+1})^n}{\omega(d_{n+1})}\sum_{c\in\FF_q^\times}\omega(c)\chi(c)^n\psi(c)g(\chi,\psi)^n \\
+%             &= g_n(\omega,\psi,T')\cdot\frac{\chi(d_1\cdots d_n)\chi(d_{n+1})^n}{\omega(d_{n+1})}\cdot g\left(\omega\chi^n,\psi\right)g(\chi,\psi)^n.
+%         \end{align*}
+%         \item Suppose $A_{n+1,n+1}=0$; here, set $T'\coloneqq\operatorname{diag}(d_1,\ldots,d_{n-1})$ for brevity. The computation in the previous case implies that we would like to show
+%         \[\sum_{\substack{A\in\operatorname{Sym}_{n+1}^\times(\FF_q)\\A'_{n+1,n+1}=0}}\omega(\det A)\psi(\tr AT)\stackrel?=0.\]
+%         In fact, let $e_{n+1}$ denote the $n$th basis vector, and for any $v\in k^{n-1}$ and $c\in k$, we claim
+%         \[S(v,c)\coloneqq\sum_{\substack{A\in\operatorname{Sym}_{n+1}^\times(\FF_q)\\Ae_{n+1}=(v,c,0)}}\omega(\det A)\psi(\tr AT)\stackrel?=0.\]
+%         To do Gaussian elimination, we would like to assume $c\ne0$. Well, because $A$ is invertible, we know that $A_{k,n+1}\ne0$ for some $1\le k\le n$ (recall $A_{n+1,n+1}=0$ already), so if the sum is to be nonempty, we may assume that $c\ne0$ or $v_k\ne0$ for some $k$. If $v_k\ne0$, then note swapping the $k$th row and column with the $n$th row and column (of both $A$ and $T$) will not affect the trace or determinant but does switch $v_k$ with $c$, which grants $c\ne0$.
+        
+%         We now do Gaussian elimination: note that there is a bijection
+%         \[\arraycolsep=1.4pt\begin{array}{rclclcl}
+%             \operatorname{Sym}_{n-1}^\times(\FF_q) & \times & \FF_q^{n-1} & \times & \FF_q & \to & \{A\in\operatorname{Sym}_{n+1}^\times(\FF_q):Ae_{n+1}=(v,c,0)\} \\
+%             (A' & , & w & , & d) & \mapsto &  \begin{bmatrix}
+%                 1 & \frac1cv & w \\
+%                   & 1 &   \\
+%                   &   & 1
+%             \end{bmatrix}\begin{bmatrix}
+%                 A' \\
+%                   & d & c \\
+%                   & c
+%             \end{bmatrix}\begin{bmatrix}
+%                 1 \\
+%                 \frac1cv^\intercal & 1 \\
+%                 w^\intercal &   & 1
+%             \end{bmatrix}
+%         \end{array}\]
+%         (Here, $\operatorname{Sym}_0^\times$ is understood to consist of only the ``empty'' $0\times0$ matrix.) To see that this is a bijection, we expand out the matrix product as
+%         \[\begin{bmatrix}
+%             A'+\frac{d}{c^2}vv^\intercal+(vw^\intercal+wv^\intercal) & dv+cw & v \\
+%             dv^\intercal+cw^\intercal & d & c \\
+%             v^\intercal & c & 0
+%         \end{bmatrix},\]
+%         so we see that $A_{n,n}$ forces $d$, which then forces $w$ from $A_{k,n}$ as $1\le k\le n$; the rest of the data then forces $A'$. Thus,
+%         \begin{align*}
+%             S(v,c) &= \sum_{\substack{A'\in\operatorname{Sym}_{n-1}^\times(\FF_q)\\w\in\FF_q^{n-1},d\in\FF_q}}\omega\left(-c^2\det A'\right)\psi\left(\tr A'T'+\frac d{c^2}\tr vv^\intercal T'+2\tr vw^\intercal T'+dd_n\right) \\
+%             &= \sum_{A'\in\operatorname{Sym}_{n-1}^\times(\FF_q)}\omega\left(-c^2\det A'\right)\psi(\tr AT')\Bigg(\sum_{d\in\FF_q}\psi\left(dd_n+\frac d{c^2}\tr vv^\intercal T'\right)\sum_{w\in\FF_q^{n-1}}\psi(2\tr vw^\intercal T')\Bigg).
+%         \end{align*}
+%         Beginning with the innermost sum, we see $\tr vw^\intercal T'=d_1v_1w_1+\cdots+d_{n-1}v_{n-1}w_{n-1}$, so this sum is
+%         \[\sum_{w\in\FF_q^{n-1}}\psi(2\tr vw^\intercal T')=\prod_{k=1}^{n-1}\Bigg(\sum_{w_k\in\FF_q}\psi(2d_kv_kw_k)\Bigg).\]
+%         In order for these inner sums to be nonzero, we note that we must have $v_k=0$ for each $k$ because $\psi$ is a nontrivial character. Thus, we may assume $v=0$, from which we see
+%         \[S(0,c)=\Bigg(\sum_{A'\in\operatorname{Sym}_{n-1}^\times(\FF_q)}\omega(\det A')\psi(\tr A'T')\Bigg)\Bigg(\sum_{d\in\FF_q}\psi(d_nd)\Bigg)=0,\]
+%         so we conclude in this case as well.
+%     \end{itemize}
+%     Summing the above two cases finishes the proof of \Cref{lem:sym-gauss-sum-ind}.
+% \end{proof}
+% We are now ready to prove \Cref{thm:sym-gauss-sum}.
+% \begin{proof}[Proof of \Cref{thm:sym-gauss-sum}]
+%     Quickly, we reduce to the case where $T$ is diagonal. Indeed, by choosing an orthogonal basis for the symmetric bilinear form given by $T$, we receive some $g\in\GL_n(\FF_q)$ such that $D\coloneqq gTg^\intercal$ is diagonal. As such, we compute
+%     \begin{align*}
+%         g_n(\omega,\psi,T) &= \sum_{A\in\Sym_n^\times(\FF_q)}\omega(\det A)\psi(\tr AT) \\
+%         &= \sum_{A\in\Sym_n^\times(\FF_q)}\omega(\det A)\psi\left(\tr g^{-\intercal}Ag^{-1}D\right) \\
+%         &= \sum_{A\in\Sym_n^\times(\FF_q)}\omega\left(\det g^\intercal Ag\right)\psi\left(\tr AD\right) \\
+%         &= \omega(\det g)^2g_n(\omega,\psi,D).
+%     \end{align*}
+%     Now, suppose we have proven the theorem for diagonal matrices. In this case, we see $g_n(\omega,\psi,D)=(\det D)^{-1}g_n(\omega,\psi,1)$, so $\det D=(\det g)^2(\det T)$ implies that
+%     \[g_n(\omega,\psi,T)=(\det T)^{-1}g_n(\omega,\psi,1),\]
+%     which is the theorem for $T$, as desired.
+    
+%     Thus, we may assume that $T\coloneqq\operatorname{diag}(d_1,\ldots,d_n)$. At this point, we induct on $n$. For $n=0$ and $n=1$, there is nothing to say. For the induction, assume $n\ge2$, and we use \Cref{lem:sym-gauss-sum-ind}; for brevity, set $T'\coloneqq\operatorname{diag}(d_1,\ldots,d_{n-1})$. There are two cases.
+%     \begin{itemize}
+%         \item Suppose that $n=2m$ is an even positive integer. In this case, \Cref{lem:sym-gauss-sum-ind} and induction yields
+%         \begin{align*}
+%             g_{2m}(\omega,\psi) &= g_{2m-1}(\omega,\psi)\cdot\frac{\chi(\det T)}{\omega(d_{n+1})}\cdot g(\omega\chi,\psi)g(\chi,\psi)^{2m-1} \\
+%             &= \frac{\chi(\det T)q^{(m-1)m}}{\omega(4^{m-1}\det T)}\cdot g(\omega,\psi)g\left(\omega^2,\psi\right)^{m-1}g(\omega\chi,\psi)g(\chi,\psi)^{2m-1}.
+%         \end{align*}
+%         By \Cref{prop:quad-twist-gauss-sum}, this is
+%         \[g_{2m}(\omega,\psi)=\frac{\chi(\det T)q^{m^2-m}}{\omega(4^m\det T)}\cdot g\left(\omega^2,\psi\right)^mg(\chi,\psi)^{2m}.\]
+%         Lastly, \Cref{prop:mag-gauss-sum} yields
+%         \[g_{2m}(\omega,\psi)=\frac{\chi(-1)^m\chi(\det T)q^{m^2}}{\omega(4^m\det T)}\cdot g\left(\omega^2,\psi\right)^m.\]
+%         \item Suppose $n=2m+1$ is an odd positive integer with $m\ge1$. In this case, \Cref{lem:sym-gauss-sum-ind} and induction yields
+%         \begin{align*}
+%             g_{2m+1}(\omega,\psi) &= g_{2m}(\omega,\psi)g(\omega,\psi)\cdot\frac{\chi(\det T')}{\omega(d_{n+1})}\cdot g(\chi,\psi)^{2m} \\
+%             &= \frac{\chi(-1)^mq^{m^2}}{\omega(4^m\det T)}\cdot g\left(\omega^2,\psi\right)^mg(\omega,\psi)g(\chi,\psi)^{2m}.
+%         \end{align*}
+%         From here, \Cref{prop:mag-gauss-sum} implies
+%         \[g_{2m+1}(\omega,\psi)=\frac{q^{m^2+m}}{\omega(4)^m}\cdot g(\omega,\psi)g\left(\omega^2,\psi\right)^m.\]
+%     \end{itemize}
+%     The above cases complete the induction.
+% \end{proof}
+
+% % \subsection{A Gamma Matrix Computation}
+% % In this subsection, we use \Cref{thm:sym-gauss-sum} to compute the finite-field analogue of a $\gamma$-matrix attached to the prehomogeneous space $\Sym_n(\FF_q)$. For context, the $p$-adic analogue of \Cref{thm:sym-gauss-sum} is intimately related to zeta functions attached to prehomogeneous spaces; see \cite[Section~3]{kudla-degenerate-principal-series} or \cite[Section~2]{ikeda-siegel-fe}. We refer to \cite{sato-prehom-spaces} for the general theory of prehomogeneous spaces.
+
+% % In our case, we note that $({\GL_n},{\Sym_n})$ is a prehomogeneous space, where the action is given by $g\cdot A\coloneqq gAg^\intercal$. In other words, there is a proper algebraic subset $S\subseteq\Sym_n(\overline k)$ such that $\Sym_n(\overline k)\setminus S$ is a single $\GL_n(\overline k)$-oribt. To see this, for any field $k$, we note that two invertible symmetric matrices $A,B\in\Sym_n(k)$ have some $g\in\GL_n(k)$ such that $g\cdot A=B$ if and only if $\det A$ and $\det B$ are the same element in $k^\times/k^{\times2}$; thus, when passing to the algebraic closure, $\Sym_n^\times(\overline k)$ is a Zariski open $\GL_n(\overline k)$-orbit in $\Sym_n(\overline k)$.
+
+% % We now define our zeta function. Let the $\GL_n(\FF_q)$-orbits of $\Sym_n^\times(\FF_q)$ be denoted by $Y_1\sqcup Y_{-1}$, corresponding to if $A\in\Sym_n^\times(\FF_q)$ has square or non-square determinant, respectively. Now, because the proper algebraic subset $S\subseteq\Sym_n(\FF_q)$ is cut out by $\det$, our attached zeta functions are
+% % \[Z_k(\omega,\varphi)\coloneqq\sum_{A\in Y_k}\omega(\det A)\varphi(A),\]
+% % where $\omega\colon\FF_q^\times\to\CC^\times$ is a character and $\varphi\colon\Sym_n(\FF_q)\to\CC$ is some test function; let $S(\Sym_n(\FF_q))$ denote this space of test functions. Now, fix once and for all a nontrivial additive character $\psi\colon\FF_q\to\CC^\times$, so we may define the Fourier transform
+% % \[\mathcal F_\psi\varphi(A)\coloneqq\sum_{B\in\Sym_n(\FF_q)}\varphi(B)\psi(\tr AB).\]
+% % \begin{remark} \label{rem:sym-fourier-twice}
+% %     To view $\mathcal F_\psi$ as a Fourier transform, we claim $\mathcal F_{\psi^{-1}}\circ\mathcal F_\psi=q^{\binom{n+1}2}$. It suffices to check this result on indicators $1_C$ where $C\in\Sym_n(\FF_q)$. Then we see $\mathcal F_\psi 1_C(B)=\psi(\tr BC)$ for any $B\in\Sym_n(\FF_q)$, so
+% %     \[\left(\mathcal F_{\psi^{-1}}\mathcal F_\psi 1_C\right)(A)=\sum_{B\in\Sym_n(\FF_q)}\psi(\tr(C-A)B).\]
+% %     If $A=C$, then the sum is $q^{\binom{n+1}2}$. Otherwise, $A'\coloneqq C-A\ne0$, and we need the sum to vanish. Well, if $A'_{k'\ell'}\ne0$ for some indices $k'$ and $\ell'$, then consider the matrix $B(k',\ell')$ by $B(k',\ell')_{k\ell}=1_{\{k,\ell\}=\{k',\ell'\}}$, which gives
+% %     \[\sum_{b\in\FF_q}\psi(\tr A'bB(k',\ell'))=\sum_{b\in\FF_q}\sum_{k,\ell=1}^n\psi(bA'_{k\ell}B(k',\ell')_{\ell k})=\sum_{b\in\FF_q}\psi(2bA'_{k'\ell'})=0.\]
+% %     Grouping the rest of the sum by $\Sym_n(\FF_q)/\FF_qB(k',\ell')$ shows that $\sum_{B\in\Sym_n(\FF_q)}\psi(\tr A'B)=0$, as needed.
+% % \end{remark}
+% % A functional equation of zeta functions attached to prehomogeneous spaces is typically a result relating $Z_\bullet(\omega,\varphi)$ to a dual version $Z_\bullet\left(\omega^{-1},\mathcal F_\psi\varphi\right)$; some such results exist in the literature \cite{denef-finite-field-prehom-space}, but we will prove an analogue here for completeness. To prove our analogue, we begin with the following multiplicity-two result.
+% % \begin{prop} \label{prop:prehom-mult-two}
+% %     Fix notation as above, and let $\omega\colon\FF_q^\times\to\CC^\times$ be a character.
+% %     \begin{enumerate}[label=(\alph*)]
+% %         \item For any $k\in\{\pm1\}$ and $g\in\GL_n(\FF_q)$ and $\varphi\in S(\Sym_n(\FF_q))$, we have
+% %         \[Z_k(\omega,g\cdot\varphi)=\omega(\det g)^2Z_k(\omega,\varphi).\]
+% %         \item The functionals $Z_1(\omega)$ and $Z_2(\omega)$ are a basis of the space
+% %         \[\Hom_{\GL_n(\FF_q)}\left(S(\Sym_n(\FF_q))^\circ,\omega^2\circ\det\right),\]
+% %         where $S(\Sym_n(\FF_q))^\circ$ denotes the functional on $\Sym_n(\FF_q)$ supported on $\Sym_n^\times(\FF_q)$.
+% %     \end{enumerate}
+% % \end{prop}
+% % \begin{proof}
+% %     Quickly, we recall that the $\GL_n(\FF_q)$-action on $\Sym_n(\FF_q)$ is given by $(g\cdot\varphi)(A)=\varphi\left(g^{-1}\cdot A\right)=\varphi\left(g^{-1}Ag^{-\intercal}\right)$. From this one can see that $S\left(\Sym_n^\times(\FF_q)\right)^\circ$ is in fact a $\GL_n(\FF_q)$-subrepresentation of $\Sym_n(\FF_q)$.
+
+% %     To see (a), we directly compute
+% %     \begin{align*}
+% %         Z_k(\omega,g\cdot\varphi) &= \sum_{A\in Y_k}\omega(\det A)(g\cdot\varphi)(A) \\
+% %         &= \sum_{A\in Y_k}\omega(\det A)\varphi\left(g^{-1}\cdot A\right) \\
+% %         &= \sum_{A\in Y_k}\omega(\det g\cdot A)\varphi(A) \\
+% %         &= \omega(\det g)^2\sum_{A\in Y_k}\omega(\det A)\varphi(A),
+% %     \end{align*}
+% %     which is what we wanted.
+    
+% %     Thus, we spend most of our time on (b). Fix representatives $A_1\in Y_1$ and $A_{-1}\in Y_{-1}$. Then we see that $Z_1(\omega)$ and $Z_2(\omega)$ are at least linearly independent as functionals on $S\left(\Sym_n(\FF_q)\right)^\circ$ because $Z_k(\omega,1_{A_\ell})=1_{k=\ell}\omega(\det A_\ell)$. 
+    
+% %     It remains to show that $Z_1$ and $Z_2$ span this eigenspace. The main point is that $\Sym_n^\times(\FF_q)$ has only two orbits, so any eigenvector $Z$ is essentially determined by two values. Rigorously, without loss of generality, we replace $Z$ with
+% %     \[Z-\frac{Z(1_{A_1})}{\omega(\det A_1)}\cdot Z_1(\omega)-\frac{Z(1_{A_{-1}})}{\omega(\det A_{-1})}\cdot Z_{-1}(\omega)\]
+% %     so that $Z(1_{A_1})=Z(1_{A_{-1}})=0$. We now claim that $Z=0$, which will complete the proof. It is enough to show that $Z(1_A)=0$ for any $A\in\Sym_n^\times(\FF_q)$.
+
+% %     Well, $\Sym_n^\times(\FF_q)=Y_1\sqcup Y_{-1}$, so without loss of generality, take $A\in Y_1$. Then we may find $g\in\GL_n(\FF_q)$ so that $A=g\cdot A_1$, so
+% %     \[1_A(B)=1_{g\cdot A_1}(B)=1_{A_1}\left(g^{-1}\cdot B\right)=(g\cdot1_{A_1})(B)\]
+% %     for any $B\in\Sym_n(\FF_q)$. Thus, because $Z$ is an eigenvector,
+% %     \[Z(1_A)=Z(g\cdot1_{A_1})=\omega(\det g)^2Z(1_{A_1})=0,\]
+% %     as desired.
+% % \end{proof}
+% % \begin{remark} \label{rem:explicit-prehom-mult-two}
+% %     In fact, for any eigenvector $Z$, the proof of \Cref{prop:prehom-mult-two} shows that
+% %     \[Z(\varphi)=\frac{Z(1_{A_1})}{\omega(\det A_1)}\cdot Z_1(\omega,\varphi)+\frac{Z(1_{A_{-1}})}{\omega(\det A_{-1})}\cdot Z_{-1}(\omega,\varphi)\]
+% %     for any $\varphi\in S(\Sym_n(\FF_q))^\circ$. Here, we recall $A_1\in Y_1$ and $A_{-1}\in Y_{-1}$ are any representatives.
+% % \end{remark}
+% % To use \Cref{prop:prehom-mult-two}, we thus want to show that $\varphi\mapsto Z\left(\omega^{-1},\mathcal F_\psi\varphi\right)$ is an eigenvector. This follows formally from the following lemma.
+% % \begin{lemma} \label{lem:fourier-twists-g-action}
+% %     For any $g\in\GL_n(\FF_q)$, the following diagram commutes.
+% %     % https://q.uiver.app/#q=WzAsNCxbMCwwLCJTKFxcU3ltX24oXFxGRl9xKSkiXSxbMSwwLCJTKFxcU3ltX24oXFxGRl9xKSkiXSxbMCwxLCJTKFxcU3ltX24oXFxGRl9xKSkiXSxbMSwxLCJTKFxcU3ltX24oXFxGRl9xKSkiXSxbMCwxLCJcXG1hdGhjYWwgRl9cXHBzaSJdLFsyLDMsIlxcbWF0aGNhbCBGX1xccHNpIl0sWzAsMiwiZyIsMl0sWzEsMywiZ157LVxcaW50ZXJjYWx9Il1d&macro_url=https%3A%2F%2Fraw.githubusercontent.com%2FdFoiler%2Fnotes%2Fmaster%2Fnir.tex
+% %     \[\begin{tikzcd}
+% %     	{S(\Sym_n(\FF_q))} & {S(\Sym_n(\FF_q))} \\
+% %     	{S(\Sym_n(\FF_q))} & {S(\Sym_n(\FF_q))}
+% %     	\arrow["{\mathcal F_\psi}", from=1-1, to=1-2]
+% %     	\arrow["{\mathcal F_\psi}", from=2-1, to=2-2]
+% %     	\arrow["g"', from=1-1, to=2-1]
+% %     	\arrow["{g^{-\intercal}}", from=1-2, to=2-2]
+% %     \end{tikzcd}\]
+% % \end{lemma}
+% % \begin{proof}
+% %     This is a direct computation. For any $g\in\GL_n(\FF_q)$ and $\varphi\in S(\Sym_n(\FF_q))$ and $A\in\Sym_n(\FF_q)$, we compute
+% %     \begin{align*}
+% %         (\mathcal F_\psi g\varphi)(A) &= \sum_{B\in\Sym_n(\FF_q)}(g\varphi)(B)\psi(\tr AB) \\
+% %         &= \sum_{B\in\Sym_n(\FF_q)}\varphi\left(g^{-1}Bg^{-\intercal}\right)\psi(\tr AB) \\
+% %         &= \sum_{B\in\Sym_n(\FF_q)}\varphi(B)\psi\left(\tr AgBg^\intercal\right) \\
+% %         &= \sum_{B\in\Sym_n(\FF_q)}\varphi(B)\psi\left(\tr g^\intercal AgB\right) \\
+% %         &= \mathcal F_\psi\varphi\left(g^\intercal\cdot A\right) \\
+% %         &= \left(g^{-\intercal}\mathcal F_\psi\varphi\right)(A),
+% %     \end{align*}
+% %     which is what we wanted.
+% % \end{proof}
+% % \begin{thm} \label{thm:gamma-matrix-exists}
+% %     Fix notation as above. Let $\omega\colon\FF_q^\times\to\CC^\times$ be a character. For any $k\in\{\pm1\}$, there exist unique constants $\gamma_{k,1}(\omega)$ and $\gamma_{k,-1}(\omega)$ such that
+% %     \[Z_k\left(\omega^{-1},\mathcal F_\psi\varphi\right)=\gamma_{k,1}(\omega)Z_{1}(\omega,\varphi)+\gamma_{k,-1}(\omega)Z_{-1}(\omega,\varphi)\]
+% %     for any $\varphi\in S(\Sym_n(\FF_q))$ supported on $\Sym_n^\times(\FF_q)$.
+% % \end{thm}
+% % \begin{proof}
+% %     This follows formally from \Cref{prop:prehom-mult-two} and \Cref{lem:fourier-twists-g-action}. Indeed, it is enough to show that the functional $\varphi\mapsto Z_k\left(\omega^{-1},\mathcal F_\psi\varphi\right)$ on $S(\Sym_n(\FF_q))$ is a $\GL_n(\FF_q)$-eigenvector with eigenvalue $\omega^2\circ\det$. Well, for any $\varphi\in S(\Sym_n(\FF_q))$ and $g\in\GL_n(\FF_q)$, we use \Cref{lem:fourier-twists-g-action} to compute
+% %     \begin{align*}
+% %         Z_k\left(\omega^{-1},\mathcal F_\psi(g\varphi)\right) &= Z_k\left(\omega^{-1},g^{-\intercal}\mathcal F_\psi\varphi\right) \\
+% %         &= \left(\omega^{-1}\left(\det g^{-\intercal}\right)\right)^2Z_k\left(\omega^{-1},\mathcal F_\psi\varphi\right) \\
+% %         &= \omega(\det g)^2Z_k\left(\omega^{-1},\mathcal F_\psi\varphi\right),
+% %     \end{align*}
+% %     as desired.
+% % \end{proof}
+% % The main point of this subsection is to explicitly compute the constants $\gamma_{k,\ell}(\omega)$, which make up the ``change-of-basis'' $\gamma$-matrix. To this end, we have the following result.
+% % \begin{thm} \label{thm:gamma-matrix-computation}
+% %     Fix notation as above. Let $\omega\colon\FF_q^\times\to\CC^\times$ be a character, and let $\chi\colon\FF_q^\times\to\CC^\times$ be the nontrivial quadratic character. For any $k,\ell\in\{\pm1\}$, we have
+% %     \begin{equation}
+% %         c_{k,\ell}(\omega)=\frac{g_n\left(\omega^{-1},\psi,1\right)+k\ell g_n\left(\omega^{-1}\chi,\psi,1\right)}2. \label{eq:coef-by-sym-gauss-sum}
+% %     \end{equation}
+% %     In particular, we have the following.
+% %     \begin{itemize}
+% %         \item If $n=2m$ is an even nonnegative integer, then
+% %         \[c_{k,\ell}(\omega)=\chi(-1)^m\omega(4)^mq^{m^2}g\left(\omega^{-2},\psi\right)^m1_{k=\ell}.\]
+% %         \item If $n=2m+1$ is an odd nonnegative integer, then
+% %         \[c_{k,\ell}(\omega)=\omega(4)^mq^{m(m+1)}g\left(\omega^{-2},\psi\right)^m\cdot\frac{g\left(\omega^{-1},\psi\right)+k\ell g\left(\omega^{-1}\chi,\psi\right)}2.\]
+% %     \end{itemize}
+% % \end{thm}
+% % \begin{proof}
+% %     The last computations follow from directly from plugging \eqref{eq:coef-by-sym-gauss-sum} into \Cref{thm:sym-gauss-sum}, so we will spend our time proving \eqref{eq:coef-by-sym-gauss-sum}. Using \Cref{rem:explicit-prehom-mult-two}, we see
+% %     \[\gamma_{k,\ell}(\omega)=\frac{Z_k\left(\omega^{-1}\mathcal F_\psi1_{A_\ell}\right)}{\omega(\det A_\ell)}=\frac1{\omega(\det A_\ell)}\sum_{A\in Y_k}\omega^{-1}(\det A)\mathcal F_\psi 1_{A_\ell}(A),\]
+% %     where $A_\ell\in Y_\ell$ is some representative. A direct computation shows $\mathcal F_\psi 1_{A_\ell}(A)=\psi(\tr AA_\ell)$, so
+% %     \[\gamma_{k,\ell}(\omega)=\frac1{\omega(\det A_\ell)}\sum_{A\in Y_k}\omega^{-1}(\det A)\psi(\tr AA_\ell).\]
+% %     To express this in terms of $g_n$s, we need to change the sum from over $A\in Y_k$ to over $A\in\Sym_n^\times(\FF_q)$. To this end, we note that $A\in Y_k$ if and only if $\chi(\det A)=k$ and is $-k$ otherwise, so a direct computation shows that $1_{Y_k}=\frac12(1+k\chi\circ\det)$. Thus,
+% %     \begin{align*}
+% %         \gamma_{k,\ell}(\omega) &= \frac1{\omega(\det A_\ell)}\sum_{A\in\Sym_n^\times}\omega^{-1}(\det A)\psi(\tr AA_\ell)\left(\frac{1+k\chi(\det A)}2\right) \\
+% %         &= \frac{g_n\left(\omega^{-1},\psi,A_\ell\right)+kg_n\left(\omega^{-1}\chi,\psi,A_\ell\right)}{2\omega(\det A_\ell)}.
+% %     \end{align*}
+% %     To finish up, we note that \Cref{thm:sym-gauss-sum} implies that $g_n\left(\omega^{-1},\psi,A_\ell\right)=\omega(\det A_\ell)g_n\left(\omega^{-1},\psi,1\right)$ and
+% %     \[g_n\left(\omega^{-1}\chi,\psi,A_\ell\right)=\omega(\det A_\ell)\chi(\det A_\ell)g_n\left(\omega^{-1}\chi,\psi,1\right)=\omega(\det A_\ell)\ell g_n\left(\omega^{-1}\chi,\psi,1\right),\]
+% %     from which substitution completes the proof.
+% % \end{proof}
+
+% % \begin{corollary}
+% %     Fix notation as above. Let $\omega\colon\FF_q^\times\to\CC^\times$ be a character. The functions $\varphi\mapsto Z_\bullet\left(\omega^{-1},\mathcal F_\psi\varphi\right)$ form a basis of the space
+% %     \[\Hom_{\GL_n(\FF_q)}\left(S(\Sym_n(\FF_q))^\circ,\omega^2\circ\det\right),\]
+% %     where $S(\Sym_n(\FF_q))^\circ$ denotes the functionals on $\Sym_n(\FF_q)$ supported on $\Sym_n^\times(\FF_q)$.
+% % \end{corollary}
+% % \begin{proof}
+% %     For brevity, define $Z'_\bullet(\varphi)\coloneqq Z_\bullet\left(\omega^{-1},\mathcal F_\psi\varphi\right)$. Note that $Z'_\bullet$ is in fact an eigenvector by the proof of \Cref{thm:gamma-matrix-exists}, and this space has basis given by $Z_1(\omega)$ and $Z_2(\omega)$ by \Cref{prop:prehom-mult-two}. Now, the constants $(\gamma_{k,\ell})_{k,\ell\in\{\pm1\}}$ make a change-of-basis matrix from $\{Z_1(\omega),Z_2(\omega)\}$ to $\{Z'_1,Z'_2\}$, so it suffices to show that
+% %     \[\det\begin{bmatrix}
+% %         \gamma_{1,1} & \gamma_{1,-1} \\
+% %         \gamma_{-1,1} & \gamma_{-1,-1}
+% %     \end{bmatrix}\stackrel?\ne0.\]
+% %     To use \Cref{thm:gamma-matrix-computation}, we set $g_+\coloneqq g_n\left(\omega^{-1},\psi,1\right)$ and $g_-\coloneqq g_n\left(\omega^{-1}\chi,\psi,1\right)$, from which we compute
+% %     \[\det\begin{bmatrix}
+% %         \gamma_{1,1} & \gamma_{1,-1} \\
+% %         \gamma_{-1,1} & \gamma_{-1,-1}
+% %     \end{bmatrix} = \det\frac12\begin{bmatrix}
+% %         g_+ + g_- & g_+ - g_- \\
+% %         g_+ - g_- & g_+ + g_-
+% %     \end{bmatrix} = g_+g_-.\]
+% %     Now, $g_+$ and $g_-$ are nonzero by \Cref{thm:sym-gauss-sum} (and \Cref{prop:mag-gauss-sum}), so we are done.
+% % \end{proof}
+% % \begin{remark}
+% %     Combining the above computation with \Cref{rem:mag-of-sym-gauss-sum}, in the ``generic'' case $\omega^2\ne1$, we have
+% %     \[\left|\det\begin{bmatrix}
+% %         \gamma_{1,1} & \gamma_{1,-1} \\
+% %         \gamma_{-1,1} & \gamma_{-1,-1}
+% %     \end{bmatrix}\right|=q^{\binom{n+1}2}.\]
+% %     If we were to normalize $\mathcal F_\psi$ to $\mathcal F_\psi^*\coloneqq q^{-\frac12\binom{n+1}2}\mathcal F_\psi$ and redefine everything with the normalized Fourier transform, then this determinant would have absolute value $1$. This normalization factor is desirable because \Cref{rem:sym-fourier-twice} implies $\mathcal F^*_{\psi^{-1}}\circ\mathcal F^*_\psi=1$.
+% % \end{remark}
+
+% \subsection{Combinatorics}
+% In this subsection, we use \Cref{thm:sym-gauss-sum} to compute the number of symmetric invertible matrices over $\FF_q$ with specified trace and determinant. This requires a more complete understanding of the sums $g_n(\omega,\psi,T)$ than \Cref{thm:sym-gauss-sum} provides; in particular, we need to understand the case when $\psi$ is trivial. Nonetheless, the method of proof \Cref{thm:sym-gauss-sum} still applies.
+% \begin{prop} \label{prop:most-sym-gauss-sum-psi-trivial}
+%     Fix a nonnegative integer $n$ and some $T\in\Sym_n^\times(\FF_q)$.
+%     \begin{enumerate}[label=(\alph*)]
+%         \item Let $\omega\colon\FF_q^\times\to\CC^\times$ be a nontrivial character. If $n$ is odd or $\omega^2\ne1$, then $g_n(\omega,1,T)=0$.
+%         \item Let $\chi\colon\FF_q^\times\to\CC^\times$ be the nontrivial quadratic character. If $n=2m$ is even, then
+%         \[g_{2m}(\chi,1,T)=\chi(-1)^mq^{m^2}\prod_{k=0}^{m-1}\left(q^{2k+1}-1\right).\]
+%     \end{enumerate}
+% \end{prop}
+% \begin{proof}
+%     For the proof of (a), we have two cases.
+%     \begin{itemize}
+%         \item Suppose $\omega^2\ne1$. Then for any $g\in\GL_n(\FF_q)$, we see that $A\in\Sym_n^\times(\FF_q)$ if and only if $gAg^\intercal\in\Sym_n^\times(\FF_q)$, so
+%         \[g_n(\omega,1,T)=\sum_{A\in\Sym_n^\times(\FF_q)}\omega(\det A)=\sum_{A\in\Sym_n^\times(\FF_q)}\omega(\det gAg^\intercal)=\omega(\det g)^2g_n(\omega,1,T).\]
+%         Thus, to conclude $g_n(\omega,1,T)=0$, it suffices to find $g\in\GL_n(\FF_q)$ with $\omega(\det g)^2\ne1$. Well, $\omega^2\ne1$, so find $c\in\FF_q^\times$ such that $\omega(c)^2\ne1$ and then set $g\coloneqq\operatorname{diag}(c,1,\ldots,1)$.
+%         \item Suppose $n$ is odd. By the previous case, we may assume that $\omega^2=1$. Now, for any $c\in\FF_q^\times$, we see that $A\in\Sym_n^\times(\FF_q)$ if and only if $cA\in\Sym_n^\times(\FF_q)$, so
+%         \[g_n(\omega,1,T)=\sum_{A\in\Sym_n^\times(\FF_q)}\omega(\det A)=\sum_{A\in\Sym_n^\times(\FF_q)}\omega(c\det A)=\omega(c)^ng_n(\omega,1,T).\]
+%         Now, if we did have $g_n(\omega,1,T)\ne0$, then we would have $\omega(c)^n=1$ for all $c\in\FF_q^\times$ and hence $\omega^n=1$; however, $n$ is odd and $\omega^2=1$ already, so it would follow $\omega=1$. However, $\omega\ne1$ by hypothesis.
+%     \end{itemize}
+%     For the proof of (b), we imitate the proof of \Cref{thm:sym-gauss-sum}. As an analogue of \Cref{lem:sym-gauss-sum-ind}, we claim that
+%     \begin{equation}
+%         g_{2m+2}(\chi,1,T)\stackrel?=g_{2m}(\chi,1,T)\cdot\chi(-1)q^{2m+1}\left(q^{2m+1}-1\right) \label{eq:ind-quad-gauss-sum}
+%     \end{equation}
+%     for any nonnegative integer $m$. Note that \eqref{eq:ind-quad-gauss-sum} will complete the proof of (b) by an induction.
+    
+%     Now, the proof of \eqref{eq:ind-quad-gauss-sum} is analogous to \Cref{lem:sym-gauss-sum-ind}; there are two cases. Set $n\coloneqq2m$ for brevity.
+%     \begin{itemize}
+%         \item We sum over $A\in\Sym_{n+2}^\times(\FF_q)$ with $A_{n+2,n+2}\ne0$. As in \Cref{lem:sym-gauss-sum-ind}, we have the following bijection.
+%         \[\arraycolsep=1.4pt\begin{array}{rclclcl}
+%             \operatorname{Sym}_{n+1}^\times(\FF_q) & \times & \FF_q^{n+1} & \times & \FF_q^\times & \to & \{A\in\operatorname{Sym}_{n+2}^\times(\FF_q):A_{n+2,n+2}\ne0\} \\
+%             (A' & , & v & , & c) & \mapsto & \displaystyle\begin{bmatrix}
+%                 1 & v \\
+%                   & 1
+%             \end{bmatrix}\begin{bmatrix}
+%                 A' \\ & c
+%             \end{bmatrix}\begin{bmatrix}
+%                 1 \\ v^\intercal & 1
+%             \end{bmatrix}
+%         \end{array}\]
+%         It follows that
+%         \[\sum_{\substack{A\in\Sym_{n+2}^\times(\FF_q)\\A_{n+2,n+2}\ne0}}\chi(\det A) = \Bigg(\sum_{A'\in\Sym_{n+1}^\times(\FF_q)}\chi(\det A)\Bigg)\Bigg(\sum_{c\in\FF_q^\times,v\in\FF_q^{n+1}}\omega(c)\Bigg),\]
+%         but the left sum vanishes by (a) because it is $g_{2m+1}(\chi,1,T)=0$. Thus, there is no contribution in this case.
+%         \item We sum over $A\in\Sym_{n+2}^\times(\FF_q)$ with $A_{n+2,n+2}=0$. In light of the previous case, we expect all contribution from this case. Let $e_{n+2}$ denote the $(n+2)$nd basis vector. For any $v\in\FF_q^n$ and $c\in\FF_q$, we claim that
+%         \[\sum_{\substack{A\in\Sym_{n+2}^\times(\FF_q)\\ Ae_{n+2}=(v,c,0)}}\chi(\det A)\stackrel?=g_{2m}(\chi,1,T)\cdot\chi(-1)q^{2m+1},\]
+%         from which the claim will follow upon summing over all vectors $(v,c)\in\FF_q^{n+1}$ with at least one nonzero entry. Quickly, because some entry in $(v,c)\in\FF_q^{n+1}$, we note that we can rearrange the rows and columns of $A$ to allow us to assume that $c\ne0$.
+        
+%         Thus, as in \Cref{lem:sym-gauss-sum-ind}, we have the following bijection.
+%         \[\arraycolsep=1.4pt\begin{array}{rclclcl}
+%             \operatorname{Sym}_{n}^\times(\FF_q) & \times & \FF_q^n & \times & \FF_q & \to & \{A\in\operatorname{Sym}_{n+2}^\times(\FF_q):Ae_{n+2}=(v,c,0)\} \\
+%             (A' & , & w & , & d) & \mapsto &  \begin{bmatrix}
+%                 1 & \frac1cv & w \\
+%                   & 1 &   \\
+%                   &   & 1
+%             \end{bmatrix}\begin{bmatrix}
+%                 A' \\
+%                   & d & c \\
+%                   & c
+%             \end{bmatrix}\begin{bmatrix}
+%                 1 \\
+%                 \frac1cv^\intercal & 1 \\
+%                 w^\intercal &   & 1
+%             \end{bmatrix}
+%         \end{array}\]
+%         It follows that
+%         \[\sum_{\substack{A\in\Sym_{n+2}^\times(\FF_q)\\ Ae_{n+2}=(v,c,0)}}\chi(\det A)=\sum_{w\in\FF_q^n,d\in\FF_q}\Bigg(\sum_{A'\in\Sym_n^\times(\FF_q)}\chi\left(-c^2\det A\right)\Bigg),\]
+%         which is what we wanted upon noting $\chi\left(-c^2\right)=\chi(-1)$ and collecting sums.
+%     \end{itemize}
+%     Combining the above casework completes the proof of (b).
+% \end{proof}
+% \begin{remark}
+%     One can prove (b) by a combinatorial argument, directly counting the number of invertible symmetric matrices with square determinant; this is done in \cite[Theorem~4]{macwilliams-ortho-matrices}. We have included the above proof to emphasize the strength of the Gaussian elimination technique to compute these Gauss sums.
+% \end{remark}
+% The last sum $g_n(\omega,\psi,T)$ to consider is the case where $\omega$ and $\psi$ are both trivial. Equivalently, we are counting the number of invertible symmetric $n\times n$ matrices with entries in $\FF_q$. This result is well-known; for example, see \cite[Theorem~2]{macwilliams-ortho-matrices}. However, to emphasize the strength of our method (and for completeness), we will present a proof using Gaussian elimination, as done in \cite{br-rand-matrices} in the case of $\FF_p$.
+% \begin{prop} \label{prop:count-sym-matrices}
+%     Fix a nonnegative integer $n$ and some $T\in\Sym_n^\times(\FF_q)$.
+%     \begin{enumerate}[label=(\alph*)]
+%         \item If $n=2m$ is even, then
+%         \[g_{2m}(1,1,T)=q^{m^2+m}\prod_{k=0}^{m-1}\left(q^{2k+1}-1\right).\]
+%         \item If $n=2m+1$ is odd, then
+%         \[g_{2m+1}(1,1,T)=q^{m^2+m}\prod_{k=0}^{m}\left(q^{2k+1}-1\right).\]
+%     \end{enumerate}
+% \end{prop}
+% \begin{proof}
+%     The proof will be by induction on $n$. In analogy to \Cref{lem:sym-gauss-sum-ind}, the main claim is that
+%     \begin{equation}
+%         g_{n+2}(1,1,T)\stackrel?=q^{n+1}(q-1)g_{n+1}(1,1,T)+q^{n+1}\left(q^{n+1}-1\right)g_n(1,1,T) \label{eq:ind-counting-sym}
+%     \end{equation}
+%     for any nonnegative integer $n$. The proof of \Cref{eq:ind-counting-sym} uses the typical Gaussian elimination technique.
+%     \begin{itemize}
+%         \item We sum over $A\in\Sym_{n+2}^\times(\FF_q)$ where $A_{n+2,n+2}\ne0$. As in \Cref{lem:sym-gauss-sum-ind}, we have the following bijection.
+%         \[\arraycolsep=1.4pt\begin{array}{rclclcl}
+%             \operatorname{Sym}_{n+1}^\times(\FF_q) & \times & \FF_q^{n+1} & \times & \FF_q^\times & \to & \{A\in\operatorname{Sym}_{n+2}^\times(\FF_q):A_{n+2,n+2}\ne0\} \\
+%             (A' & , & v & , & c) & \mapsto & \displaystyle\begin{bmatrix}
+%                 1 & v \\
+%                   & 1
+%             \end{bmatrix}\begin{bmatrix}
+%                 A' \\ & c
+%             \end{bmatrix}\begin{bmatrix}
+%                 1 \\ v^\intercal & 1
+%             \end{bmatrix}
+%         \end{array}\]
+%         It follows that the number of matrices in this case is $q^{n+1}(q-1)g_{n+1}(1,1,T)$.
+%         \item We sum over $A\in\Sym_{n+2}^\times(\FF_q)$ where $A_{n+2,n+2}=0$. Let $e_{n+2}$ denote the $(n+2)$nd basis vector. For any $v\in\FF_q^n$ and $c\in\FF_q$, we claim that
+%         \[\#\left\{A\in\Sym_{n+2}^\times(\FF_q):Ae_{n+2}=(v,c,0)\right\}\stackrel?=q^{n+1}g_n(1,1,T),\]
+%         from which \eqref{eq:ind-counting-sym} will follow by summing over all $(v,c)\in\FF_q^{n+1}$ with at least one nonzero entry. Quickly, because some entry in $(v,c)\in\FF_q^{n+1}$, we note that we can rearrange the rows and columns of $A$ to allow us to assume that $c\ne0$.
+        
+%         Now, as in \Cref{lem:sym-gauss-sum-ind}, we have the following bijection.
+%         \[\arraycolsep=1.4pt\begin{array}{rclclcl}
+%             \operatorname{Sym}_{n}^\times(\FF_q) & \times & \FF_q^n & \times & \FF_q & \to & \{A\in\operatorname{Sym}_{n+2}^\times(\FF_q):Ae_{n+2}=(v,c,0)\} \\
+%             (A' & , & w & , & d) & \mapsto &  \begin{bmatrix}
+%                 1 & \frac1cv & w \\
+%                   & 1 &   \\
+%                   &   & 1
+%             \end{bmatrix}\begin{bmatrix}
+%                 A' \\
+%                   & d & c \\
+%                   & c
+%             \end{bmatrix}\begin{bmatrix}
+%                 1 \\
+%                 \frac1cv^\intercal & 1 \\
+%                 w^\intercal &   & 1
+%             \end{bmatrix}
+%         \end{array}\]
+%         The desired equality follows.
+%     \end{itemize}
+%     Summing the above cases completes the proof of \eqref{eq:ind-counting-sym}.
+
+%     We now complete the proof by an induction on $n$. For $n=0$ and $n=1$, there is nothing to say. Now, to synthesize cases, we note that
+%     \[q^{m^2+m}\prod_{k=0}^{m}\left(q^{2k+1}-1\right)=q^{\frac12(2m+1)(2m+2)}\prod_{\substack{1\le k\le2m+1\\k\text{ odd}}}\left(1-\frac1{q^k}\right)\]
+%     and analogously for the even case. Thus, for our induction, we take $n\ge0$ and use \eqref{eq:ind-counting-sym} to see $g_{n+2}(1,1,T)$ is
+%     \begin{align*}
+%         & q^{n+1}(q-1)g_{n+1}(1,1,T)+q^{n+1}\left(q^{n+1}-1\right)g_n(1,1,T) \\
+%         ={}& q^{\frac12(n+2)(n+1)}\left(q^{n+1}(q-1)\prod_{\substack{n<k\le n+1\\k\text{ odd}}}\left(1-\frac1{q^k}\right)+\left(q^{n+1}-1\right)\right)\prod_{\substack{1\le k\le n\\k\text{ odd}}}\left(1-\frac1{q^k}\right).
+%     \end{align*}
+%     If $n$ is odd, we have
+%     \[q^{\frac12(n+2)(n+1)}\left(q^{n+2}-1\right)\prod_{\substack{1\le k\le n\\k\text{ odd}}}\left(1-\frac1{q^k}\right),\]
+%     which simplifies correctly. If $n$ is even, we have
+%     \[q^{\frac12(n+2)(n+1)}\underbrace{\left(q^{n+1}(q-1)\left(1-\frac1{q^{n+1}}\right)+\left(q^{n+1}-1\right)\right)}_{q\left(q^{n+1}-1\right)}\prod_{\substack{1\le k\le n\\k\text{ odd}}}\left(1-\frac1{q^k}\right),\]
+%     which still simplifies correctly. This completes the induction.
+% \end{proof}
+
+% We are now ready for our combinatorics.

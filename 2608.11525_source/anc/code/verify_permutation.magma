@@ -1,0 +1,182 @@
+// Chain-abundant subset orbits for small soluble permutation groups.
+//
+// For a subgroup S, nu(S) is the largest order of a nilpotent subgroup of S.
+// The first calculation considers every soluble primitive group of degree at
+// most 9 and every chain L normal in K normal in J.  The second considers every
+// soluble transitive group of degree at most 15.  The primitive and transitive
+// groups are taken from Magma's complete databases.
+
+procedure RequireEqual(description, found, expected)
+    if found ne expected then
+        error description cat "\nexpected: " cat Sprint(expected)
+            cat "\nfound: " cat Sprint(found);
+    end if;
+end procedure;
+
+LargestNilpotentOrder := function(S)
+    if IsNilpotent(S) then
+        return Order(S);
+    end if;
+    return Maximum([subgroupRecord`order
+        : subgroupRecord in NilpotentSubgroups(S)]);
+end function;
+
+SomeMemberIsAbundantFor := function(orbit, L)
+    for A in orbit do
+        stabiliser := Stabiliser(L, A);
+        orbitLength := Order(L) div Order(stabiliser);
+        if orbitLength ge Order(stabiliser) then
+            return true;
+        end if;
+        if orbitLength ge LargestNilpotentOrder(stabiliser) then
+            return true;
+        end if;
+    end for;
+    return false;
+end function;
+
+SectionAbundantOrbits := function(J, degree)
+    pointSet := {1 .. degree};
+    subsetAction := GSet(J, Subsets(pointSet));
+    subsetOrbits := Orbits(J, subsetAction);
+
+    sections := [];
+    for normalRecordK in NormalSubgroups(J) do
+        K := normalRecordK`subgroup;
+        for normalRecordL in NormalSubgroups(K) do
+            L := normalRecordL`subgroup;
+            if L notin sections then
+                Append(~sections, L);
+            end if;
+        end for;
+    end for;
+
+    number := 0;
+    sizes := [];
+    for orbit in subsetOrbits do
+        if forall{L : L in sections |
+            SomeMemberIsAbundantFor(orbit, L)} then
+            number +:= 1;
+            subsetSize := #Rep(orbit);
+            if subsetSize notin sizes then
+                Append(~sizes, subsetSize);
+            end if;
+        end if;
+    end for;
+    Sort(~sizes);
+    return number, sizes;
+end function;
+
+// The ratio |J:J_A|/nu(J_A) is constant on a J-orbit of subsets and is
+// unchanged on replacing A by its complement.  It is therefore enough to use
+// one representative from each orbit on k-subsets with 1 <= k <= degree/2.
+HasAbundantSubset := function(J, degree)
+    pointSet := {1 .. degree};
+    for subsetSize in [1 .. degree div 2] do
+        subsetAction := GSet(J, Subsets(pointSet, subsetSize));
+        for orbit in Orbits(J, subsetAction) do
+            A := Rep(orbit);
+            stabiliser := Stabiliser(J, A);
+            orbitLength := Order(J) div Order(stabiliser);
+            if orbitLength ge Order(stabiliser) then
+                return true;
+            end if;
+            if orbitLength ge LargestNilpotentOrder(stabiliser) then
+                return true;
+            end if;
+        end for;
+    end for;
+    return false;
+end function;
+
+primitiveCount := 0;
+exceptionLabels := [];
+exceptionGroups := [];
+
+for degree in [2 .. 9] do
+    for number in [1 .. NumberOfPrimitiveGroups(degree)] do
+        J := PrimitiveGroup(degree, number);
+        if IsSoluble(J) then
+            primitiveCount +:= 1;
+            numberAbundant, abundantSizes :=
+                SectionAbundantOrbits(J, degree);
+
+            if degree eq 2 then
+                RequireEqual(
+                    "chain-abundant orbits for the primitive group of degree 2",
+                    <numberAbundant, abundantSizes>, <1, [1]>);
+            else
+                pointStabiliserNu :=
+                    LargestNilpotentOrder(Stabiliser(J, 1));
+                if pointStabiliserNu gt degree then
+                    Append(~exceptionLabels, <degree, number>);
+                    Append(~exceptionGroups, J);
+                    requiredSizes := [2, 3];
+                else
+                    requiredSizes := [1, 2];
+                end if;
+
+                if not forall{size : size in requiredSizes |
+                    size in abundantSizes} then
+                    error "missing chain-abundant subset size for "
+                        cat "PrimitiveGroup(" cat Sprint(degree) cat ","
+                        cat Sprint(number) cat "): "
+                        cat Sprint(requiredSizes) cat " are required, whereas "
+                        cat Sprint(abundantSizes) cat " occur";
+                end if;
+            end if;
+        end if;
+    end for;
+end for;
+
+RequireEqual("the number of soluble primitive groups of degrees 2 to 9",
+    primitiveCount, 21);
+RequireEqual("the number of degree-nine singleton exceptions",
+    #exceptionGroups, 2);
+
+// GAP and Magma use different numbers for some primitive groups.  The two
+// exceptions are therefore checked by isomorphism type, not by database label.
+affineSemilinear, affineSemilinearPoints := AGammaL(1, 9);
+affineGeneral, affineGeneralPoints := AGL(2, 3);
+exceptionTypeCounts := [0, 0];
+for J in exceptionGroups do
+    if IsIsomorphic(J, affineSemilinear) then
+        exceptionTypeCounts[1] +:= 1;
+    elif IsIsomorphic(J, affineGeneral) then
+        exceptionTypeCounts[2] +:= 1;
+    else
+        error "an unexpected primitive group has failed the singleton test";
+    end if;
+end for;
+RequireEqual("the two singleton-exception isomorphism types",
+    exceptionTypeCounts, [1, 1]);
+
+printf "All 21 soluble primitive groups of degrees 2 to 9 have the required ";
+print "chain-abundant subset sizes.";
+printf "The singleton exceptions have Magma database labels %o and are ",
+    exceptionLabels;
+print "AGammaL(1,9) and AGL(2,3).";
+
+transitiveCount := 0;
+withoutAbundantSubset := [];
+
+for degree in [2 .. 15] do
+    for number in [1 .. NumberOfTransitiveGroups(degree)] do
+        J := TransitiveGroup(degree, number);
+        if IsSoluble(J) then
+            transitiveCount +:= 1;
+            if not HasAbundantSubset(J, degree) then
+                Append(~withoutAbundantSubset, <degree, number>);
+            end if;
+        end if;
+    end for;
+end for;
+
+RequireEqual("the number of soluble transitive groups of degrees 2 to 15",
+    transitiveCount, 501);
+RequireEqual("soluble transitive groups without an abundant subset",
+    withoutAbundantSubset, []);
+
+print "Each of the 501 soluble transitive groups of degrees 2 to 15 has an "
+    cat "abundant subset.";
+quit;

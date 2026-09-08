@@ -1,0 +1,87 @@
+% !TEX root = ../main.tex
+
+\chapter{Background}
+
+\section{Domain Theory}
+
+Domain theory, first proposed by Scott \cite{scott_domains_1982,scott_outline_1970}, aims to provide a denotational semantics for languages with general recursions. The core idea in domain theory is to see types as domains, a poset with supremum for all directed subsets, and functions between types are monotonic functions preserving the directed suprema. We hereby introduce some fundamental concepts involved in domain theory. The contents are common results in the study of denotational semantics and are loosely based on the literature by Davey and Priestley \cite{davey_introduction_2002} and the lecture notes by Lennon-Bertrand \cite{lennon-bertrand_denotational_2024}.
+
+\begin{definition}
+    A binary relation $\preceq$ on a set $P$ is a \textbf{partial order} if it satisfies the following properties:
+    \begin{itemize}
+        \item Reflexivity: $\forall x\in P.x\preceq x$.
+        \item Transitivity: $\forall x\in P.\forall y\in P.\forall z\in P.x\preceq y\wedge y\preceq z\implies x\preceq z$.
+        \item Antisymmetry: $\forall x\in P.\forall y\in P.x\preceq y\wedge y\preceq x\implies x=y$.
+    \end{itemize}
+    A set equipped with a partial order $(P,\preceq)$ is called a \textbf{poset}.
+\end{definition}
+
+\begin{definition}
+    Let $(P,\preceq)$ be a poset and $S\subseteq P$ be a subset of $P$. $s$ is an \textbf{upper (lower) bound} of $S$ if $\forall x\in S.s\preceq x$ ($\forall x\in S.x\preceq s$). If the set of all upper (lower) bounds of $S$ has a lower (upper) bound, it is called the \textbf{supremum (infimum)} of $S$, denoted $\sup S$ ($\inf S$). Suprema and infima are unique by definition if they exist.
+\end{definition}
+
+\begin{definition}
+    Let $(D,\sqsubseteq)$ be a poset. A \textbf{$\omega$-chain} in $D$ is a sequence of elements $(a_n\in D)_{n\in\N}$ that satisfy $a_m\sqsubseteq a_n$ for any $m\le n$. $D$ is called a \textbf{predomain} or a \textbf{$\omega$-cpo} if all $\omega$-chains on $D$ have suprema. If in addition $D$ has a minimum, $D$ is called a \textbf{domain} or a \textbf{$\omega$-cppo}.\footnote{Some literature uses the concept of dcpo instead, requiring all directed subsets to have suprema, which is a stronger condition than the one we used here. However, $\omega$-chain completeness is sufficient in constructing fixed points and is consistent with the synthetic formalizations of domains in Chapter \ref{chapter-topology}.}
+\end{definition}
+
+An inspiring example of a domain is the set of partial functions $A\parto B$, where $f\sqsubseteq g$ iff $\dom f\subseteq\dom g$ and $\forall x\in\dom f.f(x)=g(x)$. In other words, $f\sqsubseteq g$ if $g$ is more ``informative'' than $f$ as a function. The order $\sqsubseteq$ in a domain is therefore often called the information order.
+
+\begin{definition}
+    A function between posets is \textbf{monotonic} if
+    $$\forall x.\forall y.x\preceq y\implies f(x)\preceq f(y)$$
+    A function between domains is \textbf{Scott-continuous} (or \textbf{continuous} for short) if it is monotonic and preserves all directed suprema.
+\end{definition}
+
+One key result about continuous functions in domain theory is Kleene's fixed point theorem.
+\begin{theorem}[Kleene's fixed point theorem]
+    Let $f:D\to D$ be a continuous function. $f$ always have a least fixed point given by
+    $$\sup_{n\in\N}f^n(\bot)=\sup\set{\bot,f(\bot),f(f(\bot)),\dots}$$
+\end{theorem}
+The fixed point theorem illustrates the existence of recursion in the sense that the recursion can be constructed as a fixed point in the domain of partial functions using the $Y$-combinator.
+
+\section{Synthetic Domain Theory}
+
+Synthetic domain theory (SDT), as its name suggests, is a synthetic approach to domain theory \cite{hyland_first_1991,reus_general_1997,reus_program_1996}. In SDT, domains are treated as intuitionistic sets, and all functions expressible inside this are by nature continuous.
+
+An important motivation of SDT is that the formalisation in domain theory often involves tedious definitions of the orders on different types and constructions of continuous functions between them. SDT tackles this issue by introducing a special object $\I$\footnote{Other common notations for the classifier include $\mathbb{S}$ and $\Sigma$.} that serves as a subobject classifier classifying a certain class of subsets on which the partial functions are studied. By postulating different axioms about $\I$, we may have different variants of the SDT scaling to different computation models, which is another advantage of SDT.
+
+Meanwhile, SDT provides a type theory for users to formalise the proofs inside the language, and can be incorporated with other type theories, for example, HoTT\cite{the_univalent_foundations_program_homotopy_2013}, which allows users to deal with higher structures inside the theory.
+
+\section{Homotopy Type Theory}
+
+\begin{table}[h]
+    \centering
+    \begin{tabular}{l|l|l}
+    \textbf{Homotopy Theory} & \textbf{Type Theory} & \textbf{Category Theory} \\ \hline
+    Space & Type & Category \\ \hline
+    Point & Term & Object \\ \hline
+    Path & Identity Type & Morphism \\ \hline
+    Identity Path & Reflexivity of Equality & Identity Morphism \\ \hline
+    Path Composition & Transitivity of Equality & Morphism Composition \\ \hline
+    Path Inversion & Symmetry of Equality &  \\ \hline
+    Continuous Function & Function & Functor \\ \hline
+    & Function Congruence & Functor Mapping Morphisms \\ \hline
+    & Function Extensionality & Functor Mapping Objects \\ 
+    \end{tabular}
+    \caption{A Rosetta Stone between Homotopy Theory, Type Theory, and Category Theory}
+    \label{tab-rosetta}
+\end{table}
+
+In this thesis, we use the homotopy type theory (HoTT) as our meta-language for theorem proving. HoTT is a type theory in which identity types are treated as paths in homotopy theory \cite{the_univalent_foundations_program_homotopy_2013}. Table \ref{tab-rosetta} lists the correspondence between the key concepts in homotopy theory and type theory. Functions in HoTT by nature satisfy the congruence rule (all functions preserve equality) and the function extensionality (two functions are equal iff their values are equal anywhere). See Section \ref{sect-order} for explicit proofs of these properties.
+
+An important variant of HoTT is the cubical type theory (CuTT) \cite{cohen_cubical_2018}. Compared with HoTT, CuTT introduces interval variables, allowing users to describe and manipulate paths and shapes explicitly. CuTT also introduces the higher inductive type (HIT), allowing an inductive data type to include equality information. For example, in terms of HIT, the integer type may be defined as
+\begin{code}
+data Int : Type where
+    minus : ℕ → ℕ → Int
+    eq : ∀ a b c d → a + d ≡ b + c → minus a b ≡ minus c d
+\end{code}
+which encodes the mathematical definition $(\N\times\N)/((a,b)\sim(c,d):a+d=b+c)$. Users are required to demonstrate that the equality is preserved when pattern-matching on a HIT. CuTT has multiple implementations in proof assistants, and one of them is Cubical Agda \cite{vezzosi_cubical_2019}. The codebase for this thesis provides the formalisation of some major theorems in Cubical Agda. See Appendix \ref{apdx-agda} for details.
+
+Directed HoTT is another variation of HoTT used to study the synthetic theory of $\infty$-categories \cite{riehl_type_2023}. In directed HoTT, paths may not be invertible, while other properties including function congruence and function extensionality still hold. Table \ref{tab-rosetta} provides a correspondence between category theory, type theory, and homotopy theory.
+
+\section{Conventions of Notations}
+The thesis uses a mixed style of set-theoretic and type-theoretic notations. For a term $x$ of type $A$, both the notations $x\in A$ and $x:A$ may occur in the text. The thesis also uses a set-theoretic style notation of subsets, that is
+$$\set{x\in A:p(x)}:=\sum_{x:A}p(x)$$
+where $p:A\to\U$.
+
+The universe of all types is denoted $\U$, and the universe of all propositions is denoted $\Omega$. We assume that all types in $\U$ are h-sets and all propositions n $\Omega$ are h-props which means that we consider two propositions equal if they are logical equivalent. This assumption is only for the sake of simplicity and can be removed with only minor modifications to the theory\footnote{In fact, we only need to additionally assume that $\I$ is a set.}. The initial and final objects are denoted $\bot$ and $\top$, which are also seen as the falsity and truth in $\Omega$. The only element of $\top$ is $*$.

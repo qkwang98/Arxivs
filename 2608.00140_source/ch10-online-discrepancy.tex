@@ -1,0 +1,411 @@
+\chapter{Online Discrepancy}
+\label{ch:online}
+
+So far in all the discrepancy problems we considered, the vectors $v_1,\ldots,v_n \in \R^m$ were given to us upfront. Another very natural setting is where the vectors are revealed in an online manner and when $v_t$ arrives at time $t$, its sign $x(t)$  must be chosen immediately and irrevocably, without the knowledge of future vectors.
+The goal is to keep the discrepancy $\|d_t\|_\infty$ small at all times $t$, where  $d_t = x(1) v_1 + \ldots + x(t) v_t$. In a sense, this is very similar
+to prefix discrepancy, where we also need to minimize $\max_{t = 1}^n
+\|d_t\|_\infty$. However, the difference from the online setting is that in (offline) prefix discrepancy problems, we can choose the coloring
+$x$ with full advance knowledge of $v_1, \ldots, v_n$. We will see in this
+chapter that a simple online discrepancy minimization algorithm also
+gives the best algorithmic results for a number of prefix discrepancy
+problems we have already considered. 
+
+\paragraph{Online Koml\'{o}s Problem.}
+%and has received a lot of attention.
+%While several online discrepancy problems have been studied, see bibliographic notes later, 
+
+As the primary example of an online discrepancy problem, we focus here on the online Koml\'{o}s setting where the vectors satisfy $\|v_t\|_2 \leq 1$. It is useful to think of $n$ as being much larger than $m$ (the problem is already non-trivial for $m=2$). % various other discrepancy problems have also been studied 
+
+Notice that sampling each $x(t)$ independently and uniformly can be
+thought of as an online algorithm, and incurs discrepancy $O(\sqrt{n})$
+in the Koml\'os setting.
+Unfortunately, no online algorithm can do better in general. In
+particular, suppose that $m=2$, and each vector $v_t$ is picked by an
+adversary that knows the discrepancy vector $d_{t-1}$. Then the adversary can pick $v_t$
+orthogonal to $d_{t-1}$ so that $\|d_t\|_2^2 = \|d_{t-1}\|_2^2 +
+\|v_t\|_2^2$ irrespective of the sign $x(t)$ chosen by the online
+algorithm. Repeating this for $n$ steps gives $\|d_n\|_\infty \ge
+\sqrt{\frac{n}{2}}$. 
+
+
+
+Interestingly, substantially better results can be obtained if the vectors $v_t$ are chosen in a less adversarial manner.
+
+\paragraph{Oblivious Adversary Model.} 
+A standard model in online computation is that of an oblivious adversary. Here the adversary still knows the online algorithm and can pick the worst case sequence of vectors accordingly. However it must do so in advance before the online algorithm begins its execution. 
+
+Clearly, oblivious adversaries do not help for deterministic
+algorithms --- as the adversary knows exactly what the algorithm will do on each input, it can still pick the worst possible sequence in advance.
+%So the $\Omega(n^{1/2})$ lower bound still holds for any deterministic algorithm.
+However, randomization can be very helpful here as the adversary cannot see the specific random choices made by the algorithm (even though it knows the algorithm itself).
+
+
+
+\section{Self-Balancing Walk}
+\label{sec:sw-alg}
+We now describe an elegant algorithm called the  Self-Balancing Walk (SW) with the following guarantee.
+
+\begin{theorem}
+\label{thm:als-21} 
+For any
+$\delta \in (0,1)$, there is a polynomial time randomized online algorithm against oblivious
+adversaries, that, for any input vectors $v_1, \ldots, v_n$ with
+$\|v_t\|_2 \le 1$ for each $t$,  with probability $1-\delta$ satisfies that $\|d_t
+\|_\infty =O(\log(mn/\delta))$ for all $t \in [n]$.
+\end{theorem} 
+
+
+Theorem \ref{thm:als-21} is remarkable in many ways. 
+It gives $O(\log mn)$ discrepancy w.h.p.~for the online Koml\'{o}s
+problem. This matches the best known algorithmic bound for the offline
+\emph{prefix} Koml\'os problem that we discussed in
+Chapter~\ref{ch:bana-intro}, and comes close to the non-constructive
+$O(\sqrt{\log n})$ bound from  Theorem \ref{thm:prefix-komlos}.
+%In fact the distribution of $d_t$ output by the algorithm satisfies a sub-Gaussianity property, see Theorem \ref{thm:als-subgaussian}.
+Finally, the algorithm is very fast to implement and only requires computing a single inner product at each step. 
+
+\paragraph{The Gaussian Walk (GW) Algorithm.} To gain some intuition for the SW algorithm, we first describe another algorithm with weaker requirements.  We allow our algorithm to choose, at each time step $t$, a random color $x(t)$ which can be any real number (possibly outside the interval $[-1,1]$), but must satisfy $\E[x(t)^2] = 1$. 
+
+Remarkably, one can ensure that $\E[d_t(i)^2] \le 1$ holds for each coordinate $i \in [m]$ and each time $t$.\footnote{Finding such a distribution over $x_t$ is equivalent to constructing a feasible SDP solution with vector discrepancy at most $1$, as discussed later.} Moreover, the (random) color $x(t)$ can be computed online, using the following algorithm.\\
+
+\noindent For $t=1,\ldots,n$ do the following:
+\begin{enumerate}
+    \item Given the vector $v_t$ at time $t$, compute
+    \(
+    %\label{eq:sw-bt}
+        b_t =\langle v_t, d_{t-1} \rangle.
+    \)
+    \item Sample $x(t)$ from the Gaussian distribution $N(-b_t, 1-\E[b_t^2])$.\footnote{We will show later that this variance is always non-negative.}
+    \item Set $d_t = d_{t-1} + x(t) v_t$.
+\end{enumerate}
+
+Note here $b_t$ is a random variable as $d_{t-1}$ is random, and the expectation $\E[b_t^2]$ in Step 2
+ is over the randomness up to time $t-1$. 
+ 
+ The choice to make $x(t)$ Gaussian is not essential, and we could have chosen any random variable with mean $-b_t$ and variance $1-\E[b_t^2]$. The bias $-b_t$ of $x(t)$ plays an important role --- it makes sure that, if $\ip{v_t, d_{t-1}}$ is large, then the discrepancy vector $d_t$ is pushed towards the origin in the direction of $v_t$. To see this more precisely, we can write $x(t)$ as $x(t) = -b_t + y(t)$ where $y(t)\sim N(0, 1-\E[b_t^2])$, independent of $d_{t-1}$. Then $d_t = d_{t-1} -b_tv_t + y(t) v_t$.
+
+We have the following guarantee.
+
+% \[
+%     d'_t := d_{t-1} -b_t v_t
+%     = d_{t-1} - \langle v_t, d_{t-1}\rangle v_t
+%     = (I-v_t v_t^T)d_{t-1}.
+% \]
+% Because $y(t)$ has mean $0$ and is independent of $d'_t$, we have $\E[d_td_t^T] = \E[(d'_t)(d'_t)^T] + (1-\E[b_t^2]) v_t v_t^T$. Then an easy calculation shows that $\E[d_td_t^T]$ remains bounded by the identity. Formally, we claim the following result.
+\begin{theorem}\label{thm:gauss-prefix-komlos}
+     For any $v_1, \ldots, v_n$ provided by an oblivious adversary such that $\|v_t\|_2 \le 1$ for all $t$, the GW algorithm above is well-defined, and, at any time step $t$, satisfies $\E[x(t)^2]=1$ and $\E[d_td_t^T]\preceq I$.\footnote{Recall that the notation $A\preceq B$, for two symmetric $m\times m$ matrices $A$ and $B$, means that $B-A$ is positive semidefinite.}
+\end{theorem}
+\begin{proof}
+We will show using induction on $t$ that $\E[d_{t}d_{t}^T]\preceq I$. 
+This holds trivially for the base case $t=0$ since $d_0 = 0$. Consider some $t\geq 1$ and assume
+inductively that $\E[d_{t-1}d_{t-1}^T]\preceq I$. 
+
+First note that this implies that the algorithm is well-defined at time $t$, as  $\E[b_t^2] 
+=\E[\langle v_t, d_{t-1} \rangle^2]\le \|v_t\|_2^2
+\le 1$, so the variance of $x(t)$ is non-negative.
+As $\E[b_t^2] \le 1$, it is also easily seen that $\E[x(t)^2] = 1$.
+    
+    % This follows from $\E[d_{t-1}d_{t-1}^T]\preceq I$ which is equivalent to the fact that for any $\theta \in \R^m$, $\E[\langle \theta, d_{t-1} \rangle^2]\le \|\theta\|_2^2$. Using this inequality with $\theta = v_t$ gives us that $\E[b_t^2] \le \|v_t\|_2^2 \le 1$.
+
+  We now show the inductive step that $\E[d_{t}d_{t}^T]\preceq I$. Let us define $d'_t := d_{t-1} -b_t v_t$, so that $d_t = d'_t + y(t)v_t$.
+  A key observation is that
+  \[d'_t = d_{t-1} - b_t v_t = d_{t-1} - \langle d_{t-1},v_t \rangle v_t =  (I - v_tv_t^T)d_{t-1}.\]
+ Let us further define $\sigma_t^2:= \E[y(t)^2] = 1-\E[b_t^2]$. We thus have,
+   % We use induction, where  We use the notation $y(t)$ and $d'_t$ introduced above, and 
+    \begin{align*}
+    \E[d_td_t^T]
+    &= \E[(d'_t + y(t) v_t)(d'_t + y(t) v_t)^T]\\
+    &= \E[(d'_t) (d'_t)^T] + \sigma_t^2 v_t v_t^T\\
+    &= (I-v_t v_t^T)\E[d_{t-1}d_{t-1}^T](I-v_t v_t^T) + \sigma_t^2v_t v_t^T\\
+    &\preceq (I-v_t v_t^T)^2 + \sigma_t^2v_t v_t^T \\
+    & = I - (2- \|v_t\|_2^2 - \sigma_t^2) v_tv_t^T  \preceq I.
+    \end{align*}
+    Here, the second equality uses that $y(t)$ is independent of $d'_t$ and has mean $0$, the fourth line uses the inductive hypothesis $\E[d_{t-1}d_{t-1}^T]\preceq I$, and the last inequality follows as $\|v_t\|_2^2 \le 1$ and $\sigma_t^2 \le 1$.
+%
+%The result now follows as \[
+ %   (I-v_t v_t^T)^2 + \sigma_t^2v_t v_t^T = I - (2- |v_t|_2^2 - \sigma_t^2) v_tv_t^T  \preceq I\]
+    % \iff 
+    % \forall \theta \in \R^m: 
+    % \|\theta - \ip{v_t,\theta}v_t\|_2^2 + \sigma_t^2 \ip{v_t,\theta}^2 &\le \|\theta\|_2^2.
+    % \end{align*}
+    % Expanding $\|\theta - \ip{v_t,\theta}v_t\|_2^2$, we have
+    % \begin{align*}
+    %     \|\theta - \ip{v_t,\theta}v_t\|_2^2 &+ \sigma_t^2 \ip{v_t,\theta}^2 
+    %     =
+    %     \|\theta\|_2^2 -(2-\|v_t\|_2^2 - \sigma_t^2) \ip{v_t,\theta}^2\le \|\theta\|_2^2,
+   % \end{align*}
+ %since 
+    % It remains to show that 
+    % \begin{align*}
+    % (I-v_t v_t^T)^2 + \sigma_t^2v_t v_t^T &\preceq I\\
+    % \iff 
+    % \forall \theta \in \R^m: 
+    % \|\theta - \ip{v_t,\theta}v_t\|_2^2 + \sigma_t^2 \ip{v_t,\theta}^2 &\le \|\theta\|_2^2.
+    % \end{align*}
+    % Expanding $\|\theta - \ip{v_t,\theta}v_t\|_2^2$, we have
+    % \begin{align*}
+    %     \|\theta - \ip{v_t,\theta}v_t\|_2^2 &+ \sigma_t^2 \ip{v_t,\theta}^2 
+    %     =
+    %     \|\theta\|_2^2 -(2-\|v_t\|_2^2 - \sigma_t^2) \ip{v_t,\theta}^2\le \|\theta\|_2^2,
+    % \end{align*}
+    % since $\|v_t\|_2^2 \le 1$ and $\sigma_t^2 \le 1$.
+\end{proof}
+
+\begin{remark}
+    Theorem~\ref{thm:gauss-prefix-komlos} is similar to Theorem~\ref{thm:bana-prefix-subgaussian}. Indeed, since $d_t$ is jointly Gaussian, has mean $0$, and has variance at most $1$ in every direction, it is also $1$-subgaussian. However, unlike Theorem~\ref{thm:bana-prefix-subgaussian}, we allow the ``colors'' to be any real number (instead of just $\pm 1$). On the other hand, we achieve better constants, and have an online algorithm. 
+\end{remark}
+
+\smallskip
+
+\noindent {\bf An explicit Vector Coloring.} As a corollary of Theorem~\ref{thm:gauss-prefix-komlos}, we get a vector coloring for the prefix Koml\'os problem achieving vector discrepancy $1$. This is a strengthening of Theorem~\ref{thm:komlos-vec-disc}. 
+
+\begin{theorem}\label{thm:vec-prefix-komlos}
+    For any vectors $v_1, \ldots, v_n \in \R^m$ with $\|v_j\|_2 \le 1$ for all $j \in [n]$, there exist vectors $w_1, \ldots w_n \in \R^d$ for some positive integer $d$, such that $\|w_j\|_2 = 1$ for all $j \in [n]$, and 
+    \[
+    \max_{j=1}^n \max_{i = 1}^m \left\|\sum_{k = 1}^j w_k v_k(i)\right\|_2 \le 1.
+    \]
+\end{theorem}
+\begin{proof}
+    Let $x := (x(1), \ldots, x(n))$ be the random colors determined by the GW algorithm, and define the positive semidefinite matrix $X$ with entries $X(i,j) = \E[x(i)x(j)]$. Theorem~\ref{thm:gauss-prefix-komlos} implies that $X(j,j) = 1$ for all $j \in [n]$, and also that $V_j X V_j^T\preceq I$ for all $j \in [n]$, where $V_j$ is the $m\times n$ matrix whose first $j$ columns are $v_1, \ldots, v_j$, and the remaining $n-j$ columns are $0$. Now the theorem is implied by taking $w_1, \ldots, w_n$ to be any vectors such that $\ip{w_i,w_j} = X(i,j)$. 
+\end{proof}
+
+\paragraph{The Self-Balancing Walk (SW) Algorithm.}
+We now formulate the Self-Balancing Walk (SW) algorithm that proves Theorem~\ref{thm:als-21}. The SW algorithm is very similar to the GW algorithm, with some key differences. We need to make sure that each color $x(t)$ is in $\{-1,+1\}$. Since this forces the bias to be in $[-1,1]$, we will make the bias smaller in proportion to $\ip{v_t, d_{t-1}}$, and, moreover, the algorithm will fail when the bias is outside the interval $[-1,1]$. Below, we let $c = 2\log (4mn/\delta)$, and, as before, let $d_t$ denote the discrepancy vector at time $t$. Initially, $d_0=0$.\\
+
+
+\noindent For $t=1,\ldots,n$ do the following:
+\begin{enumerate}
+    \item Given the vector $v_t$ at time $t$, compute \begin{equation}
+    \label{eq:sw-bt}
+        b_t =\langle v_t, d_{t-1} \rangle/c.
+    \end{equation}
+    \item If $|b_t| > 1$, abort the algorithm.
+Otherwise, set
+\begin{equation} 
+\label{eq:sw-rule}
+x(t) =  \begin{cases} -1  \text { \,\,\, w.p. }  (1+b_t)/2 \\ 
+  +1 \text{ \,\,\,\, otherwise}.
+\end{cases}
+\end{equation}
+\item Set $d_t = d_{t-1} + x(t) v_t$.
+\end{enumerate}
+\vspace{2mm}
+
+To see the parallel between the GW and SW algorithms, notice that,
+conditioned on $d_{t-1}$, the sign $x(t)$ satisfies $\E[x(t) | d_{t-1}]=-b_t$, and, as $b_t = \ip{v_t,d_{t-1}}/c$, the discrepancy $d_t$ satisfies
+\[\E[d_t |d_{t-1}] = d_{t-1} - b_t v_t = \left(I - \frac{1}{c}v_t v_t^T\right) d_{t-1}.\]
+
+
+\section{Analysis}
+We now prove Theorem \ref{thm:als-21}. The proof follows the proof of Theorem~\ref{thm:gauss-prefix-komlos}, but is more involved. Instead of just bounding the second moments of the discrepancy vector $d_t$, we show that $d_t$ is subgaussian. Moreover, we need to account for the possibility that the algorithm aborts. To deal with this second issue, it will be convenient to consider a modified algorithm that never aborts but may sometimes output a non-sense ``sign'' $x(t)$ with $|x(t)|>1$. Consider the following algorithm. 
+\paragraph{Modified Walk (MW).} At each time $t$, compute $b_t = \ip{d_{t-1},v_t}/c$ exactly as before. 
+
+\vspace{2mm}
+
+(i) If $|b_t|> 1$, set $x(t) =-b_t$ deterministically.
+\vspace{2mm}
+
+(ii) Else if $|b_t|\leq 1$, then set $x(t)$ randomly exactly as in \eqref{eq:sw-rule}.\\
+
+Notice that MW never aborts, but may set $|x(t)|>1$ in step (i).
+
+\paragraph{Coupling SW and MW.} Notice that if we use the same random choices in SW in \eqref{eq:sw-rule} and MW in step (ii), then they both behave identically until the first (random) time $\tau$ when $|b_{\tau}|>1$. In particular, at this time SW will abort, but MW will output $x_\tau$ with $|x_\tau|>1$. 
+
+For this reason it will suffice to analyze the MW algorithm. 
+
+\paragraph{Sub-gaussianity of $d_t$.}
+Recall %that a mean-zero random variable $X$ is $\sigma^2$-sub-Gaussian if \[\E[\exp(\theta X)] \leq \exp (\sigma^2 \theta^2/2) \quad \text{ for all }\theta \in \R,\]
+%and similarly 
+from Section \ref{sec:bana-subgaussian} that 
+a mean-zero vector-valued random variable  $X \in \R^m$  is $\sigma$-sub-Gaussian if
+\begin{equation}
+    \label{eq:als-subg-general}
+\E[\exp( \langle X,\theta \rangle )] \leq \exp (\sigma^2 \|\theta\|^2/2) \quad \text{for all $\theta \in \R^m$},
+\end{equation}
+and that such an $X$ satisfies
+\begin{equation}
+\label{eq:als-tail}
+    \Pr[ |\ip{X,\theta} | \geq x] \leq 2 \exp(-x^2/(2\sigma^2\|\theta\|^2)) \quad \text{for all $\theta \in \R^m$}.
+\end{equation}
+MW satisfies the  following remarkable guarantee.
+\begin{theorem}
+\label{thm:als-subgaussian}
+    At each time $t$, the discrepancy vector $d_t$ produced by MW is
+    $\sqrt{c}$-sub-Gaussian. % This implies that output of SW is also $c$-sub-Gaussian until it aborts.
+\end{theorem}
+Interestingly, Theorem \ref{thm:als-subgaussian} directly implies Theorem \ref{thm:als-21}---by simply setting $c = 2 \ln (4mn/\delta)$ to ensure that $\tau > n$ with high probability.
+
+\begin{proof}[Proof of Theorem \ref{thm:als-21}] 
+As the adversary is oblivious, $v_1,\ldots,v_n$ are fixed in advance (and do not depend upon the randomness of the algorithm). 
+
+Fix a time $t$.
+By Theorem \ref{thm:als-subgaussian}
+the vector $d_t$ produced by MW is $\sqrt{c}$-sub-Gaussian. So, applying \eqref{eq:als-tail} with $X=d_{t-1}$ and $\theta = v_t$, and using that $\|v_t\|_2\leq 1$ and $\sigma^2 =c$, 
+\[\Pr[|b_t|>1] = \Pr[|\ip{d_{t-1},v_t}| \geq c] \leq 2 e^{-c/2} = \frac{\delta}{2mn}. \] 
+By a union bound over the $n$ time steps, the probability that SW aborts at some $t\leq n$ is at most $\frac{\delta}{2m} \leq \frac{\delta}{2}$.
+
+Similarly, for a fixed time $t$ and standard coordinate vector $e_i$, applying  \eqref{eq:als-tail} with $X=d_t, \theta = e_i$,  $x=c$, and $\sigma^2=c$ gives  \[\Pr[|\ip{ d_t,e_i}|> c] \leq 2 e^{-c/2} \leq \frac{\delta}{4mn}.\] Thus, by a union bound over all $t \in [n],i \in [m]$, the probability that $\|d_t\|_\infty >c$ for any time $t$ is at most $\delta/2$.
+\end{proof}
+
+\remark
+We can also derive the following more general theorem, using an
+argument analogous to the proof of
+Theorem~\ref{thm:bana-subg-suff}. While an even more general statement
+is possible, we state the theorem for a symmetric convex body $K$ in $\R^m$ with non-empty interior. We use
+$\|y\|_K \eqdef \inf\{t: y \in tK\}$ for the norm with unit ball
+$K$. We use $B_{\ell_2^m}$ for the unit ball of the $\ell_2^m$
+norm.
+
+\begin{theorem}\label{thm:als-genK}
+  Let $v_1, v_2, \ldots, v_n \in \R^m$ satisfy $\|v_t\|_2 \leq 1$ for
+  all $t \in [n]$, and suppose that $K$ is a symmetric convex  body in
+  $\R^m$ such that $rB_{\ell_2^m} \subseteq K$. Then, for any $\delta
+  \in (0,1)$, and for an appropriate choice of $c$, with probability at
+  least $1-\delta$ the SW algorithm satisfies
+  \[
+    \|d_t\|_K \lesssim \sqrt{\log(n/\delta)}(\E\|\grv\|_K + r\sqrt{\log(n/\delta)}),
+  \]
+  where  $\grv$ is a standard Gaussian random vector in $\R^m$.
+\end{theorem}
+
+The proof of Theorem~\ref{thm:als-genK} is similar to the proof of
+Theorem~\ref{thm:als-21} above. We pick $c$ on the order of
+$\log(n/\delta)$, which is enough to argue that the probability that
+SW aborts is at most $\frac{\delta}{2}$. Then we estimate $\max_{t =
+  1}^n \|d_t\|_K$ using the fact that $d_t$ is $\sqrt{c}$-sub-Gaussian,
+and the high probability version of Talagrand's comparison inequality
+(see, \eg, Exercise~8.6.5 in~\cite{vershynin}). We leave the details
+as an exercise.
+
+Theorem~\ref{thm:als-genK} can be used to give an efficient (online!)
+algorithm that nearly matches other prefix discrepancy bounds we have
+already seen, in particular those derived from Theorem~\ref{thm:bana2}. In particular, the bounds on prefix discrepancy in the
+$\ell_p$ norm in Theorem~\ref{thm:sser-ellp} can be matched up to an
+additional $O(\sqrt{\log n})$ multiplicative factor. 
+
+
+\subsection{Proof of Theorem \ref{thm:als-subgaussian}}
+We now prove Theorem \ref{thm:als-subgaussian}. 
+
+Fix some time $t$.
+Conditioned on $d_{t-1}$, as the ``sign'' $x(t)$ satisfies
+$\E[x(t)| d_{t-1}]=-b_t$, let us write $y(t) \eqdef x(t)  + b_t$, 
+% $\E[d'_t | d'_{t-1} ] = d'_{t-1} -b_t v_t$, and hence we can write 
+% \[ d'_{t} = d'_{t-1} -b_t v_t + y(t)\]
+so that  $\E[y(t)|d_{t-1}]=0$. 
+In particular
+ if $|b_t|>1$ then $y(t)=0$, and otherwise
+\begin{equation}
+\label{eq:als-rt}
+    y(t)  = \begin{cases} -(1 - b _t) \text{ w.p. }  (1+b_t)/2\\ 
+             +(1 +b _t) \text{ w.p. }  (1-b_t)/2
+             \end{cases}
+\end{equation}
+As $b_t = \langle v_t,d_{t-1}\rangle/c$, we can write  
+\[ d_t = d_{t-1} + x(t) v_t =   d_{t-1} - b_t v_t + y(t) v_t  =  \left(I - \frac{1}{c}v_tv_t^T\right) d_{t-1} + y(t)v_t.\]
+Let us denote $A_t : = (I - v_t v_t^T/c)$, so that $d_t = A_t d_{t-1} + y(t) v_t$.
+Note that $A_t$ only depends on $v_t$, and hence it does not depend on the randomness of the algorithm as the adversary is oblivious.
+
+\paragraph{The inductive argument.}
+We now prove the sub-Gaussianity of $d_t$ by induction on $t$.
+Fix some test vector $\theta \in \R^m$. We will show that \[\E [\exp(\ip{d_t,\theta})] \leq \exp(c \|\theta\|_2^2/2).\]
+This clearly holds for $t=0$ as $\ip{d_t,\theta}=0$.
+Assume inductively that 
+\begin{equation}
+    \label{eq:als-induction}
+    \E[\exp(\ip{d_{t-1},u})]\leq \exp(c\|u\|_2^2/2) \quad \text{ for all } u \in \R^m.
+\end{equation}
+%Conditioned on $d_{t-1}$ and averaging over the randomness  at time $t$ we have,
+As $d_t = A_t d_{t-1} +y(t) v_t $, we have 
+\begin{align}
+\E [\exp(\ip{d_t,\theta }) |d_{t-1}] & =   \E [\exp(\ip{A_t d_{t-1}+y(t) v_t,\theta}) |d_{t-1}] \notag  \\
+ &=   \exp( \ip{A_t d_{t-1}, \theta }) \, {\E [\exp(y(t) \ip{ v_t,\theta }) | d_{t-1}]} \notag \\
+& \leq \exp( \ip{A_t d_{t-1}, \theta })   \exp(\ip{v_t,\theta}^2/2).\label{eq:als} 
+ \end{align}
+%  =  \exp( \ip{d_{t-1}, A_t u})   \E_t  [\exp (\ip{y(t),u}) | d_{t-1}]\\
+ %  \leq \exp( d_{t-1}, A_t u) \exp( \ip{v_t,u}^2/2)
+ The last step follows from Hoeffding's lemma,
+ %, which states that for any random variable $X \in [a,b]$ and $\lambda \in \R$,  
+%\begin{equation}
+%\label{hoeffding-inequality}
+%\E[\exp(\lambda (X-\E[X])]  \leq \exp(\lambda^2(b-a)^2/8),\end{equation}
+applied to $y(t)$ conditioned on $d_{t-1}$, and noting that
+$\E[y(t)|d_{t-1}]=0$, and that $y(t)$ takes values in an interval of
+length $2$. 
+%\E [\exp(y(t) \ip{v_t,\theta }) |d_{t-1}] \leq   \exp(\ip{v_t,u}^2/2)$
+
+Taking expectation over $d_{t-1}$ in \eqref{eq:als}  gives
+\begin{align}
+    \E [\exp(\ip{d_t,\theta })] 
+                      & \leq  \exp(\ip{v_t,\theta }^2/2)\, \E [\exp( \ip{A_t d_{t-1}, \theta })] \notag \\
+                      & =  \exp(\ip{v_t,\theta }^2/2) \,\E [\exp( \ip{ d_{t-1}, A_t \theta })]  \notag \\
+                      &  \leq \exp(\ip{v_t,\theta }^2/2) \,\exp( c \|A_t \theta \|_2^2 /2\label{eq:als-final} ) 
+\end{align}
+where the second line uses that $A_t$ is self-adjoint and the last step uses the inductive hypothesis \eqref{eq:als-induction} for $d_{t-1}$ with $u=A_t \theta $.
+
+Now, as $A_t \theta = \theta - \frac{\ip{v_t,\theta}}{c} v_t$, 
+\begin{align*}
+    \|A_t \theta \|_2^2  & =  \left\| \theta -  \frac{ \ip{v_t,\theta }}{c} v_t \right\|_2^2 \\
+    & =  \|\theta\|_2^2 - \frac{2   \ip{v_t,\theta }^2}{c} +\frac{\ip{v_t,\theta }^2 \|v_t\|_2^2}{c^2} \\
+    & \leq  \|\theta\|_2^2 -   \frac{\ip{v_t,\theta }^2}{c}.  \tag{as $c \geq 1$, $\|v_t\|^2 \leq 1$}
+\end{align*}
+%Thus \[\exp(c\|A_t\theta\|^2/2) \leq \exp( c  \|\theta\|^2/2 -  \ip{v_t,\theta }^2/2)\]  and 
+Plugging this in \eqref{eq:als-final} gives the desired bound 
+\[
+ \E [\exp(\ip{d_t,\theta })]  
+ \leq \exp ( c \|\theta \|_2^2/2).\]
+
+% Exercises:
+
+% Lower bound of $\sqrt{\log n}$.
+
+% Application to Tusnady, perhaps using 
+
+\section{Bibliographic Notes} 
+ Online discrepancy was first studied by Spencer \cite{Spencer77}.
+Besides the online Koml\'{o}s problem we consider here, several other discrepancy problems have also been studied in the online setting. 
+B\'ar\'any \cite{Barany79} considered the general setting where the vectors $v_t$ are chosen from some fixed set $S$, and showed almost matching upper and lower  bounds on the online discrepancy achievable by any deterministic algorithm.
+
+Spencer \cite{Spencer86Prefix} considered the setting where the vectors $v_t$ satisfy $\|v_t\|_\infty \leq 1$
+and showed that for $n=m$ any online algorithm must incur discrepancy $\Omega(\sqrt{n \log n})$. In contrast, the offline  prefix discrepancy is $O(\sqrt{n})$.
+Bansal and Spencer \cite{BansalS20} considered the setting where the vectors $v_t$ are chosen uniformly and independently from $\{-1,1\}^m$ and gave an online strategy that at any time $t$ ensures that $\|d_t\|_\infty = O(\sqrt{m})$ with high probability.
+
+
+% GS walk proof, mention that d_t,\theta can be very large.
+
+
+Another very interesting question is the online carpooling problem \cite{AjtaiANRSW98}. Here there are $n$ nodes
+and edges $e_t=(u_t,v_t)$ arrive over time that must be oriented from
+$u_t\rightarrow v_t$ or $v_t\rightarrow u_t$. The goal is to minimize
+the discrepancy at each vertex, equal to the absolute value of the
+difference between in-degree and out-degree.
+If the edges arrive randomly from the complete graph the discrepancy is $O(\log \log n)$ at any fixed time \cite{AjtaiANRSW98}.
+For arbitrary graphs and oblivious adversaries Theorem \ref{thm:als-21} implies an $O(\log (nT))$ discrepancy, where $T$ is the time horizon. 
+A prominent open question is whether a $\text{polylog}(n)$ bound (independent of $T$) exists. To this end,
+\cite{AjtaiANRSW98} gave a
+randomized algorithm with $O(\sqrt{n \log n})$ discrepancy at any fixed time, and also showed a lower bound of $\Omega(\log^{1/3} n)$ for any randomized algorithm. 
+
+
+
+
+ 
+For the online Koml\'{o}s problem, the Self-Balancing Walk algorithm in Section \ref{sec:sw-alg} is due to Alweiss, Liu and Sawhney  \cite{alweiss2020discrepancy}. Their original proof
+follows a different approach and is based on showing that the distribution of the discrepancy vector is stochastically dominated by a suitably scaled Gaussian distribution. The exposition here gives better constants and is simpler, and is based on a personal communication by Arun Jambulapati. The weaker Gaussian Walk algorithm and the corresponding vector coloring in Theorem~\ref{thm:vec-prefix-komlos} are unpublished results of Nikolov.
+%on a idea of \cite{dwivedi2024kernel} (Section 5).
+
+    Very recently, Kulkarni, Reis, and  Rothvoss \cite{rothvoss-online}
+    showed the {\em existence} of an online algorithm with
+    $O(\sqrt{\log mn})$ discrepancy. Moreover, this algorithm matches
+    the guarantees of Theorem~\ref{thm:bana-prefix-subgaussian} while being online.
+       The bound     $O(\sqrt{\log mn})$ is also the best achievable
+       by any online algorithm for the Koml\'os problem, in contrast to offline prefix Koml\'{o}s where $O(1)$ discrepancy may be possible.
+    The algorithm of Kulkarni, Reis, and Rothvoss is highly non-constructive\footnote{Roughly speaking, given a time horizon $n$, it computes a distribution over exponentially many decision trees, where each decision tree specifies a deterministic online coloring strategy for every possible sequence of incoming vectors.}, 
+    but it strongly suggests that a simpler and more efficient algorithm might exist. 
+    Finding an efficient algorithm with $O(\sqrt{\log mn})$
+    discrepancy for the online Koml\'{o}s problem is an outstanding open problem. 
+    
+    As further evidence, Liu, Sah and Sawhney \cite{LiuSS22} gave an efficient  Gaussian Fixed Point Walk algorithm that gives a partial $\{-1,0,1\}$ coloring with discrepancy $O(\sqrt{\log mn})$ where the color $0$ is used at most $4\%$ of the time.
+    In fact, their algorithm ensures that the discrepancy vector is distributed exactly 
+   as the standard Gaussian $N(0,I_m)$.  
+    In another remarkable result, Chewi, Gerber, Rigollet and Turner \cite{ChewiGRT22} showed  that if one relaxes the colors to be two-dimensional unit vectors, then there is an efficient algorithm that ensures that the discrepancy is exactly distributed as the standard Gaussian.
+

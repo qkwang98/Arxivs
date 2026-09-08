@@ -1,0 +1,1060 @@
+\documentclass[11pt,reqno]{amsart}
+
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage[english]{babel}
+\usepackage{lmodern}
+\usepackage{microtype}
+\usepackage{amsmath,amssymb,amsthm,mathtools}
+\usepackage{xcolor}
+\usepackage{tikz}
+\usepackage{hyperref}
+
+\raggedbottom
+
+\newtheorem{theorem}{Theorem}[section]
+\newtheorem{proposition}[theorem]{Proposition}
+\newtheorem{corollary}[theorem]{Corollary}
+\newtheorem{lemma}[theorem]{Lemma}
+\newtheorem{conjecture}[theorem]{Conjecture}
+\newtheorem*{introtheorem}{Theorem}
+\theoremstyle{definition}
+\newtheorem{definition}[theorem]{Definition}
+\newtheorem{example}[theorem]{Example}
+\newtheorem{problem}[theorem]{Problem}
+\newtheorem{remark}[theorem]{Remark}
+
+\DeclareMathOperator{\code}{code}
+\newcommand{\setN}{\mathbb{N}}
+\newcommand{\setZ}{\mathbb{Z}}
+\newcommand{\xvec}{\mathbf{x}}
+\newcommand{\symS}{S}
+\newcommand{\schubertS}{\mathfrak{S}}
+\newcommand{\keypoly}{\kappa}
+\newcommand{\stretchop}{\mathbin{\ast}}
+\newcommand{\stretchperm}[2]{#1\stretchop #2}
+\newcommand{\defin}[1]{%
+  \relax\ifmmode%
+  \textcolor{blue}{#1}%
+  \else\textcolor{blue}{\emph{#1}}%
+  \fi%
+}
+\newcommand{\diagramcell}[3][gray!25]{%
+  \draw[thick,fill=#1] ({#2-1},{#3-1}) rectangle (#2,#3);%
+}
+\newcommand{\cellDiagram}[4][.42]{%
+\begin{tikzpicture}[scale=#1,baseline=(current bounding box.south)]
+  \draw[thin,gray!35] (0,0) grid (#2,#3);
+  #4
+  \draw[very thick] (0,0) rectangle (#2,#3);
+\end{tikzpicture}%
+}
+\newcommand{\rotheDiagram}[2][]{%
+\begin{tikzpicture}[baseline=(current bounding box.south),#1]
+  \def\perm{#2}
+  \def\rotheN{0}
+  \foreach \val [count=\i] in \perm {\xdef\rotheN{\i}}
+  \draw[thin,gray!30] (0,0) grid (\rotheN,\rotheN);
+  \foreach \wi [count=\i] in \perm {
+    \foreach \wj [count=\j] in \perm {
+      \ifnum\i<\j
+        \ifnum\wi>\wj
+          \draw[thick,fill=gray!25,fill opacity=.72]
+            (\wj-1,\i-1) rectangle (\wj,\i);
+        \fi
+      \fi
+    }
+  }
+  \foreach \wi [count=\i] in \perm {
+    \draw[line width=1.2pt]
+      (\wi-.5,\i-.5) -- (\rotheN,\i-.5);
+    \draw[line width=1.2pt]
+      (\wi-.5,\i-.5) -- (\wi-.5,\rotheN);
+    \fill (\wi-.5,\i-.5) circle (.15);
+  }
+  \draw[very thick] (0,0) rectangle (\rotheN,\rotheN);
+\end{tikzpicture}%
+}
+\newcommand{\rotheDiagramWithBlocks}[2][]{%
+\begin{tikzpicture}[baseline=(current bounding box.south),#1]
+  \def\perm{#2}
+  \def\rotheN{0}
+  \foreach \val [count=\i] in \perm {\xdef\rotheN{\i}}
+  \draw[thin,gray!30] (0,0) grid (\rotheN,\rotheN);
+  \foreach \wi [count=\i] in \perm {
+    \foreach \wj [count=\j] in \perm {
+      \ifnum\i<\j
+        \ifnum\wi>\wj
+          \def\cellfill{gray!25}
+          \ifnum\wj>1
+            \ifnum\wj<5
+              \def\cellfill{blue!18}
+            \fi
+          \fi
+          \ifnum\wj>6
+            \ifnum\wj<9
+              \def\cellfill{green!18}
+            \fi
+          \fi
+          \draw[thick,fill=\cellfill,fill opacity=.82]
+            (\wj-1,\i-1) rectangle (\wj,\i);
+        \fi
+      \fi
+    }
+  }
+  \foreach \wi [count=\i] in \perm {
+    \draw[line width=1.2pt]
+      (\wi-.5,\i-.5) -- (\rotheN,\i-.5);
+    \draw[line width=1.2pt]
+      (\wi-.5,\i-.5) -- (\wi-.5,\rotheN);
+    \fill (\wi-.5,\i-.5) circle (.15);
+  }
+  \draw[very thick] (0,0) rectangle (\rotheN,\rotheN);
+\end{tikzpicture}%
+}
+
+\title[Stretched Schubert and Key Coefficients]
+{Polynomiality of Stretched Schubert Structure Constants and Key Coefficients}
+\author{Per Alexandersson}
+\address{Department of Mathematics, Stockholm University,
+  SE-106 91 Stockholm, Sweden}
+\email{per.w.alexandersson@gmail.com}
+\subjclass[2020]{Primary 05E05; Secondary 14N15, 05A15}
+\keywords{Schubert polynomial, key polynomial, Schubert structure constant,
+  Demazure operator, vector partition function, Rothe diagram}
+\date{}
+
+\begin{document}
+
+\begin{abstract}
+We prove that monomial coefficients in affine families of key and Schubert
+polynomials are eventually polynomial.  The proof combines Demazure operators
+with vector partition functions and, in the Schubert case, P.~Magyar's
+orthodontic formula.  These coefficient results extend to finite products.  Using
+M.~Watanabe's Schubert duality, we deduce that stretched Schubert structure
+constants are eventually polynomial, proving a conjecture of I.~Pak and
+Z.~Slonim.  For key polynomials, this resolves the polynomiality part of a
+conjecture of P.~Alexandersson and E.~Alhajjar.
+\end{abstract}
+
+\maketitle
+
+\section{Introduction}
+\label{sec:introduction}
+
+Schubert polynomials form a distinguished basis of the polynomial ring, and
+their multiplication is governed by the \defin{Schubert structure constants}.
+For permutations \(u,v\), we define
+\(\defin{c_{u,v}^w}\) by
+\[
+\schubertS_u\schubertS_v
+=\sum_w c_{u,v}^w\schubertS_w.
+\]
+Let \(\defin{\code(u)}\) denote the Lehmer code of \(u\), and let
+\(\defin{\ell(u)}\) denote its inversion number.  For a positive integer
+\(N\), we define
+\[
+\defin{\stretchperm{N}{u}}\coloneqq\code^{-1}\bigl(N\code(u)\bigr).
+\]
+If \(N\code(u)=(c_1,\dotsc,c_h)\), we append \(t\) trailing zeroes with
+\(c_i\leq h+t-i\) for all \(i\); the resulting finite sequence is then a
+Lehmer code.  Increasing \(t\) only appends fixed points to the corresponding
+permutation.
+I.~Pak and Z.~Slonim proved that the resulting stretched Schubert structure
+constants are eventually quasipolynomial~\cite{PakSlonim2026x}, and
+conjectured that the period is always one.  We prove their conjecture by first
+considering affine monomial coefficients of stretched Schubert polynomials.
+
+For
+\[
+\defin{\xvec}\coloneqq(x_1,\dotsc,x_h),
+\qquad
+\defin{\xvec^a}\coloneqq x_1^{a_1}\dotsm x_h^{a_h}
+\quad\text{for }a\in\setZ^h,
+\]
+we write \(\defin{[\xvec^a]f}\) for the coefficient of the monomial
+\(\xvec^a\) in \(f\).
+Classical Kostka numbers are Schur monomial coefficients.  Following the
+Schubert--Kostka matrix terminology of A.~Postnikov and R.~Stanley
+\cite[Sec.~17]{PostnikovStanley2008}, we call the analogous monomial
+coefficients of Schubert polynomials Schubert--Kostka coefficients; similarly,
+we call the monomial coefficients of key polynomials key--Kostka coefficients.
+We write
+\(\defin{\setN}\coloneqq\{0,1,2,\dotsc\}\).  A function of \(N\) is
+\defin{eventually polynomial} if there is a polynomial \(P(N)\) such that the
+function agrees with \(P(N)\) for all \(N\gg0\).
+
+The remaining definitions used in these statements are recalled below.  The
+same monomial-coefficient question can be asked for key polynomials, or
+type~\(A\) Demazure characters.
+
+\begin{introtheorem}[{\hyperref[cor:pureKeyKostka]
+  {see Corollary~\ref*{cor:pureKeyKostka}}}]
+  Let \(\alpha,\nu\) be weak compositions of the same total degree.
+  Then the map
+\[
+N\longmapsto
+[\xvec^{N\nu}]\keypoly_{N\alpha}(\xvec)
+\]
+is a polynomial in \(N\).
+\end{introtheorem}
+
+The key--Kostka theorem settles the polynomiality part of a
+conjecture from earlier work with E.~Alhajjar
+\cite[Conj.~5.1]{AlexanderssonAlhajjar2018}.  The conjectured nonnegativity of
+the resulting polynomial remains open.  Such positivity is unknown even for
+classical stretched Littlewood--Richardson and Kostka polynomials
+\cite{KingTolluToumazet2004}.  Another recent approach to stretched Kostka
+coefficients, using partition-division maps on symmetric functions, is given
+in~\cite{AlexanderssonDai2026x}.
+
+The Schubert analogue is eventually polynomial along every affine weight ray.
+
+\begin{introtheorem}[{\hyperref[thm:affineSchubertKostka]
+  {see Theorem~\ref*{thm:affineSchubertKostka}}}]
+Fix a permutation \(u\) and an integer \(h\) such that
+\(\code(u)\in\setN^h\).  Let \(\nu,\eta\in\setZ^h\), and suppose that
+\(N\nu+\eta\) is a weak composition and has total degree \(N\ell(u)\) for all
+sufficiently large \(N\).  Then
+\[
+N\longmapsto
+[\xvec^{N\nu+\eta}]\schubertS_{\stretchperm{N}{u}}(\xvec)
+\]
+is eventually polynomial.
+\end{introtheorem}
+
+Schubert duality then gives the main theorem.
+
+\begin{introtheorem}[{\hyperref[cor:stretchedSchubertStructureConstants]
+  {see Corollary~\ref*{cor:stretchedSchubertStructureConstants}}}]
+For fixed permutations \(u,v,w\), the stretched Schubert structure constant
+\[
+N\longmapsto
+c_{\stretchperm{N}{u},\stretchperm{N}{v}}^{\stretchperm{N}{w}}
+\]
+is eventually polynomial.
+\end{introtheorem}
+
+The two coefficient theorems reduce coefficient extraction from fixed Demazure
+expressions to type~\(A\) vector partition functions.  For Schubert
+polynomials, P.~Magyar's orthodontic formula supplies such an expression once
+the affine column multiplicities have stabilized
+\cite[Prop.~15]{Magyar1998SchubertBottSamelson}.  M.~Watanabe's duality formula
+then expresses each Schubert structure constant as a fixed alternating sum of
+monomial coefficients~\cite[Lem.~7.4]{Watanabe2016}.
+
+The paper is organized as follows.  Section~\ref{sec:dividedDifferenceLemma}
+gives the vector-partition-function lemma used throughout.  We apply it to key
+polynomials in Section~\ref{sec:keyKostka}.  Sections
+\ref{sec:stretchingRotheDiagrams} and~\ref{sec:orthodontia} establish the
+affine orthodontic description of stretched Rothe diagrams and prove affine
+Schubert--Kostka polynomiality.  Finally, Section~\ref{sec:products} treats
+products and Schubert structure constants.
+
+\section{A divided-difference lemma}
+\label{sec:dividedDifferenceLemma}
+
+We write
+\(\defin{s_i}\) for the transposition of \(x_i\) and \(x_{i+1}\).  Let
+\[
+\defin{\pi_i(f)}
+\coloneqq
+\frac{x_i f-x_{i+1}s_i(f)}{x_i-x_{i+1}}.
+\]
+The operator \(\pi_i\) is the \defin{isobaric divided difference}, or
+\defin{Demazure operator}.
+
+The next lemma is the common polynomiality mechanism for keys and Schubert
+polynomials.
+
+\begin{lemma}[Fixed Demazure expressions]
+\label{lem:fixedDemazureExpressions}
+Fix \(h\).  Suppose that, for all sufficiently large \(N\), the Laurent
+polynomial \(F_N\) is obtained from \(1\) by a fixed finite sequence of the
+following operations:
+\begin{enumerate}
+\item multiply by a Laurent monomial
+  \(\xvec^{Na+b}\), where \(a,b\in\setZ^h\) are fixed;
+\item apply a fixed Demazure operator \(\pi_i\).
+\end{enumerate}
+Then, for fixed \(\nu,\eta\in\setZ^h\), the map
+\[
+N\longmapsto
+[\xvec^{N\nu+\eta}]F_N
+\]
+is eventually polynomial in \(N\).  The same conclusion holds for a product
+of finitely many such expressions.
+\end{lemma}
+
+\begin{proof}
+Let \(\defin{\alpha_i}\) be the \(i\)-th simple root of type~\(A\).  Thus
+\(\alpha_i\) has a \(1\) in position \(i\), a \(-1\) in position \(i+1\),
+and zeroes elsewhere; it is the difference of two consecutive unit vectors.
+On Laurent series we have
+\[
+\pi_i(f)
+=
+\frac{f}{1-\xvec^{-\alpha_i}}
+-
+\frac{\xvec^{-\alpha_i}s_i(f)}{1-\xvec^{-\alpha_i}}.
+\]
+Starting with a Laurent monomial and iterating this identity gives a finite
+sum of terms
+\begin{equation}
+\label{eq:rootDenominatorExpansion}
+C\xvec^{N\beta+\gamma}
+\prod_{\rho\in\Phi}
+\frac{1}{1-\xvec^{-\rho}},
+\end{equation}
+where \(C\in\setZ\), the vectors \(\beta,\gamma\in\setZ^h\) are fixed, and
+\(\Phi\) is a finite \emph{multiset} of type~\(A\) roots.  If a denominator
+contains a negative root, we use
+\[
+\frac{1}{1-\xvec^\rho}
+=-
+\frac{\xvec^{-\rho}}{1-\xvec^{-\rho}}
+\]
+to make it positive.  Thus all denominator roots in
+\eqref{eq:rootDenominatorExpansion} may be taken positive.
+
+The coefficient of \(\xvec^{N\nu+\eta}\) in one such term is \(C\) times
+\[
+\#\left\{(m_\rho)_{\rho\in\Phi}\in\setN^\Phi:
+  \sum_{\rho\in\Phi}m_\rho\rho
+  =N(\beta-\nu)+(\gamma-\eta)\right\}.
+\]
+This is a vector partition function.
+A matrix whose columns are positive type~\(A\) roots
+is a submatrix of a directed incidence matrix and is therefore totally
+unimodular.  Repeated columns preserve total unimodularity.  By Sturmfels'
+chamber theorem~\cite{Sturmfels1995}, the corresponding vector partition
+function is polynomial on every relatively open face of its chamber complex.
+The chamber complex is finite, and the signs of its finitely many defining
+linear forms on the affine ray \(N(\beta-\nu)+(\gamma-\eta)\) are eventually
+constant.  Hence the ray eventually remains in one face, so each term, and
+therefore their finite sum, is eventually polynomial.
+
+Multiplying finitely many expressions merely concatenates the multisets of
+roots in the denominators, so the same argument proves the product statement.
+\end{proof}
+
+\section{Key-Kostka coefficients}
+\label{sec:keyKostka}
+
+Key polynomials, introduced by A.~Lascoux and M.-P.~Sch\"utzenberger
+\cite{Lascoux1990Keys}, are the type~\(A\) Demazure characters.  Combinatorial
+models include S.~K.~Mason's semi-skyline augmented fillings, which connect
+nonsymmetric Macdonald polynomials with Demazure atoms and operators
+\cite{Mason2009}, and the Kohnert tableaux of S.~H.~Assaf and D.~Searles
+\cite{AssafSearles2018,AssafSearles2019}.
+
+A \defin{weak composition} is a finite sequence of nonnegative integers; we
+append trailing zeroes whenever necessary.  We use the divided-difference
+definition of the key polynomial \(\keypoly_\alpha\).  If \(\alpha\) is weakly
+decreasing, then
+\[
+\defin{\keypoly_\alpha}\coloneqq\xvec^\alpha.
+\]
+If \(\alpha_i<\alpha_{i+1}\), then
+\[
+\defin{\keypoly_\alpha}\coloneqq\pi_i\keypoly_{s_i\alpha}.
+\]
+This recursion is well-founded: each such step decreases by one the number of
+pairs \(p<q\) with \(\alpha_p<\alpha_q\).
+For fixed \(h\), the family
+\[
+\{\keypoly_\alpha:\alpha\in\setN^h\}
+\]
+is a basis of \(\mathbb Q[x_1,\dotsc,x_h]\).
+For a permutation \(w\) with a reduced decomposition
+\(w=s_{i_1}\dotsm s_{i_\ell}\), define
+\[
+\defin{\pi_w}
+\coloneqq
+\pi_{i_1}\dotsm\pi_{i_\ell}.
+\]
+The Demazure relations imply that \(\pi_w\) is independent of the chosen
+reduced decomposition.
+Equivalently, if \(\lambda\) is the decreasing rearrangement of \(\alpha\)
+and \(w\) is the shortest permutation satisfying \(w\lambda=\alpha\), then
+\(\keypoly_\alpha=\pi_w\xvec^\lambda\).
+
+\begin{theorem}[Affine key-Kostka polynomiality]
+\label{thm:affineKeyKostka}
+Fix \(\alpha,\nu\in\setN^h\) and \(\beta,\eta\in\setZ^h\).  Suppose that
+\(N\alpha+\beta\) and
+\(N\nu+\eta\) are weak compositions of the same total degree for all
+sufficiently large \(N\).  Then
+\[
+N\longmapsto
+[\xvec^{N\nu+\eta}]\keypoly_{N\alpha+\beta}(\xvec)
+\]
+is eventually polynomial.
+\end{theorem}
+
+\begin{proof}
+For \(N\gg0\), the relative order of the parts of \(N\alpha+\beta\) is fixed.
+Its decreasing rearrangement therefore has the form \(N\lambda+\lambda_0\),
+where \(\lambda,\lambda_0\) are fixed, and the shortest permutation \(w\) satisfying
+\[
+w(N\lambda+\lambda_0)=N\alpha+\beta
+\]
+is fixed.  Choose a reduced word for \(w\).  The expression
+\[
+\keypoly_{N\alpha+\beta}
+=\pi_w\xvec^{N\lambda+\lambda_0}
+\]
+now satisfies Lemma~\ref{lem:fixedDemazureExpressions}, which proves the
+claim.
+\end{proof}
+
+\begin{corollary}
+\label{cor:pureKeyKostka}
+For weak compositions \(\alpha,\nu\) of the same total degree,
+\[
+N\longmapsto
+[\xvec^{N\nu}]\keypoly_{N\alpha}(\xvec),
+\qquad N\geq0,
+\]
+is a polynomial in \(N\).
+\end{corollary}
+
+\begin{proof}
+Theorem~\ref{thm:affineKeyKostka}, with \(\beta=\eta=0\), gives a polynomial
+for \(N\gg0\).  The Kogan-face model for Demazure characters realizes the
+same function as an Ehrhart quasipolynomial
+\cite{Kogan2005,KiritchenkoSmirnovTimorin2010}; see also
+\cite{AlexanderssonAlhajjar2018}.  A quasipolynomial that agrees with one
+polynomial for all sufficiently large \(N\) agrees with that polynomial for
+every \(N\geq0\).
+\end{proof}
+
+\begin{proposition}[Products of affine keys]
+\label{prop:productsAffineKeys}
+Fix \(h\), and let \(\alpha_j\in\setN^h\) and
+\(\beta_j\in\setZ^h\), for \(1\leq j\leq s\), such that
+\(N\alpha_j+\beta_j\) is a weak composition for \(N\gg0\).  If
+\(\nu\in\setN^h\), \(\eta\in\setZ^h\), and \(N\nu+\eta\) is eventually
+nonnegative, then
+\[
+[\xvec^{N\nu+\eta}]
+\prod_{j=1}^s\keypoly_{N\alpha_j+\beta_j}(\xvec)
+\]
+is eventually polynomial.
+\end{proposition}
+
+\begin{proof}
+Use the fixed reduced word from the proof of
+Theorem~\ref{thm:affineKeyKostka} for each factor, and apply the product part
+of Lemma~\ref{lem:fixedDemazureExpressions}.  The claim follows.
+\end{proof}
+
+Theorem~\ref{thm:affineKeyKostka} extends the polynomiality result from joint
+work with E.~Kantarc{\i} O{\u{g}}uz from stretched row-flagged skew Schur
+polynomials and cylindric Schur functions to affine families of key
+polynomials~\cite{AlexanderssonOguz2023x}.
+
+\section{Stretching Rothe diagrams}
+\label{sec:stretchingRotheDiagrams}
+
+Let \(\defin{\symS_m}\) denote the symmetric group on \(m\) letters.
+For \(w\in\symS_m\), its \defin{Rothe diagram} is
+\[
+\defin{D(w)}
+\coloneqq
+\{(i,j):1\leq i,j\leq m,\ j<w(i),\ i<w^{-1}(j)\}.
+\]
+We use matrix coordinates: \(i\) is the row index and \(j\) is the column
+index.  Thus the cells in row \(i\) are the pairs \((i,j)\in D(w)\).  The row
+lengths form its \defin{Lehmer code},
+\[
+\defin{\code(w)_i}
+\coloneqq
+\#\{j>i:w(j)<w(i)\}.
+\]
+Conversely, if \(\gamma=(\gamma_1,\dotsc,\gamma_h)\) is a weak composition
+and \(t\) satisfies \(\gamma_i\leq h+t-i\) for all \(i\), then
+\((\gamma_1,\dotsc,\gamma_h,0^t)\) is the Lehmer code of a unique
+permutation in \(\symS_{h+t}\).
+
+We regard \(D(w)\) as a word of columns.  The \defin{type of a column} is the
+set of rows occupied in that column.
+
+\begin{example}[The affine column blocks for \(321654\)]
+\label{ex:rothe321654}
+Let \(\defin{u}\coloneqq321654\), so that
+\(\code(u)=(2,1,0,2,1,0)\).  For \(N\geq3\),
+the nonempty columns of \(D(\stretchperm{N}{u})\), read from left to right,
+have types
+\begin{equation}
+\label{eq:321654ColumnWord}
+\{1,2\},\quad
+\{1,2,4,5\}^{N-1},\quad
+\{1\},\quad
+\{1,4,5\},\quad
+\{1,4\}^{N-2},\quad
+\{4\}^{2}.
+\end{equation}
+For \(N=4\), we have
+\[
+\stretchperm{4}{u}=(9,5,1,12,7,2,3,4,6,8,10,11),
+\]
+and its Rothe diagram is shown below.
+\[
+\rotheDiagramWithBlocks[scale=.3125]{9,5,1,12,7,2,3,4,6,8,10,11}
+\]
+The three blue columns have type \(\{1,2,4,5\}\), while the two green
+columns have type \(\{1,4\}\).  These are the two column blocks whose
+lengths grow with \(N\).
+\end{example}
+
+A permutation is \defin{\(k\)-Grassmannian} if it has no descents except
+possibly at position \(k\).  For Grassmannian permutations, code stretching
+has the usual interpretation as stretching a Ferrers shape.
+
+\begin{lemma}[Grassmannian stretching]
+\label{lem:grassmannianStretching}
+Let \(\lambda=(\lambda_1,\dotsc,\lambda_k)\) be a partition, and let \(u\) be
+the permutation with Lehmer code \((\lambda_k,\dotsc,\lambda_1)\).  Then
+\(u\) is \(k\)-Grassmannian and
+\(\schubertS_u(x_1,\dotsc,x_k)=\defin{s_\lambda(x_1,\dotsc,x_k)}\), the Schur
+polynomial indexed by \(\lambda\).  Moreover,
+\(\stretchperm{N}{u}\) is the Grassmannian permutation associated with the
+stretched shape \(N\lambda\), and
+\[
+\schubertS_{\stretchperm{N}{u}}(x_1,\dotsc,x_k)
+=
+s_{N\lambda}(x_1,\dotsc,x_k).
+\]
+\end{lemma}
+
+\begin{proof}
+The Schubert--Schur identity for Grassmannian permutations is standard; see,
+for example,~\cite{ReinerShimozono1995}.  The remaining assertion follows from
+\[
+\code(\stretchperm{N}{u})
+=
+(N\lambda_k,\dotsc,N\lambda_1).
+\]
+\end{proof}
+
+Pak and Slonim prove a stability statement for pipe-dream polytopes under code
+scaling~\cite[Rem.~4.4]{PakSlonim2026x}.  The next proposition gives the
+corresponding finite-block description for Rothe diagram columns, with an
+additional affine shift of the code.
+
+\begin{proposition}[Affine column multiplicities]
+\label{prop:affineColumnMultiplicities}
+Fix \(\alpha\in\setN^h\) and \(\beta\in\setZ^h\), and suppose that
+\(N\alpha+\beta\) is nonnegative for \(N\gg0\).  Let \(w(N)\) be the
+permutation with Lehmer code \(N\alpha+\beta\), after appending sufficiently
+many trailing zeroes.  For \(N\gg0\), every nonempty column of \(D(w(N))\)
+has its rows in \(\{1,\dotsc,h\}\), and each column type
+\(C\subseteq\{1,\dotsc,h\}\) occurs with multiplicity
+\[
+a_C N+b_C,
+\]
+where \(a_C,b_C\in\setZ\) are independent of \(N\).
+\end{proposition}
+
+\begin{proof}
+Write \(\alpha=(a_1,\dotsc,a_h)\) and
+\(\beta=(b_1,\dotsc,b_h)\).  Since the code entries after position \(h\)
+are zero, every row of \(D(w(N))\) with index greater than \(h\) is empty.
+In the inverse Lehmer-code construction, \(w(N)(i)\) is the
+\((Na_i+b_i+1)\)-st positive integer not used in the first \(i-1\) positions.
+Thus, for some \(r\in\{0,\dotsc,i-1\}\),
+\[
+w(N)(i)=Na_i+b_i+1+r.
+\]
+Induction on \(i\) shows that this \(r\) is constant for \(N\gg0\).  Indeed,
+assume that the earlier values \(w(N)(1),\dotsc,w(N)(i-1)\) are affine in
+\(N\).  For a fixed \(r\), the value \(Na_i+b_i+1+r\) is selected precisely
+when exactly \(r\) earlier values are smaller, and no earlier value is equal
+to it.  These are finitely many comparisons between affine functions.  Since
+two affine functions are either identical or meet at at most one value of
+\(N\), each comparison has an eventually fixed truth value.  Since exactly
+one \(r\) is selected for each \(N\), the selected \(r\) is eventually
+constant.  Hence the first \(h\) values of \(w(N)\) are affine in \(N\), and
+their strict relative order is fixed.
+
+If a column index \(j\) is not one of these values, its column type is
+\[
+\{i\in\{1,\dotsc,h\}:j<w(N)(i)\}.
+\]
+Indeed, if \(j<w(N)(i)\) and \(j\) has not occurred among the first \(h\)
+values, then \(j\) is unused before position \(i\), so \(i<w(N)^{-1}(j)\).
+The type is empty when \(j\) exceeds all first \(h\) values, and it is
+constant as \(j\) runs between consecutive values of
+\(w(N)(1),\dotsc,w(N)(h)\).  Since the strict relative order of these affine
+values is fixed for large \(N\), each gap is either eventually empty or has
+size equal to the difference of its endpoints minus one.  In either case its
+size is affine in \(N\).  The initial gap has size
+\(\min_i w(N)(i)-1\), also affine.
+
+It remains to account for the columns \(j=w(N)(s)\) with \(s\leq h\).  Such a
+column has type
+\[
+\{i<s:w(N)(s)<w(N)(i)\},
+\]
+which is fixed by the relative order.  Summing the gap sizes and these
+individual columns proves the claim.
+\end{proof}
+
+\section{Orthodontia and Schubert-Kostka coefficients}
+\label{sec:orthodontia}
+
+Postnikov and Stanley define the \defin{Schubert--Kostka matrix} as the matrix
+of monomial coefficients \(K_{u,a}=[\xvec^a]\schubertS_u\)
+\cite[Sec.~17]{PostnikovStanley2008}.  Pak and Slonim use the term
+\defin{Schubert--Kostka number} for these coefficients
+\cite[Sec.~2.6]{PakSlonim2026x}.
+
+\subsection{Magyar's orthodontic formula}
+
+We recall Magyar's orthodontic construction and formula
+\cite[Sec.~4.3 and Prop.~15]{Magyar1998SchubertBottSamelson}.
+
+For \(r\geq1\), put
+\[
+\defin{[r]}\coloneqq\{1,2,\dotsc,r\},
+\qquad
+\defin{\xvec_r}\coloneqq x_1x_2\dotsm x_r.
+\]
+In this construction, a Rothe diagram is regarded as a multiset of nonempty
+column types.  For each \(r\), remove all columns of type \([r]\), and let
+\(\defin{k_r}\) be their number.  If any columns remain, order their types
+lexicographically.  In the first remaining type, choose its
+smallest \defin{missing tooth} \(i\): row \(i\) is absent and row \(i+1\) is
+present.
+Interchange rows \(i\) and \(i+1\) in every remaining column.  Remove the
+columns that have become \([i]\), record their number as \(m\), and
+repeat.  This gives the \defin{orthodontic word}
+\[
+\defin{\mathbf{i}}\coloneqq(i_1,\dotsc,i_\ell)
+\]
+and multiplicities \(\defin{m_1,\dotsc,m_\ell}\).  Each iteration contributes
+one entry to \(\mathbf{i}\) and performs one row interchange; thus \(\ell\) is
+the number of row interchanges.
+
+Magyar proves that the process terminates for every fixed diagram, and his
+formula states that
+\begin{equation}
+\label{eq:magyarOrthodontia}
+\schubertS_w
+=
+\left(\prod_{r=1}^h\xvec_r^{k_r}\right)
+\bigl(
+\pi_{i_1}\circ \xvec_{i_1}^{m_1}
+\circ\pi_{i_2}\circ \xvec_{i_2}^{m_2}
+\circ\dotsm
+\circ\pi_{i_\ell}\circ \xvec_{i_\ell}^{m_\ell}
+\bigr)(1).
+\end{equation}
+The composition is read from right to left, with monomials acting by
+multiplication.
+
+Magyar proves that \eqref{eq:magyarOrthodontia} can be written as a sum of
+\(2^\ell\) rational functions
+\cite[Thm.~3]{Magyar1998SchubertBottSamelson}.
+After rewriting each negative denominator root as a positive one, every
+summand has the form
+\begin{equation}
+\label{eq:magyarRationalTerm}
+\epsilon\,\xvec^\gamma
+\prod_{\rho\in\Phi}\frac{1}{1-\xvec^{-\rho}},
+\end{equation}
+where \(\epsilon\in\{1,-1\}\), \(\gamma\in\setZ^h\), and \(\Phi\) is a
+multiset of positive type~\(A\) roots.  This is the root-denominator form
+used in the proof of Lemma~\ref{lem:fixedDemazureExpressions}.
+
+\subsection{Affine orthodontic data}
+
+To apply Lemma~\ref{lem:fixedDemazureExpressions} uniformly in \(N\), it
+remains to show that the operator word is fixed and that the exponents are
+affine in \(N\).
+
+\begin{lemma}[Stable orthodontic data]
+\label{lem:stableOrthodonticData}
+Let \(w(N)\) be a permutation family whose Lehmer code is affine in \(N\),
+as in Proposition~\ref{prop:affineColumnMultiplicities}.  For \(N\gg0\),
+the orthodontic word \(\mathbf{i}\) for \(D(w(N))\) is independent of \(N\),
+and all multiplicities \(k_r(N)\) and \(m_j(N)\) are affine in \(N\).
+\end{lemma}
+
+\begin{proof}
+By Proposition~\ref{prop:affineColumnMultiplicities}, the initial
+column-type multiplicities are affine in \(N\).  If an integer-valued affine
+function is nonnegative for all large \(N\), then it is either identically
+zero, eventually a positive constant, or eventually tends to \(+\infty\).
+Thus the initial support is fixed for large \(N\).  The multiplicities
+\(k_r(N)\) of the removed columns \([r]\) are therefore affine.
+
+We now run Magyar's algorithm.  Suppose at some stage that the support of the
+remaining column types is fixed and that all their multiplicities are affine.
+The lexicographic order and smallest-tooth rule choose the same next index
+\(i\) for all sufficiently large \(N\).  Swapping rows \(i\) and \(i+1\)
+sends each fixed column type to a fixed column type, so the new
+multiplicities are sums of affine functions.  The recorded multiplicity
+\(m(N)\) of the columns that have become \([i]\) is affine, and the remaining
+support is again eventually fixed by the same positivity argument.
+
+Fix one sufficiently large \(N_0\).  Inducting through the finitely many steps
+of Magyar's algorithm for \(N_0\), the preceding paragraph shows that, after
+possibly increasing the lower bound on \(N\), the same support sequence and
+the same choices occur for every \(N\).  The support is empty at the final
+stage for \(N_0\), hence also for all large \(N\).
+Thus the successive supports, the orthodontic word, and the number of steps
+are eventually independent of \(N\), while all recorded multiplicities are
+affine in \(N\).
+\end{proof}
+
+\begin{example}[Orthodontia for \(321654\)]
+\label{ex:orthodontia321654}
+Continue with \(u=321654\) and the column word in
+\eqref{eq:321654ColumnWord}.  For \(N\geq3\), orthodontia yields
+\[
+\mathbf{i}=(3,4,2,3,1),
+\qquad
+(m_1,\dotsc,m_5)=(0,N-1,N-2,1,2).
+\]
+Consequently,
+\[
+\schubertS_{\stretchperm{N}{321654}}
+=
+\xvec_1\xvec_2
+\bigl(
+\pi_3\circ\pi_4\circ \xvec_4^{N-1}
+\circ\pi_2\circ \xvec_2^{N-2}
+\circ\pi_3\circ \xvec_3
+\circ\pi_1\circ \xvec_1^2
+\bigr)(1).
+\]
+The operator word has length five and is independent of \(N\).  The two long
+column blocks appear only in the powers \(N-1\) and \(N-2\).
+\end{example}
+
+\begin{theorem}[Affine Schubert-Kostka polynomiality]
+\label{thm:affineSchubertKostka}
+Fix \(\alpha,\nu\in\setN^h\) and \(\beta,\eta\in\setZ^h\), and let \(w(N)\)
+be the permutation whose Lehmer code is obtained from \(N\alpha+\beta\) by
+appending enough trailing zeroes to satisfy the Lehmer-code inequalities.
+Suppose that \(N\alpha+\beta\) and
+\(N\nu+\eta\) are nonnegative and have the same total degree for all
+sufficiently large \(N\).  Then
+\[
+N\longmapsto
+[\xvec^{N\nu+\eta}]\schubertS_{w(N)}(\xvec)
+\]
+is eventually polynomial.
+\end{theorem}
+
+\begin{proof}
+By Lemma~\ref{lem:stableOrthodonticData}, the word in
+\eqref{eq:magyarOrthodontia} is fixed for \(N\gg0\), and all exponents
+\(k_r(N)\) and \(m_j(N)\) are affine in \(N\).  Hence
+\eqref{eq:magyarOrthodontia} is a fixed Demazure expression of the form
+covered by Lemma~\ref{lem:fixedDemazureExpressions}, which proves the claim.
+\end{proof}
+
+\subsection{Stable key expansions}
+
+The preceding argument proves coefficient polynomiality.  Schubert polynomials
+are key positive; this follows, for example, from the flagged
+Littlewood--Richardson rule of Reiner and Shimozono~\cite{ReinerShimozono1995}
+and from Assaf's Kohnert model~\cite{Assaf2021}.  The following example
+suggests that this positive key expansion has a stronger stability property
+under stretching.
+
+\begin{example}[A stable key expansion]
+\label{ex:stableKeyExpansion321654}
+For the permutation \(u=321654\) from Example~\ref{ex:orthodontia321654},
+the key expansion stabilizes at \(N=3\).  Omitting trailing zeroes, for
+\(N\geq3\) we have
+\[
+\begin{aligned}
+\schubertS_{\stretchperm{N}{321654}}
+={}&
+\keypoly_{(2N,N,0,2N,N)}
++\keypoly_{(2N,N+1,0,2N,N-1)}\\
+&+\keypoly_{(2N,2N+1,0,N-1,N)}
++\keypoly_{(2N+1,N,0,2N-1,N)}\\
+&+\keypoly_{(2N+1,N+1,0,2N-1,N-1)}
++\keypoly_{(2N+2,N,0,2N-2,N)}\\
+&+\keypoly_{(2N+2,N+1,0,2N-2,N-1)}
++\keypoly_{(2N+2,2N-1,0,N-1,N)}.
+\end{aligned}
+\]
+Thus the expansion has eight terms with constant coefficient \(1\), and every
+key index is affine in \(N\).
+\end{example}
+
+\begin{conjecture}[Stable affine key expansion]
+\label{conj:stableAffineKeyExpansion}
+For every permutation \(u\), there exist positive integers \(c_1,\dotsc,c_t\)
+and affine weak compositions
+\[
+N\gamma_j+\delta_j,
+\qquad 1\leq j\leq t,
+\]
+such that, for all sufficiently large \(N\),
+\[
+\schubertS_{\stretchperm{N}{u}}
+=
+\sum_{j=1}^t
+c_j\keypoly_{N\gamma_j+\delta_j}.
+\]
+In particular, both the number of terms and their coefficients eventually
+stabilize, while the key indices are affine in \(N\).
+\end{conjecture}
+
+\begin{remark}
+Conjecture~\ref{conj:stableAffineKeyExpansion} is stronger than
+Theorem~\ref{thm:affineSchubertKostka}.  Magyar's formula fixes the number of
+rational summands, but it does not fix the number of Demazure components in
+the positive key expansion.  Example~\ref{ex:stableKeyExpansion321654}
+exhibits the behavior asserted in the conjecture, but the divided-difference
+argument does not imply this stronger conclusion.
+\end{remark}
+
+For a partition \(\lambda\) and a weakly increasing row flag
+\(\mathbf b=(b_1,\dotsc,b_{\ell(\lambda)})\) with \(b_i\geq i\), write
+\(\defin{s_\lambda(\mathbf b)}\) for the corresponding flagged Schur
+polynomial.
+
+\begin{conjecture}[Flagged Schur analogue]
+\label{conj:stableFlaggedSchurKeyExpansion}
+Let \(N\lambda+\mu\) be an affine family of partitions with a fixed number of
+rows, and fix such a row flag \(\mathbf b\).  Then the key expansion of
+the flagged Schur polynomial \(s_{N\lambda+\mu}(\mathbf b)\) eventually has a
+fixed number of terms and fixed coefficients, with every key index affine in
+\(N\).
+\end{conjecture}
+
+\begin{remark}[Flagged Schur functions]
+For vexillary permutations, Schubert polynomials are flagged Schur functions,
+and M.~Wachs' symmetrizing-operator formula puts affine families with a fixed
+flag in the form covered by Lemma~\ref{lem:fixedDemazureExpressions}
+\cite{Wachs1985}.  Their affine monomial coefficients are therefore eventually
+polynomial.  This coefficientwise conclusion does not imply
+Conjecture~\ref{conj:stableFlaggedSchurKeyExpansion}.
+\end{remark}
+
+M.~Shimozono and T.~Yu proved that Grothendieck polynomials expand positively
+in Lascoux polynomials~\cite{ShimozonoYu2021}, which motivates the following
+\(K\)-theoretic analogue.  We retain the connective-\(K\) parameter \(\beta\),
+so that \(\beta=0\) recovers Schubert and key polynomials, and write
+\(\defin{\mathfrak G_w^{(\beta)}}\) and
+\(\defin{\mathfrak L_\alpha^{(\beta)}}\) for the corresponding
+connective-\(K\) Grothendieck and Lascoux polynomials.
+
+\begin{conjecture}[Stable Grothendieck--Lascoux expansion]
+\label{conj:stableGrothendieckLascouxExpansion}
+For every permutation \(u\), there exist positive integers \(c_1,\dotsc,c_t\),
+nonnegative integers \(e_1,\dotsc,e_t\), and affine weak compositions
+\(N\gamma_j+\delta_j\), for \(1\leq j\leq t\), such that, for \(N\gg0\),
+\[
+\mathfrak G_{\stretchperm{N}{u}}^{(\beta)}
+=
+\sum_{j=1}^t
+c_j\beta^{e_j}\mathfrak L_{N\gamma_j+\delta_j}^{(\beta)}.
+\]
+\end{conjecture}
+
+\section{Products and Schubert structure constants}
+\label{sec:products}
+
+The divided-difference argument is stable under finite products.  We record
+the affine form needed for the subsequent extraction of Schubert structure
+constants.
+
+\begin{proposition}[Affine product Schubert-Kostka polynomiality]
+\label{prop:productSchubertKostka}
+Fix \(h\), and for \(1\leq j\leq s\), fix
+\(\alpha^{(j)}\in\setN^h\) and \(\beta^{(j)}\in\setZ^h\).  Suppose that
+\(N\alpha^{(j)}+\beta^{(j)}\) is nonnegative for \(N\gg0\), for each \(j\).
+For \(N\gg0\), let \(w_j(N)\) be the permutation whose Lehmer code is obtained
+from \(N\alpha^{(j)}+\beta^{(j)}\) by appending enough trailing zeroes to
+satisfy the Lehmer-code inequalities.
+For every fixed
+\(\nu\in\setN^h\) and \(\eta\in\setZ^h\),
+\[
+[\xvec^{N\nu+\eta}]
+\prod_{j=1}^s
+\schubertS_{w_j(N)}(\xvec)
+\]
+is eventually polynomial in \(N\).  If the total degrees eventually disagree, the
+coefficient is eventually zero.
+\end{proposition}
+
+\begin{proof}
+For each factor, use the fixed orthodontic expression supplied by
+Lemma~\ref{lem:stableOrthodonticData}.  The product assertion is then the last
+part of Lemma~\ref{lem:fixedDemazureExpressions}, and the claim follows.
+\end{proof}
+
+We now use the Schubert analogue of the usual Weyl-denominator extraction of
+Littlewood--Richardson coefficients.  For a weak composition
+\(\alpha\in\setN^h\), write \(\defin{\schubertS_\alpha}\) for the Schubert polynomial
+whose index has Lehmer code \(\alpha\).  Put
+\(\defin{\mathbf 1}\coloneqq(1,\dotsc,1)\).  For \(\lambda\in\setZ^h\), choose an integer
+\(k\) such that \(\lambda+k\mathbf 1\) is nonnegative, and define the
+\defin{generalized Schubert polynomial}
+\[
+\defin{\schubertS_\lambda(\xvec)}
+\coloneqq
+(x_1\dotsm x_h)^{-k}\schubertS_{\lambda+k\mathbf 1}(\xvec).
+\]
+This is independent of \(k\).  Put
+\[
+\defin{\rho}\coloneqq(h-1,h-2,\dotsc,0),
+\qquad
+\defin{\Delta(\xvec)}\coloneqq\prod_{1\leq i<j\leq h}(x_i-x_j),
+\]
+and equip Laurent polynomials with the monomial pairing
+\[
+\defin{\langle\xvec^a,\xvec^b\rangle}
+\coloneqq
+\begin{cases}
+1,& a=b,\\
+0,& a\neq b.
+\end{cases}
+\]
+For \(\lambda,\mu\in\setN^h\), Watanabe's duality formula
+\cite[Lem.~7.4]{Watanabe2016} states that
+\begin{equation}
+\label{eq:watanabeDuality}
+\left\langle
+\schubertS_\lambda(\xvec),
+\schubertS_{\rho-\mu}(\xvec^{-1})\Delta(\xvec)
+\right\rangle
+=
+\begin{cases}
+1,& \lambda=\mu,\\
+0,& \lambda\neq\mu.
+\end{cases}
+\end{equation}
+
+\begin{theorem}[Affine Schubert structure constants]
+\label{thm:affineSchubertStructureConstants}
+Fix \(\alpha,\gamma,\tau\in\setN^h\) and
+\(\beta,\delta,\zeta\in\setZ^h\).  Suppose that
+\(N\alpha+\beta\), \(N\gamma+\delta\), and \(N\tau+\zeta\) belong to
+\(\setN^h\) for \(N\gg0\), and let \(u(N),v(N),w(N)\) be the permutations
+with these respective Lehmer codes.  Then
+\[
+N\longmapsto c_{u(N),v(N)}^{w(N)}
+\]
+is eventually polynomial.
+\end{theorem}
+
+\begin{proof}
+Unless the total degree of \(N\tau+\zeta\) equals the sum of the total degrees
+of \(N\alpha+\beta\) and \(N\gamma+\delta\) identically in \(N\), the
+coefficient is zero for all sufficiently large \(N\).  We therefore assume
+that the degrees agree.
+The Schubert polynomials indexed by weak compositions in \(\setN^h\) form a
+basis of \(\setZ[x_1,\dotsc,x_h]\).  Pairing the Schubert expansion of
+\(\schubertS_{u(N)}(\xvec)\schubertS_{v(N)}(\xvec)\) with
+\eqref{eq:watanabeDuality} gives
+\[
+c_{u(N),v(N)}^{w(N)}
+=
+\left\langle
+\schubertS_{u(N)}(\xvec)\schubertS_{v(N)}(\xvec),
+\schubertS_{\rho-(N\tau+\zeta)}(\xvec^{-1})\Delta(\xvec)
+\right\rangle.
+\]
+Since
+\[
+\Delta(\xvec)
+=\sum_{\sigma\in\symS_h}
+\operatorname{sgn}(\sigma)\xvec^{\sigma\rho},
+\]
+the monomial pairing turns this into
+\begin{equation}
+\label{eq:finiteSchubertExtraction}
+c_{u(N),v(N)}^{w(N)}
+=
+\sum_{\sigma\in\symS_h}
+\operatorname{sgn}(\sigma)
+[\xvec^{\sigma\rho}]
+\schubertS_{u(N)}(\xvec)
+\schubertS_{v(N)}(\xvec)
+\schubertS_{\rho-(N\tau+\zeta)}(\xvec).
+\end{equation}
+
+Choose an integer-valued affine function
+\(\defin{q(N)}\coloneqq MN+K\) such that
+\(\rho-(N\tau+\zeta)+q(N)\mathbf 1\) is nonnegative for \(N\gg0\).
+It suffices to take \(M>\max_i\tau_i\) and then take \(K\) sufficiently
+large.  For each fixed \(N\), apply the definition of generalized Schubert
+polynomials with \(k=q(N)\).  Then each summand in
+\eqref{eq:finiteSchubertExtraction} is
+\[
+[\xvec^{q(N)\mathbf 1+\sigma\rho}]
+\schubertS_{u(N)}(\xvec)
+\schubertS_{v(N)}(\xvec)
+\schubertS_{\rho-(N\tau+\zeta)+q(N)\mathbf 1}(\xvec).
+\]
+The three Schubert indices and the extracted exponent are affine in \(N\).
+Proposition~\ref{prop:productSchubertKostka} shows that every summand is
+eventually polynomial.  There are only \(h!\) summands, independent of \(N\),
+so their signed sum is eventually polynomial.  This completes the proof.
+\end{proof}
+
+\begin{corollary}[Stretched Schubert structure constants]
+\label{cor:stretchedSchubertStructureConstants}
+For fixed permutations \(u,v,w\), the function
+\[
+N\longmapsto
+c_{\stretchperm{N}{u},\stretchperm{N}{v}}^{\stretchperm{N}{w}}
+\]
+is eventually polynomial.
+\end{corollary}
+
+\begin{proof}
+Apply Theorem~\ref{thm:affineSchubertStructureConstants} with
+\((\alpha,\beta)=(\code(u),0)\),
+\((\gamma,\delta)=(\code(v),0)\), and
+\((\tau,\zeta)=(\code(w),0)\).  This proves the corollary.
+\end{proof}
+
+This proves Conjecture~7.1 of I.~Pak and Z.~Slonim~\cite{PakSlonim2026x}.
+
+\begin{corollary}[Stretched Littlewood--Richardson coefficients]
+\label{cor:stretchedLittlewoodRichardson}
+For fixed partitions \(\lambda,\mu,\nu\), the function
+\[
+N\longmapsto c_{N\lambda,N\mu}^{N\nu}
+\]
+is eventually polynomial.
+\end{corollary}
+
+\begin{proof}
+Choose \(k\) such that \(\lambda,\mu,\nu\) have at most \(k\) parts, and
+realize their Schur polynomials as the Grassmannian Schubert polynomials in
+Lemma~\ref{lem:grassmannianStretching}.  After code stretching, these become
+\(s_{N\lambda}\), \(s_{N\mu}\), and \(s_{N\nu}\), respectively.  Hence
+\(c_{N\lambda,N\mu}^{N\nu}\) is a stretched Schubert structure constant, and
+the claim follows from
+Corollary~\ref{cor:stretchedSchubertStructureConstants}.
+\end{proof}
+
+The stronger assertion that \(c_{N\lambda,N\mu}^{N\nu}\) is given by a
+polynomial for every \(N\geq0\) was proved by H.~Derksen and
+J.~Weyman~\cite{DerksenWeyman2002}.  E.~Rassart later gave a chamber-complex
+proof and established a piecewise-polynomial formula in the three partition
+parameters~\cite{Rassart2004}.
+
+\section*{Acknowledgments}
+
+We thank Igor Pak for asking about polynomiality of stretched Schubert
+coefficients; that question was the starting point for this paper.
+OpenAI's Codex was used during the preparation of this paper for proof
+exploration and editorial assistance.
+
+\bibliographystyle{alpha}
+\bibliography{key-schubert-kostka-ALEXANDERSSON-revised}
+
+\end{document}

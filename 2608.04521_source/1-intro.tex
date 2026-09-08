@@ -1,0 +1,47 @@
+\section{Introduction}
+\label{sec:intro}
+
+While highly influential, Universal Composability (UC)~\cite{Can01,Can20} has divided, rather than unified, industrial and academic cryptographers, alongside game-based and simulation-based provable-security experts. Beyond UC, researchers in simulation-based composable security are further divided into camps such as Constructive Cryptography~\cite{Mau11} and IITM~\cite{DBLP:conf/csfw/Kusters06}. This fragmentation is common and expected in relatively young scientific disciplines. What can be learned from unification in other areas, such as mathematics?
+
+Category Theory is the mathematics of composition. It serves as a unifying language across mathematics and is widely used in logic, computing, and physics, not least to reveal connections between the three~\cite{baez_physics_2011}.
+It is perhaps surprising that despite its unifying successes in mathematics and computer science, this mathematics of composition has not yet been comprehensively applied to secure composition.
+
+This paper expresses a minor variant of UC for static systems~\cite[Section 2]{Can20} (a.k.a.\ simple UC, henceforward simply ``UC'') and its composition theorem in categorical terms. While this restriction is made for technical simplicity, simple UC is already fairly expressive. For example, it can model multi-party computation with an a priori known set of participants~\cite{DBLP:conf/crypto/CanettiCL15} or any protocol using a static number of idealized building blocks. 
+Indeed, EasyUC~\cite{CSV19:EasyUC} works essentially in this setting.
+This restriction also simplifies the treatment of global functionalities~\cite{BCH+:globalwithUC}, though they are not the focus of this work.
+
+Our approach offers several benefits:
+
+\emph{First}, categories let us use \emph{string diagrams}, an intuitive yet rigorous diagrammatic reasoning method developed by category theorists. Consequently, our proofs of the Composition Theorems~\ref{thm:securemapsareanSMC} and~\ref{thm:categoricalUCcomposition} are easier to follow than textual presentations, yet amenable to equational translation and computer formalization. 
+
+\emph{Second}, categories are highly useful for generalization. To quote Mac Lane~\cite[IX.6]{maclane:categories}, a co-founder of category theory,  
+\begin{quote}
+    The point of these observations is not the reduction of the familiar to the unfamiliar [...] but the extension of the familiar to cover many more cases.
+\end{quote}
+
+\noindent Indeed, our proof clearly holds for models of computation beyond UC's networks of interactive Turing machines (ITMs). Specifically, it provides a template for developing UC-like theories that replace ITMs with, \eg quantum systems~\cite{Unr10} or code in a suitable domain-specific language (DSL)~\cite{
+CSV19:EasyUC,
+DBLP:journals/pacmpl/GancherSFSM23,
+LHM19}.
+Crucially, one does not need to reprove the composition theorem for these variants. To invoke the general result, one simply verifies that their network model of ``interactive computational systems'' admits a computational indistinguishability notion satisfying Definition~\ref{def:indistinguishability} (which typically relies on a model of network execution).
+
+\emph{Third}, categories tend to ``point you in the right direction'':
+\begin{itemize}
+    \item There is no need for machines to have names (identities) in the context of UC: instead, it is more convenient to name the connections between machines.
+    \item The environment and adversary are not restricted to a single machine; they can consist of multiple machines, just like protocols. As a result, absorbing a machine into the environment or adversary is immediate, avoiding the extra step of replacing the network with a single equivalent machine. This also sidesteps a restriction Canetti notes for single-machine environments (see Remark~\ref{rem:environmentasnetwork}).
+\end{itemize}
+Despite these changes, we show in Section~\ref{ssec:translatingtoUC} that our version translates directly to UC (and vice versa), letting us deduce \cite[Theorem~3]{Can20} from our results. 
+
+\emph{Finally}, we identify and fix some technical oversights (in Section~\ref{ssec:translatingtoUC}) in the setup of the UC composition theorem. These fixes are guided by the categorical principle that sequential composition requires matching types (\ie the codomain of one matches the domain of the other), and some of the corrected conditions appear in a recent tutorial by Canetti~\cite{Can25:tutorial}.
+
+We envision further benefits once the program has been carried out in greater detail: a DSL-based variant of UC, formalizing the widespread practice of expressing computational behavior as (pseudo)code; similar analyses of other composability frameworks, guided by a categorical axiomatization that guarantees composition ``for free''; and, ultimately, rigorous security-preserving translations between frameworks, akin to functorial versions of~\cite{RKC:embeddingUCinIITM}. We expand on these in Section~\ref{sec:conclusion}.
+
+\subsection*{Related works} This paper advances an ongoing program of applying category theory to composable security frameworks~\cite{BK22,BK23}. However, prior literature left open the task of formally connecting these abstract treatments to established frameworks. Here, we close this gap for the most prominent paradigm, namely UC. Rather than pursuing maximal generality, our objective is to provide an abstract template for deriving ``UC-like'' theories with significantly greater tractability than the original framework allows. Consequently, we establish our main results via rigorous diagrammatic reasoning, requiring fewer categorical prerequisites. The theory developed here is not an instance of the general theory in~\cite{BK23}, nor is that theory an instance of ours. In Appendix~\ref{appendix:UC-composition} we outline a more abstract account of our theory, bringing it closer to~\cite{BK23} in spirit but still differing technically.
+
+The use of informal diagrams as a heuristic device is common in cryptography (\eg \cite{PR08,joyofcryptography,BDF+18,BO23SSP}). Recasting them as string diagrams promotes them to a rigorous tool without losing their intuitive nature. String diagrams have already been used in quantum cryptography when analyzing particular protocols (see,  \eg~\cite{breiner:graphicaldicrypto,coecke:graphicalqkd,breiner:selftesting,hillebrand:superdense,stay:crypto,colissonetal:graphstate}), whereas here we use them in the foundations of composable security. Facilitating and popularizing string diagrams in cryptography is one of our long-term goals. 
+
+Recent work~\cite{PKWC24:UCisRC,KPC24:robustcompilationandUC} relates UC to Robust Compilation (RC), showing that UC emulation corresponds to robust hyperproperty-preserving compilation: roughly, compiled programs retain the security properties of their source counterparts no matter what malicious code they are linked with. While RC accommodates distinct source and target languages, instantiating it to UC requires the two to coincide; we instead generalize UC to arbitrary models of computation from the outset, proving the composition theorems once at that level of generality. Moreover, whereas their diagrams serve as informal illustration, our string diagrams are rigorous proof objects. We conjecture that RC compilers correspond to security-preserving symmetric monoidal functors (cf.~\cite[Theorem~4.10]{BK23}).
+
+In Section~\ref{sec:UCcategorical} we make extensive use of a construction $\CB$ of a category with backdoors built from a category $\CC$. An essentially similar construction appears in~\cite{VDS:leakage} (there phrased as a quotient of the $\mathrm{coPara}$ construction), with the adversarial interface read as a leak.
+
+\paragraph*{Structure of the paper} Section~\ref{sec:introtoCT} briefly introduces categories and string diagrams. Section~\ref{sec:UCcategorical} presents our main novelties, expressing UC categorically. The main results are Theorem~\ref{thm:securemapsareanSMC}, which guarantees that security is closed under sequential and parallel composition, and Theorem~\ref{thm:categoricalUCcomposition}, which gives our categorical version of the UC composition theorem. Section~\ref{sec:UCconcrete} instantiates the theory with a model based on networks of ITMs, and translates between this and UC~\cite[Section~2]{Can20}. Section~\ref{sec:conclusion} concludes with further questions.
