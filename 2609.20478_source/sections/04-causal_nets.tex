@@ -1,0 +1,193 @@
+
+\subsection{Causal nets}\label{sec:causal-nets}
+
+Causal nets are a process-mining formalism that refines Petri nets by equipping each activity with explicit input and output bindings. Where a Petri net records token multiplicity along a flow relation, a causal net records which subsets of predecessor activities jointly enable a given activity, and which subsets of successor activities are jointly produced. We translate OC causal nets into decorated cospans by the same cospan-algebra construction as for OCPNs. The only difference is that the interface sets come from bindings rather than from pre/post-set multiplicities. The reading is direct. A binding is an AND mediator, synchronising the typed pairs that fire together. The alternative bindings of an activity exclude one another, so one XOR mediator on each side of the activity chooses among them. We begin with bindings as plain sets of typed pairs. How many objects flow along each is a separate, later layer, the constraint system $\Lambda$ (Remark~\ref{rem:cnet-binding-numbers}).
+
+\begin{definition}[Object-centric causal net]
+  \label{def:causal-net}
+  The object-centric (OC) causal net used here, or OCCN, is our formulation, drawn from causal
+  nets~\cite{vanderaalstCausalNetsModeling2011} and their object-centric
+  extension~\cite{lissObjectCentricCausalNets2025}. It is a tuple
+  \[
+    CN=(T,D,\mathrm{In},\mathrm{Out},\mathcal{O}),
+  \]
+  where \(T\) is a finite set of activities, \(\mathcal{O}\) is a finite set of object types, and
+  \[
+    D\subseteq (T\cup\{\bot\})\times\mathcal{O}\times (T\cup\{\top\})
+  \]
+  is a typed dependency multigraph, where each arc $(s,\omega,t)\in D$ records that $s$ can produce a token of type $\omega\in\mathcal{O}$ consumed by $t$. The symbols $\bot,\top\notin T$ are the open ends of Definition~\ref{def:contexts-general}, where objects enter and leave the net. The maps
+  \begin{gather*}
+    \mathrm{In}:T\to \mathcal{P}(\mathcal{P}((T\cup\{\bot\})\times\mathcal{O})),\\
+    \mathrm{Out}:T\to \mathcal{P}(\mathcal{P}((T\cup\{\top\})\times\mathcal{O}))
+  \end{gather*}
+  assign to each activity $t$ a set of input bindings and a set of output bindings. Each input binding $X\in \mathrm{In}(t)$ is a finite set of $(s,\omega)$-pairs (typed predecessors jointly enabling $t$), and each output binding $Y\in \mathrm{Out}(t)$ is a finite set of $(t',\omega)$-pairs (typed successors jointly produced when $t$ fires), all consistent with~$D$.
+\end{definition}
+
+This construction instantiates the general framework of Section~\ref{sec:general-framework}, and
+the mapping is the most direct of the four. An activity is a plain node, and each binding is an
+AND mediator. An activity's several input (or output) bindings are exclusive alternatives, so one
+XOR mediator on each side of the activity has the AND mediators of its bindings as branches. A
+singleton binding is a one-in, one-out AND that passes flow straight through. A pair $(\bot,\omega)$
+or $(\top,\omega)$ in a binding gives its AND mediator an edge from a mediator with no in-edges or
+to one with no out-edges, so the walk ends there at the open end $\bot$ or $\top$
+(Definition~\ref{def:contexts-general}). This determines the instance map.
+\medskip
+\begin{center}
+  \small\begin{tabularx}{\linewidth}{@{}lX@{}}
+    \hline
+    General framework & Causal net \\
+    \hline
+    AND/OR graph $(V,E)$ & the activities $T$, with one XOR mediator on each side of an activity and one AND mediator per binding; typed wires read from $D$ \\
+    Activities $\mathcal{A}$ & the activities $T$ \\
+    AND mediators & one per binding in $\mathrm{In}(t),\mathrm{Out}(t)$, synchronising the typed pairs that fire together (a singleton binding is a pass-through) \\
+    XOR mediators & one on each side of each activity $t$, choosing among the bindings of $\mathrm{In}(t)$ or of $\mathrm{Out}(t)$ \\
+    \hline
+  \end{tabularx}
+\end{center}
+\medskip
+Running the construction of Definition~\ref{def:contexts-general} through this mapping is
+immediate, since the bindings are already the contexts. The walk from an activity $t$ steps
+through one XOR and one AND mediator on each side and reaches its neighbours at once, so its
+backward and forward families are the input and output bindings themselves, $\mathrm{In}(t)$ and
+$\mathrm{Out}(t)$. Every pair of an input binding with an output binding is a context,
+\[
+  \mathrm{Contexts}_{CN}(t):=\mathrm{In}(t)\times \mathrm{Out}(t),
+\]
+and each context $c=(P,S)$ yields one generator with typed wires
+$L_c=\{(s,\{\omega\},t):(s,\omega)\in P\}$ and $R_c=\{(t,\{\omega\},t'):(t',\omega)\in S\}$.
+Counts are carried separately by the constraint system $\Lambda$
+(Remark~\ref{rem:cnet-binding-numbers}), so a split of one type across two output legs, as at the
+review $r$ of Example~\ref{ex:running-cnet-cospan} below, is a context like any other. Generators
+sharing a typed wire compose along it in $\mathbf{F}(\Sigma)$ (Definition~\ref{def:free-category}).
+Start and end generators attached at $\bot$ and $\top$ belong to $\Sigma_\gamma$, a choice of the
+analysis (Section~\ref{subsec:analysis}).
+
+\begin{theorem}[Canonical cospan-algebra presentation of OC causal nets]
+  \label{thm:causal-to-cospan-signature}
+  Let $CN = (T, D, \mathrm{In}, \mathrm{Out}, \mathcal{O})$ be an OC causal net. Then $CN$ canonically determines a cospan-algebra signature $\Sigma$, and hence the free symmetric monoidal category $\mathbf{F}(\Sigma)$.
+\end{theorem}
+
+\begin{proof}
+  The schema of Section~\ref{sec:notation-by-notation} applies at the instance map above,
+  finiteness of $T$ and of all binding sets giving the conditions of
+  Definition~\ref{def:lm-graph}, with each edge typed by the arc types in~$D$. The delta is that
+  the walk is immediate. It steps through one XOR and one AND mediator on each side of an activity and
+  reaches its neighbours at once, returning $\mathrm{In}(t)$ and $\mathrm{Out}(t)$. Every pair
+  of them is a context, and
+  $\mathrm{Contexts}_{CN}(t)=\mathrm{In}(t)\times \mathrm{Out}(t)$ is finite because $T$ and
+  the binding sets are finite.
+\end{proof}
+
+\begin{figure*}[tp]
+  \centering
+  \input{tikz/running_example/re_cn_example}\unskip
+  \caption{An object-centric causal net over two object types, order (blue) and item (red).
+    Every wire carries objects of one type, and every activity binds both types on each
+    side. The solid connector joins the markers of a single binding, whose objects are
+    consumed and produced together. On a wire a $\square$ marker is a batch of objects of
+    that type and a $\circ$ marker is exactly one. The two bounds on the wires from the
+    send $s$ to the review $r$ are declared per leg and independently of each other,
+    $[1,5]$ orders and $[2,4]$ items. The review $r$ splits each type by a key of its own,
+    $\rho_{o}$ over orders and $\rho_{it}$ over items. Each order and each item, taken singly,
+    makes an exclusive choice between the legs that share a key, so each object leaves on one of
+    them and the two legs hold the batch between them. The outcome $i$ takes one order and one
+    item, and the outcome $n$ takes the remainder of each type. The boundary nodes $\bot$ and
+    $\top$ are not activities of the net. They are the open ends where objects enter and leave
+    (Definition~\ref{def:causal-net}).}
+  \label{fig:re-occn}
+\end{figure*}
+
+\begin{figure*}[tp]
+  \centering
+  \input{tikz/running_example/re_cn_cospans}\unskip
+  \caption{The generators $g_r$, $g_i$ and $g_n$ of Fig.~\ref{fig:re-occn}, each shown as a decorated cospan (left)
+    and the string diagram it denotes (right). Order wires are blue and item wires red, and the
+    labels beside each boundary name its typed ports in the order drawn. The outcome
+    generators are $g_i$, one investigated order and one item, and $g_n$, the remainder of
+    each type. Each generator has a constraint system of its own, set out below its row and
+    flagged on the string diagram by the $\Lambda$ marker spanning both boundaries. A
+    system's independent line records the bounds that generator declares on its own legs,
+    and its coupling line relates its two boundaries. Composition identifies the variables of
+    shared wires and conjoins the systems, so three systems that each hold on their own need not
+    hold together.}
+  \label{fig:re-occn-cospans}
+\end{figure*}
+
+\begin{exmp}[A small OCCN and its generator cospans]
+  \label{ex:running-cnet-cospan}
+  Consider the OC causal net of Fig.~\ref{fig:re-occn}, over two object types,
+  $\mathrm{order}$ and $\mathrm{item}$, each key-distributed at the review $r$. It has no places. Write $(x,\mathrm{o},y)$ for $(x,\{\mathrm{o}\},y)$. Each
+  activity carries its bindings, which are already its contexts:
+  \begin{gather*}
+    \mathrm{Out}(s)=\{\{(r,\mathrm{o}),(r,\mathrm{it})\}\},\qquad\twocolbreak
+    \mathrm{In}(r)=\{\{(s,\mathrm{o}),(s,\mathrm{it})\}\},
+  \end{gather*}
+  \begin{gather*}
+    \mathrm{Out}(r)=\{\{(i,\mathrm{o}),(i,\mathrm{it}),\twocolbreak(n,\mathrm{o}),(n,\mathrm{it})\}\},\\
+    \mathrm{In}(i)=\mathrm{In}(n)=\{\{(r,\mathrm{o}),(r,\mathrm{it})\}\}.
+  \end{gather*}
+  Activity $r$ has a single output binding $\{(i,\mathrm{o}),(i,\mathrm{it}),(n,\mathrm{o}),(n,\mathrm{it})\}$. It
+  emits both legs on every firing and is a key-distribution split, not an
+  exclusive choice. Reading a generator off each binding
+  (Fig.~\ref{fig:re-occn-cospans}) gives, for $r$,
+  \begin{gather*}
+    g_r = \Bigl(\{(s,\mathrm{o},r),(s,\mathrm{it},r)\}
+      \xrightarrow{\iota} A \xleftarrow{\iota}\twocolbreak 
+      \{(r,\mathrm{o},i),(r,\mathrm{it},i),(r,\mathrm{o},n),(r,\mathrm{it},n)\},\; d_r\Bigr),
+  \end{gather*}
+  whose decoration carries the constraint system $\Lambda$
+  (Remark~\ref{rem:cnet-binding-numbers}). Read off $g_r$'s boundary, the markings say what each
+  wire carries in one firing of $r$. The input wire $(s,\mathrm{o},r)$ takes a batch of one to
+  five orders ($1\le n_{(s,\mathrm{o},r)}\le 5$), and the investigated leg $(r,\mathrm{o},i)$
+  holds exactly one ($n_{(r,\mathrm{o},i)}=1$). The two output legs hold the whole batch between
+  them, tied by a within-type key $\rho_{o}$ that partitions it,
+  $n_{(r,\mathrm{o},i)}+n_{(r,\mathrm{o},n)}=n_{(s,\mathrm{o},r)}$. Hence one firing of $r$
+  receives a batch and splits it, one order to $i$ and the rest to $n$, and a batch of more than five
+  forces $r$ to fire again. The item type is split in the same way by its own within-type key $\rho_{it}$, one item
+  investigated on $i$ and the rest on $n$, so both types follow the identical key-distribution
+  pattern under bounds of their own.
+\end{exmp}
+
+\begin{remark}[Binding numbers and keys as the constraint system]
+  \label{rem:cnet-binding-numbers}
+  Definition~\ref{def:causal-net} records which typed pairs bind, but not
+  \emph{how many} objects flow along each. The full OC causal-net
+  formalism~\cite{lissObjectCentricCausalNets2025} additionally equips every
+  binding pair with a cardinality $[c_{\min},c_{\max}]$ and may correlate
+  pairs through a shared object key $\rho$. Both enter the constraint system of
+  Definition~\ref{def:multiplicity-decoration}. The binding cardinality is a
+  per-leg interval, an inequality of $\rho(t)$ on a variable leg, and the shared key is an equality of $\rho(t)$ at its activity $t$ (Definition~\ref{def:lm-graph})
+  among the legs of one generator, a partition of the input wire across the output wires it feeds.
+  The routing
+  structure, which generators exist, is untouched. The numbers decorate those
+  generators, and an unannotated binding defaults to $n_p=1$, the unannotated sense of the
+  generators of Example~\ref{ex:running-cnet-cospan}.
+
+  On the small example above this attaches as follows. The send activity $s$ ships
+  a batch of orders and a batch of items to $r$ in one firing, so each wire is bounded on its own,
+  $1\le n_{(s,\mathrm{o},r)}\le 5$ for orders and $2\le n_{(s,\mathrm{it},r)}\le 4$ for items. The receive activity $r$
+  then distributes each type between the two outcomes by its own within-type key. The order key
+  $\rho_{o}$ partitions the orders across the investigated and not-investigated legs,
+  $n_{(r,\mathrm{o},i)}+n_{(r,\mathrm{o},n)}-n_{(s,\mathrm{o},r)}=0$, with exactly one investigated
+  per firing, $n_{(r,\mathrm{o},i)}=1$. The item key $\rho_{it}$ partitions the items the
+  same way, $n_{(r,\mathrm{it},i)}+n_{(r,\mathrm{it},n)}-n_{(s,\mathrm{it},r)}=0$ with
+  $n_{(r,\mathrm{it},i)}=1$, so the two key constraints sit side by side in $\Lambda$ and make the
+  distribution explicit. Hence the number of investigations equals the number of $r$ firings, and a
+  batch above either bound forces $r$ to fire again.
+
+  Generators sharing a wire identify its leg variable and conjoin their
+  constraints, and a closed composite exists if and only if the glued constraint system is
+  solvable over $\mathbb{N}$. The symbolic signature carrying
+  $\Lambda$ is bound-independent and is the form compared across notations.
+\end{remark}
+
+\begin{remark}[Causal net states]
+  The state of a causal net mid-execution is the causal-net version of a Petri-net
+  marking as a cut (Remark~\ref{rem:pn-marking-cut}). A cut through the string diagram
+  carries the active wire ports, the bindings in progress rather than tokens in places,
+  and sweeping the cut from boundary to boundary reads off the state evolution with no
+  separate algebraic state machinery. On the OCCN example, after the $r$ generator fires
+  the cut carries the four ports leading to $i$ and~$n$ simultaneously, an order and an item wire to each, and firing
+  $i$ or $n$ first advances that outcome's two ports to $\top$, two binding sequences of one
+  diagram.
+\end{remark}

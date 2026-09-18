@@ -1,0 +1,406 @@
+\section{String Diagrams as a Composition Engine for Process Models}\label{sec:hypergraphs}
+
+Section~\ref{sec:introduction} read the string diagram of Figure~\ref{fig:oc-two-faces}(vi)
+informally, and Table~\ref{tab:intuition} recorded its vocabulary with a pointer to each term's
+definition, most of them into this section. Here that reading becomes precise. The section hands
+the reader two things, a way to record one fragment of a process as a diagram whose boundary is
+its typed input and output wires, and a way to glue two fragments along a shared boundary. That
+is the equipment the rest of the paper runs on. It is what lets a whole model be assembled from a
+finite set of small generators, and what lets two models, drawn in different notations, be
+compared piece by piece once their routing devices are gone. A reader already at home in
+hypergraph categories may skim ahead to Section~\ref{sec:general-framework} and lose nothing.
+
+\subsection{From the picture to the algebra}
+
+The four notations of Figure~\ref{fig:oc-two-faces} record the same structure by different devices.
+The Petri net of panel~(i) makes the buffer of pending items an explicit typed place and writes the count as an
+arc weight. The causal net has no places and marks the arcs instead, following \citet{lissObjectCentricCausalNets2025}, a circle for a single object against a square for
+several, with the dashed links grouping the markers that must be satisfied together. The process
+tree has neither, and carries the count in the arity of its parallel operator. The BPMN model
+carries it in the branches opened by one gateway and closed by another. Each notation
+is recovered from the string diagram by keeping only the structure it records and dropping the rest.
+Pooling the two item wires into one typed place and the two $p$ boxes into one transition that fires
+twice returns the Petri net, while carrying the same multiplicity on $s$'s binding returns the
+causal net. We make these projections precise in Section~\ref{sec:conversion-framework}.
+
+These properties recur across process-mining notations, yet comparing models even
+within one notation, and saying what a model minimally is, remain persistently
+hard~\cite{vanderaalstRepresentationalBiasProcess2011,vanderaalstImprovingRepresentationalBias2012}.
+String diagrams answer both needs. They are a common language in which to state when two
+models are equal, and a compositional one in which complex models are assembled
+from simple generators. They are the syntax of hypergraph categories, which
+we now introduce.
+
+\subsection{Notation and conventions}\label{subsec:conventions}
+
+We fix the notation used throughout. Objects are typed resources drawn from a finite set of object
+types $\mathcal{O}$, the untyped case being $\mathcal{O}=\{\ast\}$. Morphisms compose
+sequentially by $(;)$ and in parallel by the monoidal product $(\otimes)$, with unit $I$ and
+identities $\mathrm{id}_X$. Composing two fragments sequentially means gluing them end to end. The
+wires that one hands to the other are identified and everything else is kept. In category theory that gluing
+is a pushout of cospans, and Definition~\ref{def:pushout} states it.
+
+Finite multisets over a set $X$ are written $\mathbb{N}^{X}$, the functions $X\to\mathbb{N}$ of
+finite support, equivalently the free commutative monoid on $X$, so the value at $x$ is the
+multiplicity of $x$. A multiset is displayed as a formal sum, for example $2a+3b$, and multisets
+are combined by $+$, $-$, and $\subseteq$. A Petri-net marking is such a multiset,
+$M\in\mathbb{N}^{P}$ with $M(p)$ tokens in place $p$, drawn as an object by the tensor power
+$\bigotimes_{p\in P}p^{\otimes M(p)}$, and typed multisets form $\mathbf{FinMSet}/\mathcal{O}$. The
+letter $M$ denotes a marking throughout, while models are written $m_1,m_2$. Ordinary sets use
+single braces $\{\dots\}$. A nested $\{\{\dots\}\}$ is a set whose elements are themselves sets, for
+instance a set of subsets, and never a multiset. We do not use bag braces.
+
+\subsection{Split, merge, start, stop}
+
+We model process behaviour with concurrency and causal structure using hypergraph
+categories, following the string-diagrammatic framework of
+\citet{bonchiStringDiagramRewrite2022,bonchiStringDiagramRewrite2022a,bonchiStringDiagramRewrite2022b}.
+Figure~\ref{fig:oc-two-faces}(vi) supplies the running intuition. Wires are
+objects, the resources a process manipulates and the interfaces through which
+subsystems interact. Boxes are activities, which consume objects and produce
+others for later use. A whole model is a particular composition of atomic
+boxes, complexity built from simple parts, and for a Petri-net reader the same
+sentences read place for wire and transition for box.
+
+\paragraph{Conventions.} String diagrams are read left to right. A box's inputs enter on
+its left, its outputs leave on its right, and a wire runs from the box that produces a
+resource to the box that consumes it. Two operations build diagrams. Sequential
+composition $(;)$ connects the outputs of one box to the inputs of the next, and parallel
+composition $(\otimes)$ places boxes side by side without connecting them. We write
+$X\xmapsto{\llangle \cdot\cdot\cdot \rrangle} D$ to mean that the algebraic object $X$ is
+drawn as the string diagram $D$.
+
+We start with how resources, such as Petri net tokens or the typed objects of
+Fig.~\ref{fig:oc-two-faces}, may begin, end, and branch within a diagram. The
+structure that governs this is known, somewhat intimidatingly, as a special
+commutative Frobenius algebra. The name is not important, and we explain instead
+what its four operations do. Working through them is the gentlest way into the
+hypergraph-category machinery that follows, since a reader who follows the four
+operations has met its central idea.
+
+Figure~\ref{fig:oc-two-faces}(vi) needs two of them. The order enters
+at $a$ with no producing activity and leaves after $s$ with no consumer, so a
+wire must be able to begin ($\eta_X$) and to end ($\epsilon_X$), the bare
+boundaries to which $a$ and $s$ attach. The two item wires need no operation,
+being two outputs of the one box $a$. Where one object is shared between
+genuinely concurrent activities its wire must be able to split ($\delta_X$), and
+the mirror operation merges the copies back into one ($\mu_X$). Most flow uses
+none of the four. An object
+handed from one activity to the next is a plain wire, a choice between
+continuations is several separate diagrams rather than one branching wire, and
+a multiplicity of objects is a count carried by parallel wires. The four
+operators appear exactly where a process begins, ends, or shares one object
+between genuinely concurrent activities, and that economy is what keeps
+diagrams readable.
+
+\begin{definition}[Special commutative Frobenius algebra]
+Let $X$ be a resource (or object), possibly carrying typing information, in some space of resources. A special commutative Frobenius algebra structure on $X$ is a tuple $(X,\delta_X,\mu_X,\eta_X,\epsilon_X)$ of the four maps drawn below.
+\end{definition}
+\begin{align*}
+\delta_X
+\xmapsto{\llangle \cdot\cdot\cdot \rrangle}
+\vcenter{\hbox{\input{tikz/categories/fig_03}\unskip}}
+\quad\quad
+\mu_X
+\xmapsto{\llangle \cdot\cdot\cdot \rrangle}
+\vcenter{\hbox{\input{tikz/categories/fig_04}\unskip}}
+\\
+\eta_X
+\xmapsto{\llangle \cdot\cdot\cdot \rrangle}
+\vcenter{\hbox{\input{tikz/categories/fig_05}\unskip}}
+\quad\quad
+\epsilon_X
+\xmapsto{\llangle \cdot\cdot\cdot \rrangle}
+\vcenter{\hbox{\input{tikz/categories/fig_06}\unskip}}
+\end{align*}
+\medskip
+These operators are informally known as ``split'' ($\delta_X$), ``merge'' ($\mu_X$), ``initialise'' ($\eta_X$) and ``terminate'' ($\epsilon_X$).
+
+The operators $(\delta_X,\mu_X,\eta_X,\epsilon_X)$ satisfy a number of equational axioms, listed in
+full in Appendix~\ref{sec:axioms}. The most immediately useful is speciality~\eqref{eq:ax-special},
+$\delta_X ; \mu_X = \mathrm{id}_X$, which says that splitting a resource and immediately re-merging
+the two copies recovers the original wire unchanged.
+
+Merge and split operators are equivalent up to topological deformation, so only the connections
+matter and only the connections drawn with a black dot are interactions. The spider
+theorem~\cite{bonchiStringDiagramRewrite2022} puts any such diagram into a normal form.
+
+Splitting and merging concern copies of one object. Placing
+several objects, or several independent activities, side by side is a different operation,
+parallel composition, which sets resources next to one another without connecting them and
+so records that they proceed independently. We write it with the tensor product
+$(\otimes)$. The two packs of Figure~\ref{fig:oc-two-faces}(vi) form exactly this
+composite, $p\otimes p$, two activities with no wire between them and no implied
+order. In a Petri net the same operation is what a marking needs. The multiplicity of an
+object, the number of parallel wires of a given type, is the number of tokens in the
+corresponding place, and a marking is insensitive to the order of its tokens, so it is
+represented by a tensor of object copies indexed by places. Let \(P\) be a set of Petri net places viewed as the objects (i.e.\ the space of resources for a model). A marking of tokens is a function
+\[
+M : P \to \mathbb{N},
+\]
+and its corresponding representation in the hypergraph category is denoted as,
+\[
+M
+\xmapsto{\llangle \cdot\cdot\cdot \rrangle}
+\bigotimes_{p \in P} p^{\otimes M(p)},
+\]
+where \(p^{\otimes M(p)}\) denotes the \(M(p)\)-fold tensor power of \(p\), and in the case every place has zero tokens we define $p^{\otimes{}0}=I$ where $I$ is the unit (e.g.\ zero tokens) of the category. We interpret the action of spider diagrams as creating or consuming tokens ``for free'', in the sense an intermediate activity is not needed.
+This convention makes multiplicity explicit at the level of objects. Each token in place \(p\) is represented by one copy of the category object representing \(p\), so the total token content of a marking is encoded by the number of parallel wires of each object.
+
+Later sections endow other notations (causal nets, process trees, BPMN) with the same token-like semantics, placing all of them on a common compositional footing.
+
+However, for process mining, we are still missing the activities that capture process behaviour. The spiders only carry input or output information, e.g.\ properties of tokens. We require a way to take places (or more accurately token resources) and transform them. This is done by introducing morphisms, known as boxes, which represent an activity in a process model.
+
+Assembling boxes and objects needs a categorical setting with the two compositions we have
+used above, sequential $(;)$ and parallel $(\otimes)$. That setting is a symmetric monoidal
+category, one with these two compositions in which the order of parallel factors
+does not matter and wires may cross. A hypergraph category is one in which, in addition,
+every object carries the Frobenius structure above.
+
+\begin{definition}[Hypergraph category]\label{def:hypergraph-category}
+A hypergraph category is a symmetric monoidal category in which every
+object $X$ carries a chosen special commutative Frobenius algebra structure
+$(X,\delta_X,\mu_X,\eta_X,\epsilon_X)$ compatible with the parallel product $(\otimes)$.
+Compatibility means the Frobenius structure on $X\otimes Y$ is built component-wise from those of $X$ and $Y$.
+\end{definition}
+
+A morphism, or activity or box, can have multiple inputs and outputs, corresponding to the objects of the hypergraph category. The boxes of
+Figure~\ref{fig:oc-two-faces}(vi) are all morphisms of this kind. The accept
+$a$ has the empty input boundary $I$ and the output boundary
+$\mathrm{order}\otimes\mathrm{item}^{\otimes 2}$, each pack $p$ maps
+$\mathrm{item}$ to $\mathrm{item}$, and the ship $s$ mirrors $a$. A single
+transition thus consumes multiple inputs and produces multiple outputs, like a
+Petri net transition. Typing the objects in $P$ yields a formalism for
+object-centric Petri nets, which we construct explicitly in
+Section~\ref{sec:petri-nets}. For now we give the general definition of an
+activity morphism in a hypergraph category.
+\begin{definition}[Activity morphism]
+Let $P$ denote the set of objects in the hypergraph category $\mathbf{H}$ and $n,n':P\to\mathbb{N}$ denote input and output multiplicity functions. An activity in a process model is represented by a morphism $f$ as,
+\[ f : \bigotimes_{X\in{}P}X^{\otimes{}n_X} \rightarrow \bigotimes_{U\in{}P}U^{\otimes{}n'_U} \]
+\end{definition}
+We now have the basic building blocks for representing process models, namely objects (places), morphisms (activities) and special commutative Frobenius algebra structures (spiders), which allow us to copy, merge, create and terminate resources. To compute with them, and to read them off process models, we need a precise, machine-friendly way to record a diagram together with how it composes. Section~\ref{sec:introduction} previewed the answer, a cospan, a fragment with an input boundary and an output boundary that glue along shared boundaries. We develop this as the cospan-based semantics of hypergraph categories, well suited to reformulating process-mining models as compositional networks.
+
+In particular, we will work with so-called decorated cospans~\cite{fongDecoratedCospans2015}, which record the compositional structure of process models but endow them with extra information that allows us to draw string diagrams.
+\begin{definition}[Decorated cospan]\label{def:decorated-cospan}
+A decorated cospan is a morphism of the form,
+\[
+f
+\xmapsto{\llangle \cdot\cdot\cdot \rrangle}
+\left(X_{1}\xrightarrow{i} A \xleftarrow{o} X_{2},\; d\right)
+\]
+where $X_1$ and $X_2$ are the left and right boundaries, $A$ is the apex, $i:X_1\to A$ and $o:X_2\to A$ are the boundary maps, and $d$ is a decoration over $A$ which gives the information needed to draw the string diagram.
+\end{definition}
+\begin{remark}[Decorations]
+There are many ways to formulate decorations, but in this paper we will concretely define them as tuples of the form $(E,s,t,\lambda)$ for $E$ a set of hyperedges, $s,t:E\to A^{*}$ source and target maps for the edges, and $\lambda:E\to L$ a labelling function. The source and target maps give the information needed to draw the string diagram, while the labelling function allows us to address possible repeated activities.
+\end{remark}
+
+The $p$ box of Figure~\ref{fig:oc-two-faces}(vi) is already such a cospan. Each
+boundary is one item port, the apex is those two ports, and the decoration is
+the single hyperedge labelled $p$ from the input port to the output port.
+
+\begin{remark}
+For more complex morphisms the boundaries expand to uniquely labelled inputs and outputs, the apex is the set of all boundary and internal ports, and the decoration $d$ maps the inputs to the outputs with any necessary internal structure.
+\end{remark}
+
+Composition has been the running theme. A model is assembled by gluing fragments
+along shared boundaries, and for cospans that gluing is a standard operation, the
+pushout. The plain reading comes first. Composing $g_1;g_2$ glues the output
+ports of $g_1$ onto the input ports of $g_2$, port by port and type by type, and
+keeps both decorations, so the composite is again a valid string diagram. Under
+the unique-ID convention the paper works with throughout, where every port
+carries a globally unique integer identifier, the whole construction is a set
+union.
+\begin{definition}[Composition of decorated cospans (cospan pushout)]\label{def:pushout}
+Let
+\begin{align}
+g_1 &= \Bigl(X_1 \xrightarrow{i_1} A_1 \xleftarrow{o_1} X_2,\; d_1\Bigr),\\
+g_2 &= \Bigl(X_2 \xrightarrow{i_2} A_2 \xleftarrow{o_2} X_3,\; d_2\Bigr)
+\end{align}
+be decorated cospans sharing interface $X_2$, with ports drawn from a common
+pool of unique identifiers, so that $X_2\subseteq A_1$, $X_2\subseteq A_2$, and
+$o_1(x)=x=i_2(x)$ for every $x\in X_2$. Their composite is
+\begin{equation}
+g_1;g_2 \;:=\;
+\Bigl(X_1\hookrightarrow A_1\cup A_2\hookleftarrow X_3,\; d_1\cup d_2\Bigr),
+\end{equation}
+where the apex is the set union, the boundary maps are the set inclusions, and
+the composite decoration carries every hyperedge of $d_1$ and of $d_2$
+unchanged. A hyperedge of $d_1$ incident to a port $x\in X_2$ and a hyperedge
+of $d_2$ incident to the same port now share that vertex, which is the gluing.
+\end{definition}
+This is the working form of a general construction. For arbitrary boundary maps
+the apex is the quotient of the disjoint union $A_1\sqcup A_2$ by the
+identifications $o_1(x)\sim i_2(x)$, a pushout of finite sets, and the unique-ID
+convention is what collapses that quotient to the union above, since the two
+copies of each interface port carry the same identifier. The general two-step
+construction is standard~\cite{fongDecoratedCospans2015} and adds nothing the
+paper uses. The convention is maintained inductively. Internal ports of a newly
+attached generator take fresh identifiers, and interface ports inherit the
+identifiers of the shared boundary.
+
+\begin{remark}[Process mining reading]
+Think of ports as representing places, the medium through which transitions communicate with each other.
+The interface $X_2$ is the set of ports that $g_1$ hands off to $g_2$.
+The map $o_1$ locates those ports inside diagram $A_1$, while $i_2$
+locates the same ports inside diagram $A_2$.
+Composition fuses places together in the composite apex $A_1\cup A_2$, gluing the output
+boundary of $g_1$ directly onto the input boundary of $g_2$.
+In Figure~\ref{fig:oc-two-faces}(vi) the composition after $a$ is exactly this fusion,
+$a$'s three output ports glued by type onto the input ports of the fragment
+$\mathrm{id}_{\mathrm{order}}\otimes p\otimes p$, and the composition before $s$ repeats it.
+\end{remark}
+
+\begin{remark}[Typed ports]
+If ports carry types, for example token object type in an object-centric
+Petri net, the identification of $o_1(x)\in A_1$ with $i_2(x)\in A_2$ is imposed only when
+$\mathrm{type}(o_1(x))=\mathrm{type}(i_2(x))$, and
+ports of mismatched type cannot be fused.
+\end{remark}
+
+The pushout construction is heavier on the page than in practice, and an example makes it concrete.
+
+\begin{exmp}
+Consider the cospans $g_1$ and $g_2$ defined below. We compute their composition by pushout, using port types to describe the unique-ID convention,
+\begin{strip}
+\begin{align}
+g_1;g_2
+& \xmapsto{\llangle \cdot\cdot\cdot \rrangle}
+\vcenter{\hbox{\resizebox{\ifdim\width>0.40\linewidth 0.40\linewidth\else\width\fi}{!}{\input{tikz/categories/fig_22}\unskip}}}
+\;{};\;{}
+\vcenter{\hbox{\resizebox{\ifdim\width>0.40\linewidth 0.40\linewidth\else\width\fi}{!}{\input{tikz/categories/fig_23}\unskip}}}
+\\
+& \xmapsto{\llangle \cdot\cdot\cdot \rrangle}
+\vcenter{\hbox{\resizebox{\ifdim\width>0.85\linewidth 0.85\linewidth\else\width\fi}{!}{\input{tikz/categories/fig_24}\unskip}}}\label{eq:decoration-example}
+\\
+& \xmapsto{\llangle \cdot\cdot\cdot \rrangle}
+\vcenter{\hbox{\resizebox{\ifdim\width>0.85\linewidth 0.85\linewidth\else\width\fi}{!}{\input{tikz/categories/fig_25}\unskip}}}\label{eq:string-diagram-example}
+\end{align}
+\end{strip}
+\end{exmp}
+
+The composite is the cospan $\left(X_{1}\xrightarrow{i} A \xleftarrow{o} X_{3}, d_{3}\right)$, whose
+decoration carries one hyperedge per box and per spider, each recording the ports it reads and the
+ports it writes together with its label. Reading those hyperedges back through the labelling
+function returns the morphism $d_{3}\sim(f\otimes{}k);(\mu\otimes{}\mathrm{id});h;\mu$. The port
+colours are the abstract wire types we return to in the object-centric Petri net analysis.
+
+Many different composites of $(\mu,\delta)$ and $f,k,h$ denote this same string diagram, which is
+the point, since only the connectivity of the diagram carries information.
+
+Having described the fundamental components of hypergraphs, and how they informally map across to Petri nets, the remaining step is to describe a whole model with cospans.
+
+The device is a set of cospans from which all behaviour of the model can be reconstructed. Such sets are called cospan signatures.
+
+\subsection{From a model to its signature}
+
+The link between composition and process mining is simple. Each transition of a
+model, with its input and output data, is a decorated cospan, a generator, and these
+generators are the building blocks. The model's signature is the set of them. Composing
+generators yields the model's connected diagrams, and each diagram's traces are its
+linearisations (Section~\ref{sec:semantics}), up to the deformation and reordering the
+hypergraph structure permits. The signature is thus a finite set of building-block
+transitions that generate the category. We now define it and unravel each component.
+\begin{definition}[Cospan-algebra signature]
+A cospan-algebra signature, also just called a signature, $\Sigma$ is a set of cospans $\left\{g_t = \left(X_i\xrightarrow{i_t} A_t \xleftarrow{o_t} X_j,\; d_t\right) : t \in T\right\}$ where $T$ is some indexing set, $X_i$ and $X_j$ are boundary objects indexed by integers.
+\end{definition}
+Intuitively, a signature is a finite set of cospan objects from which all possible morphisms in a hypergraph category can be constructed. For process mining, we will be interested in signatures which are generated by the transitions of a process model, and the cospans will be defined by the input and output data of these transitions.
+The signature of the running example is the set of its three boxes,
+$\Sigma=\{a,p,s\}$ with their typed boundaries, and
+Figure~\ref{fig:oc-two-faces}(vi) is one composite of those generators, with
+$p$ used twice.
+
+The final ingredient we need to map traditional process models to the language of hypergraph categories is how to recover the full behaviour of a model from its signature. Typically, we construct what is known as the free hypergraph category $\mathbf{H}(\Sigma)$ generated by $\Sigma$, which holds every diagram obtainable by composing the generators in any sequential and parallel arrangement, all realisations of the subprocesses running in every configuration. This is far too large a space for most process mining discovery settings, since it includes wholly independent, concurrently-running processes. We look instead at a constrained space of morphisms which still describes a process model but enables discovery of behaviour.
+\begin{definition}[Connected process diagram]
+Let $\Sigma$ be a signature. A connected process diagram is a diagram with any boundary, built from generators in $\Sigma$,
+that contains at least one generator occurrence and satisfies two conditions.
+\begin{itemize}
+\item \textbf{Connected.} All generator occurrences are joined by wires, so that there is a path of wires between any two of them
+\item \textbf{No branching or merging.} There are no Frobenius operators (i.e.\ no wire mergers or splits) in the diagram
+\end{itemize}
+\end{definition}
+A single executable run therefore uses none of the Frobenius operators introduced
+above. The split-and-merge structure lives only in the ambient model, where one
+branching wire stands compactly for the many runs that resolve it. This is the
+precise sense in which those operators are model-level scaffolding rather than part
+of any individual behaviour.
+\begin{exmp}[Connected process diagram]
+Consider the string diagram in Eq.~\ref{eq:string-diagram-example}. Forgetting types, and replacing any mergers or splits with individual wires results in a connected process diagram. Additionally, rewiring the output of box $k$ so that it passes through the diagram results in a disconnected diagram, which the connected process diagrams do not include. Consequently we have the diagrams as in Eq.~\ref{eq:connected-process-diagram}.
+\begin{strip}
+\begin{align}\label{eq:connected-process-diagram}
+\vcenter{\hbox{\input{tikz/categories/fig_26}\unskip}}
+\hspace{1cm}
+\vcenter{\hbox{\input{tikz/categories/fig_27}\unskip}}
+\end{align}
+\end{strip}
+\end{exmp}
+Connected process diagrams are the morphisms of $\mathbf{F}(\Sigma)$
+(Definition~\ref{def:free-category}) whose occurrences stay connected, and they form the
+default selection of Section~\ref{subsec:theorem}. In practice a
+bounded depth-first search over composites, deduplicated up to isomorphism, suffices. We
+do not dwell on the enumeration here. The signature is also the object over which models written in different notations are later compared, since each notation yields one by the same construction (Section~\ref{sec:conversion-framework}).
+
+\subsection{Reading traces off a diagram}\label{sec:semantics}
+
+A connected string diagram in our hypergraph category framework encodes a process at the level of causal structure rather than as a single execution sequence. Intuitively, each box represents an action in the process, while the wires record which actions must occur before others and which may occur independently. Thus the diagram captures the dependency pattern shared by all traces in the same equivalence class.
+
+The traces a string diagram represents are found by extracting a partial order from it and enumerating all its linear extensions, or total orders. We start with obtaining the underlying causal structure of the string diagram.
+\begin{definition}[Causal partial order of a connected process diagram]\label{def:causal-partial-order}
+Given a connected process diagram, its causal partial order is the partial order generated
+by $a \le b$ whenever an output of box $a$ is directly connected to an input of box $b$.
+As a relation it is a directed acyclic graph (DAG).
+\end{definition}
+Each node of the DAG represents a unique occurrence of a process activity, even if multiple nodes share the same activity label via some labelling function $\ell$. The transitive closure of the DAG is the causal partial order on activity occurrences, capturing the causal dependencies between them. The set of traces associated with a connected process diagram is then obtained by enumerating all linear extensions of this partial order and mapping nodes to their activity labels via $\ell$.
+\begin{figure}[htbp]
+\centering
+\input{tikz/categories/fig_28}\unskip
+\caption{String diagram with repeated boxes}\label{fig:repeated-boxes}
+\end{figure}
+\begin{exmp}[Traces of a string diagram]
+Consider the string diagram in Fig.~\ref{fig:repeated-boxes}. Algebraically this is written as $(f\otimes{}k);h;(f\otimes{}k)$. Define a labelling by function $\ell:(f\otimes{}k);h;(f\otimes{}k)\to{}(f_1\otimes{}k_1);h;(f_2\otimes{}k_2)$. The partial orders can be read off as $f_1\le{}h$, $k_1\le{}h$, $h\le{}f_2$, $h\le{}k_2$. The Hasse diagram for this partial order is then given by,
+\begin{center}
+\input{tikz/categories/fig_29}\unskip
+\end{center}
+The total orders associated with this partial order are $\langle f_1k_1hf_2k_2\rangle$, $\langle k_1f_1hf_2k_2\rangle$, $\langle f_1k_1hk_2f_2\rangle$ and $\langle k_1f_1hk_2f_2\rangle$. Applying the inverse labels $\ell^{-1}$, and taking the unique set of total orders if necessary, gives us the traces represented by the string diagram, $\langle fkhfk\rangle$, $\langle kfhfk\rangle$, $\langle fkhkf\rangle$ and $\langle kfhkf\rangle$.
+\end{exmp}
+This reading is the trace semantics
+\[
+\Gamma : \mathbf{F}(\Sigma) \to \mathcal{P}(\mathcal{L}^\ast),
+\]
+which sends each morphism $f$ of the free symmetric monoidal category $\mathbf{F}(\Sigma)$ to its set of traces $\Gamma(f)$, where $\mathcal{L}^\ast$ denotes all finite sequences of activity labels. Section~\ref{sec:general-framework} defines $\mathbf{F}(\Sigma)$ and $\Gamma$ precisely (Definitions~\ref{def:free-category} and~\ref{def:trace-map}), with $\Gamma(f)$ empty when $f$ is unsatisfiable, and the language $L_{\mathcal{S}}(\Sigma)$ of a selection of morphisms. Here, the causal order of $f$ is the partial order induced by its DAG, and its traces are the linear extensions of that order. Intuitively, traces are obtained by listing activity occurrences in any order that respects the flow of execution defined by the diagram. Thus, trace semantics are obtained by first extracting the causal dependencies between activity occurrences, then enumerating all execution orders consistent with these dependencies, and finally mapping occurrences to activity labels if necessary.
+
+On the running example the causal order has four occurrences, $a$ below the two
+packs and both packs below $s$. It has two linear extensions, which differ only
+in the order of the two $p$ occurrences, so the labelling folds them into the
+single trace $\langle a,p,p,s\rangle$, and $\Gamma$ returns exactly that set.
+The packs' concurrency is visible in the diagram and absent from the trace,
+the same loss that Section~\ref{sec:introduction} laid out for sequence-based
+comparison.
+
+\begin{proposition}[Normal form of a scenario]\label{prop:scenario-normal-form}
+Let $f$ be a scenario, a morphism of $\mathbf{F}(\Sigma)$. Any two factorisations of $f$ into generators induce the same causal partial order $D_f$ (Definition~\ref{def:causal-partial-order}) up to isomorphism, called the causal poset of $f$. The factorisations of $f$ into a total generator sequence are in bijection with the linear extensions $\mathrm{Lin}(D_f)$. Consequently $\Gamma(f)$ is the image under $\ell$ of $\mathrm{Lin}(D_f)$, and $f$ determines one labelled poset up to isomorphism. A fully resolved scenario in this sense is what partial-order accounts of process behaviour call a variant, one choice-free run presented as a single labelled poset. A loop in the model gives no cycle in a scenario and appears as repeated composition of generators (Section~\ref{subsec:free-category}).
+\end{proposition}
+\begin{proof}
+The generators appearing in $f$ are its activity occurrences. Each wire $(a,w,b)$ of $f$ records that an output of the occurrence $a$ feeds an input of the occurrence $b$, so it fixes a covering pair $a\le b$ of the occurrence DAG. The DAG, and hence its transitive closure $D_f$, is therefore determined by the wiring of $f$ alone and does not depend on the chosen factorisation. Two factorisations of $f$ differ only by reordering generators that share no wire, an application of the interchange law that leaves the DAG unchanged, which gives the invariance up to isomorphism. A total factorisation lists the occurrences in an order that respects every wire, so total factorisations are exactly the topological sortings of the DAG, which are the linear extensions of $D_f$. Applying the labelling $\ell$ to each such sequence yields $\Gamma(f)$.
+\end{proof}
+
+\begin{remark}
+In process mining, and Petri net theory more generally, the language over a net is tied to an initial marking $M_0$, with the possibility of imposing some final marking $M_1$. The trace semantics defined here is instead a property of a diagram, so $\Gamma$ applies to every morphism of $\mathbf{F}(\Sigma)$, whatever its boundary. That makes it notation-independent. A model's trace language is the union of $\Gamma$ over a selection of morphisms. Start and end generators that play the part of $M_0$ and $M_1$ are a choice made in the analysis of a model (Section~\ref{subsec:analysis}), and they leave $\Sigma$ unchanged.
+\end{remark}
+
+Computationally, realising $\Gamma$ means listing the linear extensions of the
+causal partial order, which standard algorithms do in time proportional to the
+output~\cite{knuthArtComputerProgramming2011,ruskeyCombinatorialGeneration2003}.
+Counting them instead is
+$\#$P-complete~\cite{brightwellCountingLinearExtensions1991}.
+
+To bring the section together, here is the whole construction read back in process-mining
+terms. A signature is the set of a model's generators, its building-block transitions,
+each a transition with its input and output data. Composing these generators along shared
+typed boundaries assembles the morphisms of $\mathbf{F}(\Sigma)$, each
+diagram a partial order of activities. The trace semantics $\Gamma$ then turns each diagram
+back into observable behaviour, the set of execution orders it admits. Composition is thus
+how a model is built from its transitions, and $\Gamma$ is how its trace-language
+behaviour is recovered. This makes $\Gamma$ a deliberately lossy projection, since it reduces each diagram to the set of its linear extensions and drops the concurrency that the partial order records, and the signature-level certificate of Section~\ref{sec:conversion-framework} later recovers what $\Gamma$ discards. The one ingredient still missing is where a model's generators come
+from. For every notation this paper treats, object-centric Petri nets, causal nets,
+process trees, and BPMN, they are not chosen by hand but read off the model by a single
+construction, the same for all four. We turn to it now (Section~\ref{sec:general-framework}).

@@ -1,0 +1,218 @@
+\FloatBarrier
+\subsection{BPMN}\label{sec:bpmn}
+
+Business Process Model and Notation (BPMN) is a widely-used graphical notation for
+specifying business processes~\cite{BusinessProcessModel}, standardised as ISO/IEC 19510:2013.
+BPMN is thus a first-class modelling language in its own right.
+In the process-mining context the core elements are activities, XOR gateways (exclusive
+choice), AND gateways (parallel split/join), OR gateways (inclusive choice/merge), and
+sequence flows. We type BPMN's control flow directly, each sequence flow and gateway carrying an
+object type, and give the resulting object-centric BPMN (OCBPMN) its cospan-algebra presentation, one further
+instance of the general framework. Earlier object-centric treatments of BPMN take a different route
+(Section~\ref{subsec:bpmn-related}).
+Read at the level of models, this generalises the Kalenkova conversion between BPMN and Petri nets~\cite{kalenkovaProcessMiningUsing2017} to a single framework that covers four notations at once.
+
+\begin{definition}[BPMN model]\label{def:bpmn}
+  A BPMN model is a tuple
+  \[
+    B = (N, F, \ell, \mathcal{O}),
+  \]
+  where $N$ is a finite set of flow objects and $\mathcal{O}$ is a finite set of
+  object types.
+  Here $F \subseteq N \times \mathcal{O} \times N$ is the set of typed sequence flows,
+  a typed multigraph in which an arc $(x,\omega,y)\in F$ records that an object of type
+  $\omega\in\mathcal{O}$ flows from $x$ to $y$, mirroring the typed dependency multigraph
+  $D$ of Definition~\ref{def:causal-net}, and
+  $\ell : N \to \{\mathrm{activity}, \mathrm{event}, \mathrm{AND}, \mathrm{XOR}, \mathrm{OR}\}$
+  assigns a BPMN node type to each flow object. A start event has no incoming flow and an end event
+  has no outgoing flow.
+  Write $A = \ell^{-1}(\mathrm{activity})$ for the activities and $G = N \setminus A$ for the
+  gateways and events. Each flow carries an object type $\omega$, which is the edge typing the
+  general framework uses. Gateways carry no
+  object type of their own and are control-flow routing constructs
+  (Remark~\ref{rem:bpmn-typed-gateways}).
+  The control-flow graph of $B$ is the directed graph $(N, F)$.
+\end{definition}
+
+BPMN's OR gateways (inclusive choice) are the one construct without a direct AND/XOR
+reading, and the least settled part of the standard's token semantics. The difficulty is the
+OR-join, which must fire once exactly those incoming branches the matching split activated
+have completed, in general a non-local decision that operational token semantics settle only
+with global lookahead~\cite{dijkmanSemanticsAnalysisBusiness2008}. We sidestep the
+operational question denotationally. Our concern is the structural (trace) language of a
+model, what it \emph{allows} to happen, not whether a particular token run deadlocks, and
+read this way an OR gateway is just the finite family of branch subsets it may activate,
+each subset an ordinary AND-binding. The join then consumes exactly the subset the split
+committed, so no global state is read, which is the reading object-centric causal nets and
+Petri nets already use for inclusive choice.
+
+\begin{definition}[OR-gateway semantics]\label{def:or-semantics}
+  We read an OR gateway denotationally, as the set of branch subsets it allows.
+  For a $k$-ary OR gateway with branch set $S$, write
+  $\mathcal{P}^+(S) = \{ U \subseteq S \mid U \neq \emptyset \}$ for its $2^k - 1$
+  non-empty subsets. The gateway denotes the inclusive-choice family indexed by
+  $\mathcal{P}^+(S)$. An OR-split commits one $U \in \mathcal{P}^+(S)$ and activates exactly the
+  branches in $U$ concurrently, and the matching OR-join fires once exactly the branches in $U$ have
+  completed, the committed $U$ recorded as the gateway's binding. Each $U$ is thus an ordinary
+  AND-binding and the gateway is their XOR. It is the object-centric causal-net activity with
+  output-binding set $\mathrm{Out}(g)=\mathcal{P}^+(S)$, and in OCPN form the $2^k-1$ silent AND-transitions
+  selected by an XOR.
+\end{definition}
+
+Because the committed $U$ is recorded as a binding, the OR-join reads exactly what the split wrote
+and consults no global state. Replacing each OR gateway by its $\mathcal{P}^+(S)$ alternatives
+(Definition~\ref{def:or-semantics}), each an XOR-selected AND-binding, leaves a finite AND/OR graph whose mediators are all tagged AND or XOR (Definition~\ref{def:lm-graph}), with the same signature. From there the construction is the
+OCPN and OCCN one unchanged. The AND/OR graph is walked, and each activity's
+gateway-mediated neighbourhoods are read off it.
+
+This instantiates the general framework of Section~\ref{sec:general-framework}, and the two mapping
+choices mirror the earlier sections. An activity is a generator. A gateway is a mediator, an AND
+gateway an AND, an XOR gateway an XOR, and an OR gateway the XOR-of-ANDs above. A $1$-ary gateway is
+the degree-$(1,1)$ mediator where AND, XOR and a SEQ pass-through all coincide, and simply forwards
+its one branch. The gateways carry no generator of their own, exactly as the operators of the
+process tree do not (Remark~\ref{rem:bpmn-typed-gateways}). Given
+$B=(N,F,\ell,\mathcal{O})$, the instance map is as follows.
+\medskip
+\begin{center}
+  \small\begin{tabularx}{\linewidth}{@{}lX@{}}
+    \hline
+    General framework & BPMN \\
+    \hline
+    AND/OR graph $(V,E)$ & the control-flow graph $(N,F)$ \\
+    Activities $\mathcal{A}$ & tasks $A$ \\
+    AND mediators & AND gateways, and the start and end events, where a walk ends at $\bot$ or $\top$ \\
+    XOR mediators & XOR gateways, and OR gateways (exploded to XOR-of-ANDs over $\mathcal{P}^+(S)$) \\
+    SEQ pass-throughs & $1$-ary gateways, where AND, XOR and SEQ coincide \\
+    \hline
+  \end{tabularx}
+\end{center}
+\medskip
+The signature comes from $B$ as given. Inserting a type-preserving gateway of one input and one
+output on any flow leaves every reached family, every context and hence every generator unchanged,
+since a $1$-ary mediator forwards under both the AND and the XOR rule and wires are named by the
+activities at their ends. The construction is therefore invariant under the normalisation of
+\citet{dijkmanSemanticsAnalysisBusiness2008} without requiring it, which
+matters because that normalisation is stated for their Petri-net mapping and leaves the OR-join
+aside. Nothing here depends on resolving an OR-join. The signature enumerates the paths a model
+permits and says nothing about how a running system would choose between them.
+
+The engine of Section~\ref{sec:general-framework} runs unchanged, with one instance-specific
+fact. Reachability is through the gateways only, an AND gateway joining one reached set from each
+of its branches, since they occur together, and an XOR gateway keeping the reached sets of its
+branches separate, since exactly one of them occurs. The context, generator, and composition steps
+are those of Definitions~\ref{def:contexts-general} and~\ref{def:generator-cospan-general} on the
+typed flows.
+
+\begin{figure*}[tp]
+  \centering
+  \input{tikz/running_example/re_bpmn_example}\unskip
+  \caption{A small object-centric BPMN model in canonical form, over order (blue)
+    and item (red). The start emits an order and an item, and an AND-split gateway
+    ($+$) routes them down parallel branches. An XOR gateway ($\times$) verifies
+    ($b$) or expedites ($e$) the order while $c$ packs the item, and an AND-join gateway
+    ($+$) synchronises them for shipping ($s$). Every gateway preserves object
+    types, order flows staying order-typed and item flows item-typed.}
+  \label{fig:re-obpmn}
+\end{figure*}
+
+\begin{figure*}[tp]
+  \centering
+  \input{tikz/running_example/re_bpmn_cospans}\unskip
+  \caption{The generator cospans of Fig.~\ref{fig:re-obpmn}. Gateways are
+    mediators and yield no generators, while the activities do. The XOR gateway gives one
+    generator per branch ($g_b$, $g_e$). The item thread is $g_c$, and $g_s$ is the
+    object-centric synchronisation, its order port arriving from $b$ or $e$ (the
+    XOR resolved upstream), so $s$ has two contexts.}
+  \label{fig:re-obpmn-cospans}
+\end{figure*}
+
+\begin{exmp}[A small OCBPMN and its generator cospans]
+  \label{ex:running-bpmn-cospan}
+  Consider the OCBPMN of Fig.~\ref{fig:re-obpmn}, over the object types
+  $\mathrm{order}$ and $\mathrm{item}$. Every split and join is an explicit gateway,
+  and each gateway preserves object types. The AND-split routes the order and item
+  by type, the XOR offers two same-type alternatives for the order, and nothing
+  creates or converts a type (Remark~\ref{rem:bpmn-typed-gateways}).
+
+  The gateways are mediators, so only the activities yield generators
+  (Fig.~\ref{fig:re-obpmn-cospans}). The XOR gateway gives one generator per branch,
+  $g_b:\{(\bot,\mathrm{o},b)\}\to\{(b,\mathrm{o},s)\}$ and
+  $g_e:\{(\bot,\mathrm{o},e)\}\to\{(e,\mathrm{o},s)\}$. The item thread is
+  $g_c:\{(\bot,\mathrm{it},c)\}\to\{(c,\mathrm{it},s)\}$. The AND-join is
+  the object-centric synchronisation, shown in its $b$-context,
+  \begin{gather*}
+    g_s = \Bigl(\{(b,\mathrm{o},s),(c,\mathrm{it},s)\}
+      \xrightarrow{\iota} A \xleftarrow{\iota}\twocolbreak 
+      \{(s,\mathrm{o},\top),(s,\mathrm{it},\top)\},\; d_s\Bigr).
+  \end{gather*}
+  Its left boundary carries both object types. The order arrives from $b$ or from $e$ (the XOR
+  resolved upstream), so $s$ has two contexts, the $e$-context replacing $b$ by $e$. The AND
+  gateways correspond to $s$'s AND-binding and the XOR gateway to the order's alternatives, matching
+  the causal-net bindings of Section~\ref{sec:causal-nets}. Any count constraint (a key-distribution
+  split, say) relates the leg counts of $s$, is recorded in its constraint system $\Lambda$
+  (Definition~\ref{def:multiplicity-decoration}) and needs no further machinery.
+\end{exmp}
+
+\begin{figure*}[tp]
+  \centering
+  \resizebox{\textwidth}{!}{\input{tikz/running_example/re_bpmn_or}\unskip}
+  \caption{(a) An OR gadget over $S=\{v,u\}$, order-typed. It denotes the XOR over the non-empty
+    subsets $\mathcal{P}^+(S)=\{\{v\},\{u\},\{v,u\}\}$, the last an AND-binding. (b) The resulting
+    three contexts of $s$, each a decorated cospan and the string diagram it denotes. The
+    $\{v,u\}$ context gives $s$ two order ports.}
+  \label{fig:re-bpmn-or}
+\end{figure*}
+
+\begin{exmp}[An OR gateway and its alternatives]
+  \label{ex:bpmn-or}
+  Suppose an order must undergo at least one of two optional checks, verify
+  ($v$) and audit ($u$), before ship ($s$). An OR-split over the branch
+  set $S=\{v,u\}$ feeds an OR-join into $s$ (Fig.~\ref{fig:re-bpmn-or}). By
+  Definition~\ref{def:or-semantics} the gateway denotes the family indexed by
+  $\mathcal{P}^+(S)=\bigl\{\,\{v\},\{u\},\{v,u\}\,\bigr\}$, so $s$ gains one context per committed
+  subset, with left boundaries
+  \[
+    \{(v,\mathrm{o},s)\},\quad \{(u,\mathrm{o},s)\},\quad
+    \{(v,\mathrm{o},s),(u,\mathrm{o},s)\},
+  \]
+  the last being the AND-binding in which both checks were taken. The branches
+  contribute $g_v:\{(\bot,\mathrm{o},v)\}\to\{(v,\mathrm{o},s)\}$ and, likewise,
+  $g_u$. The inclusive choice is thus an XOR over these three AND-bindings, exactly the
+  $\mathcal{P}^+(S)$ explosion, and the OR-join consumes precisely the binding the split
+  committed, so no global token state is consulted.
+\end{exmp}
+
+\begin{remark}[Typed gateways are routing-only]
+  \label{rem:bpmn-typed-gateways}
+  Every gateway is type-preserving, carrying the same set of object types on its incoming and
+  outgoing flows and serving only to route objects. A gateway is a mediator, so it has no port of
+  its own and the walk of Definition~\ref{def:contexts-general} passes through it. A gateway may not
+  convert one type into another. Any count constraint on the routing (a key-distribution split, a
+  batch cardinality) relates the leg counts of an activity it routes to and enters that activity's
+  constraint system $\Lambda$ (Definition~\ref{def:multiplicity-decoration}) without further
+  machinery.
+\end{remark}
+
+\begin{theorem}[Canonical cospan-algebra presentation of BPMN]\label{thm:bpmn-cospan}
+  Let $B$ be any finite BPMN model.
+  Then $B$ canonically determines a cospan-algebra signature $\Sigma$, and hence the free
+  symmetric monoidal category $\mathbf{F}(\Sigma)$.
+\end{theorem}
+
+\begin{proof}
+  The delta is the inclusive choice. By Definition~\ref{def:or-semantics} each OR gateway is the
+  $\mathcal{P}^+(S)$ family of XOR-selected AND-bindings, a finite replacement that changes no
+  signature, and afterwards every mediator is an AND or an XOR, a $1$-ary gateway being the
+  degree-$(1,1)$ case, and an edge joining two activities directly is the degenerate case,
+  traversed in one step (Definition~\ref{def:lm-graph}), and inserting a type-preserving $1$-ary
+  gateway on such an edge changes no reached family and so no generator. The schema of Section~\ref{sec:notation-by-notation} then applies at the instance
+  map above, the tasks being the activities, each edge carrying its flow type $\omega$
+  (Definition~\ref{def:bpmn}), and finiteness of $N$ giving the conditions of
+  Definition~\ref{def:lm-graph}. The mediators are the same AND/XOR kinds as the Petri- and
+  causal-net instances, and the reach families are finite even under cyclic gateways, since the
+  graph is finite and a branch stops at any node already on its path
+  (Definition~\ref{def:contexts-general}).
+\end{proof}
+
+The presentation needs no structural precondition on $B$, and the OR-join, which operational token semantics settle only with global lookahead~\cite{dijkmanSemanticsAnalysisBusiness2008}, is handled denotationally.
+

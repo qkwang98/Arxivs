@@ -1,0 +1,3293 @@
+SATURATION AND CONTAINMENT
+
+This file records the exact linear-conjugacy test and the equal-dimensional saturation calculation for the cubic-fourfold candidates.  The matrices, invariant bases, and individual certificates are not repeated in this compact copy.
+
+For finite matrix groups H,L <= GL(6,C), the calculation asks whether P^-1 H P is a subgroup of L for some P in GL(6,C).  A positive answer gives the reverse inclusion of invariant families.  If both smooth families have the same dimension, the smaller group does not define a saturated family.  Necessary group and character tests may reject a pair, but an undecided comparison never removes a candidate.
+
+Some explicit models for proper large families were obtained by a separate representation calculation.  This supplies equation-side representatives for 29 rows.  The completeness of the large-family list comes from the lattice classification, together with smoothness, self-conjugacy, and saturation; it is not deduced from an exhaustive representation search.
+
+GAP CODE: STRICT LINEAR EMBEDDING
+
+## 5. Proof-grade conjugacy embedding for finite matrix groups
+#############################################################################
+
+## Prepare a faithful permutation model.  The group identifier is annotation
+## only and is never used as a negative embedding certificate.
+PreprocessMatrixGroupStrict := function(generators, reportedOrder, groupId)
+    local info, matrixGroup, isomorphism, order, dimension;
+
+    if not IsList(generators) or Length(generators) = 0 then
+        Error("A nonempty list of invertible square matrices is required.");
+    fi;
+
+    dimension := CF_MatrixListDimension(generators);
+    if not ForAll(
+        generators,
+        matrix -> not IsZero(DeterminantMat(matrix))
+    ) then
+        Error("Every matrix-group generator must be invertible.");
+    fi;
+
+    info := rec();
+    info.gens := generators;
+    info.ambientDimension := dimension;
+    info.reported_order := reportedOrder;
+    info.h_id := groupId;
+    info.h_id_doc := groupId;
+    matrixGroup := Group(generators);
+    info.G := matrixGroup;
+
+    if not IsFinite(matrixGroup) then
+        return rec(
+            strict_ok := false,
+            G := matrixGroup,
+            gens := generators,
+            ambientDimension := dimension,
+            reason := "infinite_group"
+        );
+    fi;
+
+    order := Size(matrixGroup);
+    if reportedOrder <> fail and order <> reportedOrder then
+        Print(
+            "WARNING strict order mismatch reported=", reportedOrder,
+            " computed=", order, "\n"
+        );
+    fi;
+
+    isomorphism := IsomorphismPermGroup(matrixGroup);
+    if isomorphism = fail then
+        return rec(
+            strict_ok := false,
+            G := matrixGroup,
+            gens := generators,
+            ambientDimension := dimension,
+            reason := "no_perm_model"
+        );
+    fi;
+
+    info.iso_perm := isomorphism;
+    info.P := Image(isomorphism);
+    info.order := Size(info.P);
+    SetSize(matrixGroup, info.order);
+    info.strict_ok := true;
+    info.ok := true;
+    info.exponent := Exponent(info.P);
+    return info;
+end;
+
+
+StrictEnsureFingerprints := function(info)
+    if IsBound(info.fps) then
+        return info.fps;
+    fi;
+
+    info.fps := ConjugacyFingerprintMultisets(info.G, info.iso_perm);
+    return info.fps;
+end;
+
+
+StrictEnsureDerived := function(info)
+    if not IsBound(info.derived_orders) then
+        info.derived_orders := DerivedSeriesOrders(info.P);
+    fi;
+
+    return info.derived_orders;
+end;
+
+
+## Cache all source-side character data which are independent of the target.
+## A source can be compared with many targets in a catalogue run, so these
+## conjugacy classes and traces should be constructed only once.
+StrictEnsureSourceCharacterData := function(info)
+    local data;
+
+    if IsBound(info.strict_source_character_data) then
+        return info.strict_source_character_data;
+    fi;
+
+    data := rec();
+    data.generators := info.gens;
+    data.permutationGenerators := List(
+        data.generators,
+        element -> Image(info.iso_perm, element)
+    );
+    data.generatorTraces := List(data.generators, TraceMat);
+    data.classRepresentatives := List(
+        ConjugacyClasses(info.P),
+        Representative
+    );
+    data.classTraces := List(
+        data.classRepresentatives,
+        element -> TraceMat(
+            PreImagesRepresentative(info.iso_perm, element)
+        )
+    );
+    info.strict_source_character_data := data;
+    return data;
+end;
+
+
+## Cache a compact generating set used only to select the subgroup-search
+## backend.  Failure is harmless and selects the general backend.
+StrictEnsureSmallGeneratingSet := function(info)
+    local caught;
+
+    if IsBound(info.strict_small_generating_set_record) then
+        return info.strict_small_generating_set_record;
+    fi;
+
+    caught := CALL_WITH_CATCH(SmallGeneratingSet, [info.P]);
+    if not caught[1] then
+        info.strict_small_generating_set_record := rec(
+            ok := false,
+            generators := fail
+        );
+    else
+        info.strict_small_generating_set_record := rec(
+            ok := true,
+            generators := caught[2]
+        );
+    fi;
+    return info.strict_small_generating_set_record;
+end;
+
+
+## Return the full automorphism group.  Exceeding max_aut gives an
+## inconclusive record rather than a negative embedding result.
+StrictAutGroup := function(info, options)
+    local automorphismGroup, caught;
+
+    if IsBound(info.strict_automorphism_group) then
+        automorphismGroup := info.strict_automorphism_group;
+    else
+        caught := CALL_WITH_CATCH(AutomorphismGroup, [info.P]);
+        if not caught[1] then
+            return rec(
+                exhaustive := false,
+                size := fail,
+                aut := fail,
+                reason := "aut_error"
+            );
+        fi;
+        automorphismGroup := caught[2];
+        info.strict_automorphism_group := automorphismGroup;
+    fi;
+    if IsBound(options.max_aut)
+       and Size(automorphismGroup) > options.max_aut then
+        return rec(
+            exhaustive := false,
+            size := Size(automorphismGroup),
+            aut := fail,
+            reason := "aut_capped"
+        );
+    fi;
+
+    return rec(
+        exhaustive := true,
+        size := Size(automorphismGroup),
+        aut := automorphismGroup
+    );
+end;
+
+
+## Return one representative of every outer-automorphism coset.  Inner
+## twists are redundant: after an embedding phi, composing with conjugation
+## by h in the source is target conjugation by phi(h), and hence preserves
+## every target trace.  The transversal is cached on the source info record.
+StrictOuterAutRepresentatives := function(info, options)
+    local automorphismRecord, automorphismGroup, innerGroup,
+          representatives, outerSize, caught;
+
+    automorphismRecord := StrictAutGroup(info, options);
+    if not automorphismRecord.exhaustive then
+        return rec(
+            exhaustive := false,
+            automorphismSize := automorphismRecord.size,
+            innerSize := fail,
+            outerSize := fail,
+            inner := fail,
+            representatives := fail,
+            reason := automorphismRecord.reason
+        );
+    fi;
+    automorphismGroup := automorphismRecord.aut;
+
+    if IsBound(info.strict_inner_automorphism_group) then
+        innerGroup := info.strict_inner_automorphism_group;
+    else
+        caught := CALL_WITH_CATCH(
+            InnerAutomorphismsAutomorphismGroup,
+            [automorphismGroup]
+        );
+        if not caught[1] then
+            return rec(
+                exhaustive := false,
+                automorphismSize := automorphismRecord.size,
+                innerSize := fail,
+                outerSize := fail,
+                inner := fail,
+                representatives := fail,
+                reason := "inner_aut_error"
+            );
+        fi;
+        innerGroup := caught[2];
+        info.strict_inner_automorphism_group := innerGroup;
+    fi;
+
+    outerSize := Index(automorphismGroup, innerGroup);
+    if IsBound(options.max_outer_aut)
+       and outerSize > options.max_outer_aut then
+        return rec(
+            exhaustive := false,
+            automorphismSize := automorphismRecord.size,
+            innerSize := Size(innerGroup),
+            outerSize := outerSize,
+            inner := innerGroup,
+            representatives := fail,
+            reason := "outer_aut_capped"
+        );
+    fi;
+
+    if IsBound(info.strict_outer_automorphism_representatives) then
+        representatives :=
+            info.strict_outer_automorphism_representatives;
+    else
+        caught := CALL_WITH_CATCH(
+            RightTransversal,
+            [automorphismGroup, innerGroup]
+        );
+        if not caught[1] then
+            return rec(
+                exhaustive := false,
+                automorphismSize := automorphismRecord.size,
+                innerSize := Size(innerGroup),
+                outerSize := outerSize,
+                inner := innerGroup,
+                representatives := fail,
+                reason := "outer_aut_transversal_error"
+            );
+        fi;
+        representatives := caught[2];
+        info.strict_outer_automorphism_representatives := representatives;
+    fi;
+
+    return rec(
+        exhaustive := true,
+        automorphismSize := automorphismRecord.size,
+        innerSize := Size(innerGroup),
+        outerSize := outerSize,
+        inner := innerGroup,
+        representatives := representatives
+    );
+end;
+
+
+## Compatibility wrapper.  Large automorphism groups should be iterated
+## directly through StrictAutGroup rather than materialized as a list.
+StrictAutList := function(info, options)
+    local automorphismRecord;
+
+    automorphismRecord := StrictAutGroup(info, options);
+    if not automorphismRecord.exhaustive then
+        return rec(
+            exhaustive := false,
+            size := automorphismRecord.size,
+            list := fail
+        );
+    fi;
+
+    if automorphismRecord.size > 20000 then
+        return rec(
+            exhaustive := false,
+            size := automorphismRecord.size,
+            list := fail,
+            reason := "aut_list_too_large_use_group"
+        );
+    fi;
+
+    return rec(
+        exhaustive := true,
+        size := automorphismRecord.size,
+        list := AsList(automorphismRecord.aut)
+    );
+end;
+
+
+## Exact equality of the two natural characters on every conjugacy class.
+StrictTraceAllClasses := function(firstInfo, secondInfo, homomorphism)
+    local class, element, image;
+
+    for class in ConjugacyClasses(firstInfo.P) do
+        element := PreImagesRepresentative(
+            firstInfo.iso_perm,
+            Representative(class)
+        );
+        image := PreImagesRepresentative(
+            secondInfo.iso_perm,
+            Image(
+                homomorphism,
+                Image(firstInfo.iso_perm, element)
+            )
+        );
+
+        if TraceMat(element) <> TraceMat(image) then
+            return false;
+        fi;
+    od;
+
+    return true;
+end;
+
+
+## Cache target traces for one isomorphism from the source permutation group.
+IsoTraceTable := function(firstInfo, secondInfo, isomorphism)
+    return rec(
+        info_i := firstInfo,
+        info_j := secondInfo,
+        iso := isomorphism,
+        cache := NewDictionary(One(firstInfo.P), true)
+    );
+end;
+
+
+IsoTraceOf := function(table, element)
+    local value, image;
+
+    if KnowsDictionary(table.cache, element) then
+        return LookupDictionary(table.cache, element);
+    fi;
+
+    image := PreImagesRepresentative(
+        table.info_j.iso_perm,
+        Image(table.iso, element)
+    );
+    value := TraceMat(image);
+    AddDictionary(table.cache, element, value);
+    return value;
+end;
+
+
+## Necessary conditions for a conjugacy embedding.  No catalogue group ID is
+## used here: every negative result comes from an intrinsic invariant.
+NecessaryFiltersStrict := function(firstInfo, secondInfo)
+    local firstOk, secondOk;
+
+    firstOk := (IsBound(firstInfo.strict_ok) and firstInfo.strict_ok)
+        or (IsBound(firstInfo.ok) and firstInfo.ok);
+    secondOk := (IsBound(secondInfo.strict_ok) and secondInfo.strict_ok)
+        or (IsBound(secondInfo.ok) and secondInfo.ok);
+
+    if not firstOk or not secondOk then
+        return rec(ok := false, reason := "bad_group_data");
+    fi;
+
+    if firstInfo.order = fail or secondInfo.order = fail then
+        return rec(ok := false, reason := "bad_group_data");
+    fi;
+
+    if not IsInt(secondInfo.order / firstInfo.order) then
+        return rec(ok := false, reason := "order_divisibility");
+    fi;
+
+    if firstInfo.exponent <> fail and secondInfo.exponent <> fail then
+        if not IsInt(secondInfo.exponent / firstInfo.exponent) then
+            return rec(ok := false, reason := "exponent");
+        fi;
+    fi;
+
+    if IsBound(firstInfo.derived_orders)
+       and IsBound(secondInfo.derived_orders)
+       and firstInfo.derived_orders <> fail
+       and secondInfo.derived_orders <> fail
+       and Length(firstInfo.derived_orders)
+           <= Length(secondInfo.derived_orders) then
+        if ForAny(
+            [1 .. Length(firstInfo.derived_orders)],
+            position -> not IsInt(
+                secondInfo.derived_orders[position]
+                / firstInfo.derived_orders[position]
+            )
+        ) then
+            return rec(ok := false, reason := "derived_series");
+        fi;
+    fi;
+
+    if IsBound(firstInfo.fps) and IsBound(secondInfo.fps)
+       and firstInfo.fps <> fail and secondInfo.fps <> fail then
+        if not IsSubmultisetWeighted(
+            firstInfo.fps.element_orders,
+            secondInfo.fps.element_orders
+        ) then
+            return rec(ok := false, reason := "element_order_multiset");
+        fi;
+
+        if not IsSubmultisetWeighted(
+            firstInfo.fps.weak,
+            secondInfo.fps.weak
+        ) then
+            return rec(ok := false, reason := "weak_fingerprint");
+        fi;
+
+        if not IsSubmultisetWeighted(
+            firstInfo.fps.strong,
+            secondInfo.fps.strong
+        ) then
+            return rec(ok := false, reason := "strong_fingerprint");
+        fi;
+    fi;
+
+    return rec(ok := true, reason := "passed");
+end;
+
+
+## Exhaustively search subgroup images and outer-automorphism twists of the
+## source.  Inner twists are target-conjugate to the identity twist and need
+## not be repeated.  An infrastructure or resource failure is returned as
+## exhaustive=false and must never be interpreted as non-embedding.
+AlgorithmAStrict := function(firstInfo, secondInfo, stopFirst, options)
+    local firstGroup, secondGroup, firstPermGroup, secondPermGroup,
+          embeddings, generators, permutationGenerators,
+          sourceCharacterData,
+          outerAutomorphismRecord, outerAutomorphismRepresentatives,
+          innerAutomorphismGroup, results,
+          isomorphism, automorphism, homomorphism, imageMatrices,
+          firstOrder, secondOrder, subgroup, subgroupClass,
+          primes, prime, Sylow, matches, position, traceTable,
+          generatorTraces, classRepresentatives, classTraces,
+          smallGeneratorRecord, useSubgroupClasses,
+          representative, caught;
+
+    results := [];
+    if not (IsBound(firstInfo.strict_ok) and firstInfo.strict_ok) then
+        return rec(
+            exhaustive := false,
+            list := results,
+            reason := "i_not_strict"
+        );
+    fi;
+    if not (IsBound(secondInfo.strict_ok) and secondInfo.strict_ok) then
+        return rec(
+            exhaustive := false,
+            list := results,
+            reason := "j_not_strict"
+        );
+    fi;
+
+    firstGroup := firstInfo.G;
+    secondGroup := secondInfo.G;
+    firstPermGroup := firstInfo.P;
+    secondPermGroup := secondInfo.P;
+    firstOrder := Size(firstPermGroup);
+    secondOrder := Size(secondPermGroup);
+
+    if not IsInt(secondOrder / firstOrder) then
+        return rec(exhaustive := true, list := results, reason := "order");
+    fi;
+
+    primes := PrimeDivisors(firstOrder);
+    embeddings := [];
+    smallGeneratorRecord := StrictEnsureSmallGeneratingSet(firstInfo);
+    useSubgroupClasses :=
+        secondOrder <= 2000
+        and smallGeneratorRecord.ok
+        and Length(smallGeneratorRecord.generators) > 2;
+
+    ## Equal orders require only a group isomorphism: the image subgroup must
+    ## be the whole target.  This avoids any subgroup enumeration.
+    if firstOrder = secondOrder then
+        caught := CALL_WITH_CATCH(
+            IsomorphismGroups,
+            [firstPermGroup, secondPermGroup]
+        );
+        if not caught[1] then
+            return rec(
+                exhaustive := false,
+                list := results,
+                reason := "isomorphism_groups_error"
+            );
+        fi;
+        if caught[2] <> fail then
+            Add(embeddings, caught[2]);
+        fi;
+    elif Length(primes) = 1 and firstOrder <= 100 then
+        ## GAP's general isomorphic-subgroup search is often slow for
+        ## p-groups.  The Sylow-subgroup path is exhaustive and retains the
+        ## established specialized logic.
+        prime := primes[1];
+        Sylow := SylowSubgroup(secondPermGroup, prime);
+        caught := CALL_WITH_CATCH(AllSubgroups, [Sylow]);
+        if not caught[1] then
+            return rec(
+                exhaustive := false,
+                list := results,
+                reason := "allsubgroups_error"
+            );
+        fi;
+
+        for subgroup in caught[2] do
+            if Size(subgroup) = firstOrder then
+                isomorphism := IsomorphismGroups(
+                    firstPermGroup,
+                    subgroup
+                );
+                if isomorphism <> fail then
+                    Add(embeddings, isomorphism);
+                fi;
+            fi;
+        od;
+    elif useSubgroupClasses then
+        ## IsomorphicSubgroups can be exceptionally slow when the source
+        ## genuinely needs more than two generators.  For a small target,
+        ## enumerating its subgroup conjugacy classes is complete and is the
+        ## backend recommended by GAP's own performance warning.  Cache the
+        ## class list because one target can be used many times.
+        if IsBound(secondInfo.strict_subgroup_conjugacy_classes) then
+            caught := [ true,
+                secondInfo.strict_subgroup_conjugacy_classes ];
+        else
+            caught := CALL_WITH_CATCH(
+                ConjugacyClassesSubgroups,
+                [secondPermGroup]
+            );
+            if caught[1] then
+                secondInfo.strict_subgroup_conjugacy_classes := caught[2];
+            fi;
+        fi;
+        if not caught[1] then
+            return rec(
+                exhaustive := false,
+                list := results,
+                reason := "ccs_error"
+            );
+        fi;
+        for subgroupClass in caught[2] do
+            subgroup := Representative(subgroupClass);
+            if Size(subgroup) = firstOrder then
+                isomorphism := IsomorphismGroups(
+                    firstPermGroup,
+                    subgroup
+                );
+                if isomorphism <> fail then
+                    Add(embeddings, isomorphism);
+                fi;
+            fi;
+        od;
+    else
+        ## IsomorphicSubgroups returns monomorphisms whose image subgroups
+        ## represent all target-conjugacy classes isomorphic to the source.
+        ## Source outer-automorphism representatives are handled below.
+        if IsBound(options.allow_hard_iso)
+           and options.allow_hard_iso = false
+           and secondOrder > 2000 then
+            return rec(
+                exhaustive := false,
+                list := results,
+                reason := "hard_iso_deferred"
+            );
+        fi;
+
+        caught := CALL_WITH_CATCH(
+            IsomorphicSubgroups,
+            [secondPermGroup, firstPermGroup]
+        );
+        if not caught[1] then
+            return rec(
+                exhaustive := false,
+                list := results,
+                reason := "isomorphic_subgroups_error"
+            );
+        fi;
+        embeddings := caught[2];
+    fi;
+
+    sourceCharacterData := StrictEnsureSourceCharacterData(firstInfo);
+    generators := sourceCharacterData.generators;
+    permutationGenerators := sourceCharacterData.permutationGenerators;
+    generatorTraces := sourceCharacterData.generatorTraces;
+    classRepresentatives := sourceCharacterData.classRepresentatives;
+    classTraces := sourceCharacterData.classTraces;
+
+    outerAutomorphismRecord :=
+        StrictOuterAutRepresentatives(firstInfo, options);
+    if not outerAutomorphismRecord.exhaustive then
+        if IsBound(outerAutomorphismRecord.reason) then
+            return rec(
+                exhaustive := false,
+                list := results,
+                reason := outerAutomorphismRecord.reason
+            );
+        fi;
+        return rec(
+            exhaustive := false,
+            list := results,
+            reason := "outer_aut_error"
+        );
+    fi;
+    outerAutomorphismRepresentatives :=
+        outerAutomorphismRecord.representatives;
+    innerAutomorphismGroup := outerAutomorphismRecord.inner;
+
+    for isomorphism in embeddings do
+        traceTable := IsoTraceTable(firstInfo, secondInfo, isomorphism);
+
+        matches := true;
+        for position in [1 .. Length(permutationGenerators)] do
+            if generatorTraces[position]
+               <> IsoTraceOf(
+                   traceTable,
+                   permutationGenerators[position]
+               ) then
+                matches := false;
+                break;
+            fi;
+        od;
+
+        if matches then
+            for position in [1 .. Length(classRepresentatives)] do
+                if classTraces[position]
+                   <> IsoTraceOf(
+                       traceTable,
+                       classRepresentatives[position]
+                   ) then
+                    matches := false;
+                    break;
+                fi;
+            od;
+        fi;
+
+        if matches then
+            homomorphism := GroupHomomorphismByImages(
+                firstPermGroup,
+                secondPermGroup,
+                permutationGenerators,
+                List(
+                    permutationGenerators,
+                    element -> Image(isomorphism, element)
+                )
+            );
+
+            if homomorphism <> fail and IsInjective(homomorphism) then
+                imageMatrices := List(
+                    generators,
+                    element -> PreImagesRepresentative(
+                        secondInfo.iso_perm,
+                        Image(
+                            homomorphism,
+                            Image(firstInfo.iso_perm, element)
+                        )
+                    )
+                );
+                Add(
+                    results,
+                    rec(images := imageMatrices, method := "A_strict")
+                );
+
+                if stopFirst then
+                    return rec(
+                        exhaustive := true,
+                        list := results,
+                        reason := "found"
+                    );
+                fi;
+                continue;
+            fi;
+        fi;
+
+        ## The identity twist was tested above.  The unique representative
+        ## lying in Inn(H) is therefore skipped as well.
+        for automorphism in outerAutomorphismRepresentatives do
+            if automorphism in innerAutomorphismGroup then
+                continue;
+            fi;
+            matches := true;
+            for position in [1 .. Length(permutationGenerators)] do
+                if generatorTraces[position]
+                   <> IsoTraceOf(
+                       traceTable,
+                       Image(
+                           automorphism,
+                           permutationGenerators[position]
+                       )
+                   ) then
+                    matches := false;
+                    break;
+                fi;
+            od;
+
+            if not matches then
+                continue;
+            fi;
+
+            for position in [1 .. Length(classRepresentatives)] do
+                if classTraces[position]
+                   <> IsoTraceOf(
+                       traceTable,
+                       Image(
+                           automorphism,
+                           classRepresentatives[position]
+                       )
+                   ) then
+                    matches := false;
+                    break;
+                fi;
+            od;
+
+            if not matches then
+                continue;
+            fi;
+
+            homomorphism := GroupHomomorphismByImages(
+                firstPermGroup,
+                secondPermGroup,
+                permutationGenerators,
+                List(
+                    permutationGenerators,
+                    element -> Image(
+                        isomorphism,
+                        Image(automorphism, element)
+                    )
+                )
+            );
+
+            if homomorphism = fail or not IsInjective(homomorphism) then
+                continue;
+            fi;
+
+            imageMatrices := List(
+                generators,
+                element -> PreImagesRepresentative(
+                    secondInfo.iso_perm,
+                    Image(
+                        homomorphism,
+                        Image(firstInfo.iso_perm, element)
+                    )
+                )
+            );
+            Add(
+                results,
+                rec(images := imageMatrices, method := "A_strict")
+            );
+
+            if stopFirst then
+                return rec(
+                    exhaustive := true,
+                    list := results,
+                    reason := "found"
+                );
+            fi;
+            break;
+        od;
+
+        if Length(results) > 0 and stopFirst then
+            return rec(
+                exhaustive := true,
+                list := results,
+                reason := "found"
+            );
+        fi;
+    od;
+
+    return rec(
+        exhaustive := true,
+        list := results,
+        reason := "exhausted_no_verified_candidate"
+    );
+end;
+
+
+## Try to construct an explicit conjugating matrix.  A failed witness search
+## does not negate a character-theoretically proved embedding.
+StrictVerifyCandidates := function(firstInfo, secondInfo, candidates)
+    local firstGenerators, candidate, matrix;
+
+    firstGenerators := firstInfo.gens;
+    for candidate in candidates do
+        matrix := FindInvertibleIntertwiner(
+            firstGenerators,
+            candidate.images
+        );
+        if matrix = fail then
+            continue;
+        fi;
+
+        if VerifyConjugation(
+            firstGenerators,
+            candidate.images,
+            matrix,
+            secondInfo.G
+        ) then
+            return rec(
+                found := true,
+                P := matrix,
+                images := candidate.images,
+                method := candidate.method
+            );
+        fi;
+    od;
+
+    return rec(found := false);
+end;
+
+
+## Complete strict entry point.  Its status is one of embedded,
+## no_embedding, or undecided.  Only exhaustive negative searches return
+## no_embedding.
+SearchEmbeddingStrict := function(firstInfo, secondInfo, arg...)
+    local options, filters, search, verification,
+          firstDimension, secondDimension, constructWitness, literalWitness;
+
+    if Length(arg) = 0 then
+        options := rec();
+    else
+        options := arg[1];
+    fi;
+    if not IsRecord(options) then
+        Error("Strict embedding options must be a record.");
+    fi;
+    if not IsBound(options.stop_first) then
+        options.stop_first := false;
+    fi;
+    if not IsBound(options.try_literal_inclusion) then
+        options.try_literal_inclusion := true;
+    fi;
+    if options.try_literal_inclusion <> true
+       and options.try_literal_inclusion <> false then
+        Error("try_literal_inclusion must be true or false.");
+    fi;
+    if not IsBound(options.use_fingerprints) then
+        options.use_fingerprints := true;
+    fi;
+    if options.use_fingerprints <> true
+       and options.use_fingerprints <> false then
+        Error("use_fingerprints must be true or false.");
+    fi;
+    constructWitness := true;
+    if IsBound(options.construct_witness) then
+        if options.construct_witness <> true
+           and options.construct_witness <> false then
+            Error("construct_witness must be true or false.");
+        fi;
+        constructWitness := options.construct_witness;
+    fi;
+
+    if not (IsBound(firstInfo.strict_ok) and firstInfo.strict_ok) then
+        return rec(
+            ok := fail,
+            status := "undecided",
+            reason := "preprocess_i",
+            method := "strict"
+        );
+    fi;
+    if not (IsBound(secondInfo.strict_ok) and secondInfo.strict_ok) then
+        return rec(
+            ok := fail,
+            status := "undecided",
+            reason := "preprocess_j",
+            method := "strict"
+        );
+    fi;
+
+    if IsBound(firstInfo.ambientDimension) then
+        firstDimension := firstInfo.ambientDimension;
+    else
+        firstDimension := CF_MatrixListDimension(firstInfo.gens);
+    fi;
+    if IsBound(secondInfo.ambientDimension) then
+        secondDimension := secondInfo.ambientDimension;
+    else
+        secondDimension := CF_MatrixListDimension(secondInfo.gens);
+    fi;
+    if firstDimension <> secondDimension then
+        return rec(
+            ok := false,
+            status := "no_embedding",
+            reason := "ambient_dimension",
+            method := "filter"
+        );
+    fi;
+
+    if firstInfo.order = fail or secondInfo.order = fail then
+        return rec(
+            ok := fail,
+            status := "undecided",
+            reason := "bad_group_data",
+            method := "filter"
+        );
+    fi;
+    if not IsInt(secondInfo.order / firstInfo.order) then
+        return rec(
+            ok := false,
+            status := "no_embedding",
+            reason := "order_divisibility",
+            method := "filter"
+        );
+    fi;
+    if firstInfo.exponent <> fail and secondInfo.exponent <> fail then
+        if not IsInt(secondInfo.exponent / firstInfo.exponent) then
+            return rec(
+                ok := false,
+                status := "no_embedding",
+                reason := "exponent",
+                method := "filter"
+            );
+        fi;
+    fi;
+
+    ## Many catalogue records use compatible coordinates.  Literal matrix
+    ## containment is already a complete positive certificate with P = 1.
+    ## Failure of this fast path is not used as a negative result.
+    if options.try_literal_inclusion = true
+       and ForAll(
+           firstInfo.gens,
+           element -> element in secondInfo.G
+       ) then
+        if constructWitness then
+            literalWitness := IdentityMat(firstDimension);
+        else
+            literalWitness := fail;
+        fi;
+        return rec(
+            ok := true,
+            status := "embedded",
+            reason := "literal_matrix_subgroup",
+            method := "literal_matrix_subgroup",
+            P := literalWitness,
+            images := ShallowCopy(firstInfo.gens)
+        );
+    fi;
+
+    ## Derived-series orders are normally cheaper than the full element and
+    ## characteristic-polynomial fingerprints.  Apply that exact necessary
+    ## filter first, and construct fingerprints only for surviving pairs.
+    StrictEnsureDerived(firstInfo);
+    StrictEnsureDerived(secondInfo);
+    filters := NecessaryFiltersStrict(firstInfo, secondInfo);
+
+    if not filters.ok then
+        if filters.reason = "bad_group_data" then
+            return rec(
+                ok := fail,
+                status := "undecided",
+                reason := "bad_group_data",
+                method := "filter"
+            );
+        fi;
+        return rec(
+            ok := false,
+            status := "no_embedding",
+            reason := filters.reason,
+            method := "filter"
+        );
+    fi;
+
+    # Fingerprints are optional necessary filters.  Disabling them changes
+    # only the fast rejection stage: AlgorithmAStrict below still performs
+    # the exhaustive subgroup and character comparison.
+    if options.use_fingerprints then
+        StrictEnsureFingerprints(firstInfo);
+        StrictEnsureFingerprints(secondInfo);
+        filters := NecessaryFiltersStrict(firstInfo, secondInfo);
+
+        if not filters.ok then
+            if filters.reason = "bad_group_data" then
+                return rec(
+                    ok := fail,
+                    status := "undecided",
+                    reason := "bad_group_data",
+                    method := "filter"
+                );
+            fi;
+            return rec(
+                ok := false,
+                status := "no_embedding",
+                reason := filters.reason,
+                method := "filter"
+            );
+        fi;
+    fi;
+
+    search := AlgorithmAStrict(
+        firstInfo,
+        secondInfo,
+        options.stop_first,
+        options
+    );
+    if not search.exhaustive then
+        return rec(
+            ok := fail,
+            status := "undecided",
+            reason := search.reason,
+            method := "A_strict"
+        );
+    fi;
+    if Length(search.list) = 0 then
+        return rec(
+            ok := false,
+            status := "no_embedding",
+            reason := "exhausted_no_verified_candidate",
+            method := "A_strict"
+        );
+    fi;
+
+    if not constructWitness then
+        return rec(
+            ok := true,
+            status := "embedded",
+            reason := "character_iso_witness_skipped",
+            method := search.list[1].method,
+            P := fail,
+            images := search.list[1].images
+        );
+    fi;
+
+    verification := StrictVerifyCandidates(
+        firstInfo,
+        secondInfo,
+        search.list
+    );
+    if verification.found then
+        return rec(
+            ok := true,
+            status := "embedded",
+            reason := "found",
+            method := verification.method,
+            P := verification.P,
+            images := verification.images
+        );
+    fi;
+
+    ## Over characteristic zero, equality of the natural characters of two
+    ## finite-group representations proves their linear equivalence.  Thus an
+    ## injective character-matching homomorphism proves the embedding even if
+    ## the optional explicit intertwiner was not found.
+    return rec(
+        ok := true,
+        status := "embedded",
+        reason := "character_iso_no_explicit_P",
+        method := search.list[1].method,
+        P := fail,
+        images := search.list[1].images
+    );
+end;
+
+
+## Search through a specified intermediate subgroup.  A negative result in
+## the intermediate group is globally negative only when the caller supplies
+## N_is_embedding_complete := true.
+SearchEmbeddingStrictViaSubgroup := function(
+    firstInfo,
+    subgroupInfo,
+    secondInfo,
+    arg...
+)
+    local result, matrix, inverse, options;
+
+    result := CallFuncList(
+        SearchEmbeddingStrict,
+        Concatenation([firstInfo, subgroupInfo], arg)
+    );
+
+    if Length(arg) = 0 then
+        options := rec();
+    else
+        options := arg[1];
+    fi;
+
+    if result.ok <> true then
+        if IsBound(result.status) and result.status = "no_embedding" then
+            if IsBound(options.N_is_embedding_complete)
+               and options.N_is_embedding_complete = true then
+                return result;
+            fi;
+            return rec(
+                ok := fail,
+                status := "undecided",
+                reason := "no_embedding_via_N",
+                method := "A_strict+viaN"
+            );
+        fi;
+        return result;
+    fi;
+
+    if IsBound(result.P) and result.P <> fail then
+        matrix := result.P;
+        inverse := matrix^-1;
+        if not ForAll(
+            firstInfo.gens,
+            element -> inverse * element * matrix in secondInfo.G
+        ) then
+            return rec(
+                ok := fail,
+                status := "undecided",
+                reason := "viaN_not_in_ambient",
+                method := "A_strict+viaN"
+            );
+        fi;
+        return rec(
+            ok := true,
+            status := "embedded",
+            reason := "found_via_subgroup",
+            method := "A_strict+viaN",
+            P := matrix,
+            images := result.images
+        );
+    fi;
+
+    if not IsBound(result.images) then
+        return rec(
+            ok := fail,
+            status := "undecided",
+            reason := "viaN_no_images",
+            method := "A_strict+viaN"
+        );
+    fi;
+    if not ForAll(result.images, matrix -> matrix in secondInfo.G) then
+        return rec(
+            ok := fail,
+            status := "undecided",
+            reason := "viaN_not_in_ambient",
+            method := "A_strict+viaN"
+        );
+    fi;
+
+    return rec(
+        ok := true,
+        status := "embedded",
+        reason := "character_iso_via_subgroup_no_explicit_P",
+        method := "A_strict+viaN",
+        P := fail,
+        images := result.images
+    );
+end;
+
+
+ComposeEmbeddingWitness := function(firstMatrix, secondMatrix)
+    return firstMatrix * secondMatrix;
+end;
+
+
+#############################################################################
+
+GAP CODE: EQUAL-DIMENSION COMPARISON
+
+#############################################################################
+## Pair selection and list reduction for family-containment calculations.
+##
+## The proof-grade linear-conjugacy test is SearchEmbeddingStrict from
+## gap_functions.g.  This file only standardizes catalogue records, chooses
+## the pairs to test, and removes endpoints of proved containment edges.
+## An embedding H_i -> H_j gives the reverse inclusion of invariant families.
+## Every public search preserves the three statuses embedded, no_embedding,
+## and undecided; an undecided comparison never removes a record.
+#############################################################################
+
+if not IsBound(SearchEmbeddingStrict) then
+    if IsExistingFile("../gap_functions.g") then
+        Read("../gap_functions.g");
+    elif IsExistingFile("gap_functions.g") then
+        Read("gap_functions.g");
+    elif IsExistingFile("gap_classification/gap_functions.g") then
+        Read("gap_classification/gap_functions.g");
+    else
+        Error(
+            "Load gap_functions.g first, or run from the repository root, ",
+            "gap_classification, or gap_classification/gap_saturation."
+        );
+    fi;
+fi;
+
+
+#############################################################################
+## Record accessors
+#############################################################################
+
+CF_ContainmentRecordGenerators := function(record)
+    if IsBound(record.matrixGenerators) then
+        return record.matrixGenerators;
+    elif IsBound(record.generators) then
+        return record.generators;
+    elif IsBound(record.linearGenerators) then
+        return record.linearGenerators;
+    elif IsBound(record.group) then
+        return GeneratorsOfGroup(record.group);
+    fi;
+
+    Error("The record has no recognized matrix-generator field.");
+end;
+
+
+CF_ContainmentRecordGroupId := function(record)
+    if IsBound(record.linearGroupId) then
+        return record.linearGroupId;
+    elif IsBound(record.linearGId) then
+        return record.linearGId;
+    elif IsBound(record.GLId) then
+        return record.GLId;
+    elif IsBound(record.groupId) then
+        return record.groupId;
+    fi;
+
+    return fail;
+end;
+
+
+CF_ContainmentRecordReportedOrder := function(record)
+    local groupId;
+
+    if IsBound(record.linearOrder) then
+        return record.linearOrder;
+    elif IsBound(record.reportedOrder) then
+        return record.reportedOrder;
+    elif IsBound(record.groupOrder) then
+        return record.groupOrder;
+    fi;
+
+    groupId := CF_ContainmentRecordGroupId(record);
+    if IsList(groupId) and Length(groupId) >= 1 and IsInt(groupId[1]) then
+        return groupId[1];
+    fi;
+
+    return fail;
+end;
+
+
+CF_ContainmentRecordFamilyDimension := function(record)
+    if IsBound(record.familyDimension) then
+        return record.familyDimension;
+    elif IsBound(record.expectedModuliDimension) then
+        return record.expectedModuliDimension;
+    fi;
+
+    return fail;
+end;
+
+
+CF_ContainmentRecordKey := function(record, position)
+    if IsBound(record.sourceKey) then
+        return record.sourceKey;
+    elif IsBound(record.label) then
+        return record.label;
+    elif IsBound(record.inputNumber) then
+        return Concatenation("input-", String(record.inputNumber));
+    fi;
+
+    return Concatenation("position-", String(position));
+end;
+
+
+#############################################################################
+## Shared preprocessing
+#############################################################################
+
+CF_PrepareContainmentRecords := function(records)
+    local entries, position, record, generators, groupId, reportedOrder,
+          familyDimension, info, exactOrder;
+
+    if not IsList(records) then
+        Error("The containment input must be a list of records.");
+    fi;
+
+    entries := [];
+    for position in [ 1 .. Length(records) ] do
+        record := records[position];
+        if not IsRecord(record) then
+            Error("Containment input position ", position, " is not a record.");
+        fi;
+
+        generators := CF_ContainmentRecordGenerators(record);
+        groupId := CF_ContainmentRecordGroupId(record);
+        reportedOrder := CF_ContainmentRecordReportedOrder(record);
+        familyDimension := CF_ContainmentRecordFamilyDimension(record);
+        info := PreprocessMatrixGroupStrict(
+            generators,
+            reportedOrder,
+            groupId
+        );
+
+        if IsBound(info.order) then
+            exactOrder := info.order;
+        elif IsBound(info.G) and IsFinite(info.G) then
+            exactOrder := Size(info.G);
+        else
+            Error(
+                "Could not determine a finite group order at input position ",
+                position, "."
+            );
+        fi;
+
+        Add(entries, rec(
+            position := position,
+            key := CF_ContainmentRecordKey(record, position),
+            record := record,
+            groupId := groupId,
+            reportedOrder := reportedOrder,
+            order := exactOrder,
+            familyDimension := familyDimension,
+            info := info
+        ));
+    od;
+
+    return rec(
+        isContainmentPreparation := true,
+        recordCount := Length(records),
+        entries := entries
+    );
+end;
+
+
+CF_AsContainmentPreparation := function(data)
+    if IsRecord(data)
+       and IsBound(data.isContainmentPreparation)
+       and data.isContainmentPreparation = true then
+        return data;
+    fi;
+
+    return CF_PrepareContainmentRecords(data);
+end;
+
+
+#############################################################################
+## Lazy pair preparation
+#############################################################################
+
+## This lighter preparation stores only documentary data.  Matrix groups and
+## permutation models are constructed later, and only for pairs which survive
+## the dimension, order-divisibility, and equal-order group-ID filters.
+CF_PrepareContainmentRecordHeaders := function(records)
+    local entries, position, record, groupId, reportedOrder,
+          familyDimension;
+
+    if not IsList(records) then
+        Error("The containment input must be a list of records.");
+    fi;
+
+    entries := [];
+    for position in [ 1 .. Length(records) ] do
+        record := records[position];
+        if not IsRecord(record) then
+            Error("Containment input position ", position, " is not a record.");
+        fi;
+
+        groupId := CF_ContainmentRecordGroupId(record);
+        reportedOrder := CF_ContainmentRecordReportedOrder(record);
+        familyDimension := CF_ContainmentRecordFamilyDimension(record);
+
+        Add(entries, rec(
+            position := position,
+            key := CF_ContainmentRecordKey(record, position),
+            record := record,
+            groupId := groupId,
+            reportedOrder := reportedOrder,
+            order := reportedOrder,
+            familyDimension := familyDimension
+        ));
+    od;
+
+    return rec(
+        isContainmentHeaderPreparation := true,
+        recordCount := Length(records),
+        entries := entries
+    );
+end;
+
+
+CF_AsContainmentHeaderPreparation := function(data)
+    if IsRecord(data)
+       and IsBound(data.isContainmentHeaderPreparation)
+       and data.isContainmentHeaderPreparation = true then
+        return data;
+    fi;
+
+    ## An eager preparation is also valid input for the lazy driver.  Its
+    ## cached strict information is simply reused.
+    if IsRecord(data)
+       and IsBound(data.isContainmentPreparation)
+       and data.isContainmentPreparation = true then
+        return data;
+    fi;
+
+    return CF_PrepareContainmentRecordHeaders(data);
+end;
+
+
+CF_ContainmentEnsureEntryInfo := function(entry)
+    local info;
+
+    if IsBound(entry.info) then
+        return entry.info;
+    fi;
+
+    info := PreprocessMatrixGroupStrict(
+        CF_ContainmentRecordGenerators(entry.record),
+        entry.reportedOrder,
+        entry.groupId
+    );
+    entry.info := info;
+
+    if IsBound(info.order) then
+        entry.order := info.order;
+    elif IsBound(info.G) and IsFinite(info.G) then
+        entry.order := Size(info.G);
+    fi;
+
+    return info;
+end;
+
+
+CF_ContainmentEntryOrder := function(entry)
+    if entry.order = fail then
+        CF_ContainmentEnsureEntryInfo(entry);
+    fi;
+    if entry.order = fail then
+        Error("Could not determine the group order for ", entry.key, ".");
+    fi;
+    return entry.order;
+end;
+
+
+CF_ContainmentDifferentEqualOrderGroupIds := function(first, second)
+    return first.groupId <> fail
+           and second.groupId <> fail
+           and IsList(first.groupId)
+           and IsList(second.groupId)
+           and first.groupId <> second.groupId;
+end;
+
+
+## Test only the abstract subgroup relation encoded by two SmallGroups IDs.
+## The result is cached because many different matrix representations have the
+## same pair of abstract group IDs.  A missing or documentary ID [order,0]
+## gives "unknown" and is never used as a negative certificate.
+CF_AbstractEmbeddingPossibilityFromIds := function(sourceId, targetId, cache)
+    local cached, sourceGroupCall, targetGroupCall, embeddingCall, result;
+
+    cached := First(
+        cache.entries,
+        entry -> entry.sourceId = sourceId and entry.targetId = targetId
+    );
+    if cached <> fail then
+        return cached.result;
+    fi;
+
+    if sourceId = fail or targetId = fail
+       or not IsList(sourceId) or not IsList(targetId)
+       or Length(sourceId) < 2 or Length(targetId) < 2
+       or sourceId[2] = 0 or targetId[2] = 0 then
+        result := rec(
+            status := "unknown",
+            reason := "SmallGroups ID is unavailable"
+        );
+    elif sourceId = targetId then
+        result := rec(
+            status := "possible",
+            reason := "the abstract group IDs agree"
+        );
+    elif not IsInt(sourceId[1]) or not IsInt(sourceId[2])
+         or not IsInt(targetId[1]) or not IsInt(targetId[2])
+         or sourceId[1] < 1 or targetId[1] < 1
+         or sourceId[2] < 1 or targetId[2] < 1 then
+        result := rec(
+            status := "unknown",
+            reason := "the documented SmallGroups ID is invalid"
+        );
+    elif not SmallGroupsAvailable(sourceId[1])
+         or not SmallGroupsAvailable(targetId[1]) then
+        result := rec(
+            status := "unknown",
+            reason := "the required SmallGroups data are unavailable"
+        );
+    elif sourceId[2] > NumberSmallGroups(sourceId[1])
+         or targetId[2] > NumberSmallGroups(targetId[1]) then
+        result := rec(
+            status := "unknown",
+            reason := "the documented SmallGroups ID is out of range"
+        );
+    else
+        sourceGroupCall := CALL_WITH_CATCH(
+            SmallGroup,
+            [sourceId[1], sourceId[2]]
+        );
+        targetGroupCall := CALL_WITH_CATCH(
+            SmallGroup,
+            [targetId[1], targetId[2]]
+        );
+
+        if not sourceGroupCall[1] or not targetGroupCall[1] then
+            result := rec(
+                status := "unknown",
+                reason := "SmallGroup construction failed"
+            );
+        else
+            embeddingCall := CALL_WITH_CATCH(
+                IsomorphicSubgroups,
+                [targetGroupCall[2], sourceGroupCall[2]]
+            );
+            if not embeddingCall[1] then
+                result := rec(
+                    status := "unknown",
+                    reason := "abstract subgroup search failed"
+                );
+            elif Length(embeddingCall[2]) = 0 then
+                result := rec(
+                    status := "no_embedding",
+                    reason := Concatenation(
+                        "the documented abstract target has no subgroup ",
+                        "of the documented source type"
+                    )
+                );
+            else
+                result := rec(
+                    status := "possible",
+                    reason := "an abstract subgroup embedding exists"
+                );
+            fi;
+        fi;
+    fi;
+
+    Add(cache.entries, rec(
+        sourceId := sourceId,
+        targetId := targetId,
+        result := result
+    ));
+    return result;
+end;
+
+
+CF_ContainmentSearchOptions := function(arguments)
+    local options;
+
+    if Length(arguments) = 0 then
+        options := rec();
+    elif Length(arguments) = 1 and IsRecord(arguments[1]) then
+        options := ShallowCopy(arguments[1]);
+    else
+        Error("Containment options must be one optional record.");
+    fi;
+
+    if not IsBound(options.stop_first) then
+        options.stop_first := true;
+    fi;
+    if not IsBound(options.construct_witness) then
+        options.construct_witness := false;
+    fi;
+
+    return options;
+end;
+
+
+#############################################################################
+## Pair searches
+#############################################################################
+
+CF_SearchContainmentPairs := function(preparedData, equalDimensionOnly, options)
+    local prepared, entries, allPairs, embeddedEdges, noEmbeddingPairs,
+          undecidedPairs, firstPosition, secondPosition, first, second,
+          source, target, search, pair, searchMode;
+
+    prepared := CF_AsContainmentPreparation(preparedData);
+    entries := prepared.entries;
+
+    if equalDimensionOnly
+       and ForAny(entries, entry -> entry.familyDimension = fail) then
+        Error(
+            "Every record needs familyDimension or expectedModuliDimension ",
+            "for an equal-dimension search."
+        );
+    fi;
+
+    allPairs := [];
+    embeddedEdges := [];
+    noEmbeddingPairs := [];
+    undecidedPairs := [];
+
+    if Length(entries) >= 2 then
+        for firstPosition in [ 1 .. Length(entries) - 1 ] do
+            for secondPosition in [ firstPosition + 1 .. Length(entries) ] do
+                first := entries[firstPosition];
+                second := entries[secondPosition];
+
+                if equalDimensionOnly
+                   and first.familyDimension <> second.familyDimension then
+                    continue;
+                fi;
+
+                # Only the smaller group can embed properly in the larger
+                # group.  For equal orders, one orientation is sufficient:
+                # an embedding is then a linear conjugacy.
+                if first.order <= second.order then
+                    source := first;
+                    target := second;
+                else
+                    source := second;
+                    target := first;
+                fi;
+
+                search := SearchEmbeddingStrict(
+                    source.info,
+                    target.info,
+                    options
+                );
+                pair := rec(
+                    sourcePosition := source.position,
+                    targetPosition := target.position,
+                    sourceKey := source.key,
+                    targetKey := target.key,
+                    sourceOrder := source.order,
+                    targetOrder := target.order,
+                    sourceFamilyDimension := source.familyDimension,
+                    targetFamilyDimension := target.familyDimension,
+                    status := search.status,
+                    reason := search.reason,
+                    method := search.method,
+                    familyDirection :=
+                        "target family is contained in source family",
+                    embeddingResult := search
+                );
+
+                Add(allPairs, pair);
+                if search.status = "embedded" then
+                    Add(embeddedEdges, pair);
+                elif search.status = "no_embedding" then
+                    Add(noEmbeddingPairs, pair);
+                elif search.status = "undecided" then
+                    Add(undecidedPairs, pair);
+                else
+                    Error("Unexpected strict-embedding status: ", search.status);
+                fi;
+            od;
+        od;
+    fi;
+
+    if equalDimensionOnly then
+        searchMode := "equal_dimension";
+    else
+        searchMode := "all_dimensions";
+    fi;
+
+    return rec(
+        mode := searchMode,
+        recordCount := prepared.recordCount,
+        testedPairCount := Length(allPairs),
+        embeddedCount := Length(embeddedEdges),
+        noEmbeddingCount := Length(noEmbeddingPairs),
+        undecidedCount := Length(undecidedPairs),
+        allPairs := allPairs,
+        embeddedEdges := embeddedEdges,
+        noEmbeddingPairs := noEmbeddingPairs,
+        undecidedPairs := undecidedPairs
+    );
+end;
+
+
+## Pair-lazy version of the same search.  Documentary orders and group IDs
+## reject impossible pairs before either matrix group is converted to a
+## permutation group.  Every surviving pair is still passed to the same
+## proof-grade SearchEmbeddingStrict routine used above.
+CF_SearchContainmentPairsLazy := function(headerData, equalDimensionOnly, options)
+    local prepared, entries, allPairs, embeddedEdges, noEmbeddingPairs,
+          undecidedPairs, firstPosition, secondPosition, first, second,
+          firstOrder, secondOrder, source, target, sourceInfo, targetInfo,
+          search, pair, searchMode, cheapRejectedCount, strictTestCount,
+          progressInterval, preprocessedRecordCount, useAbstractIdFilter,
+          abstractCache, abstractCheck, abstractRejectedCount,
+          abstractUnknownCount;
+
+    prepared := CF_AsContainmentHeaderPreparation(headerData);
+    entries := prepared.entries;
+
+    if equalDimensionOnly
+       and ForAny(entries, entry -> entry.familyDimension = fail) then
+        Error(
+            "Every record needs familyDimension or expectedModuliDimension ",
+            "for an equal-dimension search."
+        );
+    fi;
+
+    if IsBound(options.progress_interval) then
+        progressInterval := options.progress_interval;
+    else
+        progressInterval := 0;
+    fi;
+    if not IsInt(progressInterval) or progressInterval < 0 then
+        Error("progress_interval must be a nonnegative integer.");
+    fi;
+    if IsBound(options.use_abstract_id_filter) then
+        useAbstractIdFilter := options.use_abstract_id_filter;
+    else
+        useAbstractIdFilter := true;
+    fi;
+
+    allPairs := [];
+    embeddedEdges := [];
+    noEmbeddingPairs := [];
+    undecidedPairs := [];
+    cheapRejectedCount := 0;
+    abstractRejectedCount := 0;
+    abstractUnknownCount := 0;
+    strictTestCount := 0;
+    abstractCache := rec(entries := []);
+
+    if Length(entries) >= 2 then
+        for firstPosition in [ 1 .. Length(entries) - 1 ] do
+            for secondPosition in [ firstPosition + 1 .. Length(entries) ] do
+                first := entries[firstPosition];
+                second := entries[secondPosition];
+
+                if equalDimensionOnly
+                   and first.familyDimension <> second.familyDimension then
+                    continue;
+                fi;
+
+                firstOrder := CF_ContainmentEntryOrder(first);
+                secondOrder := CF_ContainmentEntryOrder(second);
+                if firstOrder <= secondOrder then
+                    source := first;
+                    target := second;
+                else
+                    source := second;
+                    target := first;
+                fi;
+
+                if target.order mod source.order <> 0 then
+                    search := rec(
+                        status := "no_embedding",
+                        reason := "source order does not divide target order",
+                        method := "documentary order divisibility"
+                    );
+                    cheapRejectedCount := cheapRejectedCount + 1;
+                elif source.order = target.order
+                     and CF_ContainmentDifferentEqualOrderGroupIds(
+                         source,
+                         target
+                     ) then
+                    search := rec(
+                        status := "no_embedding",
+                        reason :=
+                            "different documented group IDs at equal order",
+                        method := "documentary group IDs"
+                    );
+                    cheapRejectedCount := cheapRejectedCount + 1;
+                else
+                    if useAbstractIdFilter then
+                        abstractCheck :=
+                            CF_AbstractEmbeddingPossibilityFromIds(
+                                source.groupId,
+                                target.groupId,
+                                abstractCache
+                            );
+                    else
+                        abstractCheck := rec(
+                            status := "unknown",
+                            reason := "abstract ID filter disabled"
+                        );
+                    fi;
+
+                    if abstractCheck.status = "no_embedding" then
+                        search := rec(
+                            status := "no_embedding",
+                            reason := abstractCheck.reason,
+                            method := "abstract SmallGroup IDs"
+                        );
+                        abstractRejectedCount :=
+                            abstractRejectedCount + 1;
+                    else
+                        if abstractCheck.status = "unknown" then
+                            abstractUnknownCount :=
+                                abstractUnknownCount + 1;
+                        fi;
+
+                        sourceInfo := CF_ContainmentEnsureEntryInfo(source);
+                        targetInfo := CF_ContainmentEnsureEntryInfo(target);
+
+                        ## Reorient using the exact computed orders.  A mismatch
+                        ## with the documentary order is already reported by the
+                        ## strict preprocessor.
+                        source.order := CF_ContainmentEntryOrder(source);
+                        target.order := CF_ContainmentEntryOrder(target);
+                        if source.order > target.order then
+                            first := source;
+                            source := target;
+                            target := first;
+                            sourceInfo := source.info;
+                            targetInfo := target.info;
+                        fi;
+
+                        search := SearchEmbeddingStrict(
+                            sourceInfo,
+                            targetInfo,
+                            options
+                        );
+                        strictTestCount := strictTestCount + 1;
+                    fi;
+                fi;
+
+                pair := rec(
+                    sourcePosition := source.position,
+                    targetPosition := target.position,
+                    sourceKey := source.key,
+                    targetKey := target.key,
+                    sourceOrder := source.order,
+                    targetOrder := target.order,
+                    sourceFamilyDimension := source.familyDimension,
+                    targetFamilyDimension := target.familyDimension,
+                    status := search.status,
+                    reason := search.reason,
+                    method := search.method,
+                    familyDirection :=
+                        "target family is contained in source family",
+                    embeddingResult := search
+                );
+
+                Add(allPairs, pair);
+                if search.status = "embedded" then
+                    Add(embeddedEdges, pair);
+                elif search.status = "no_embedding" then
+                    Add(noEmbeddingPairs, pair);
+                elif search.status = "undecided" then
+                    Add(undecidedPairs, pair);
+                else
+                    Error("Unexpected strict-embedding status: ", search.status);
+                fi;
+
+                if progressInterval > 0
+                   and Length(allPairs) mod progressInterval = 0 then
+                    Print(
+                        "Containment pairs processed: ", Length(allPairs),
+                        "; strict=", strictTestCount,
+                        "; abstract-rejected=", abstractRejectedCount,
+                        "; embedded=", Length(embeddedEdges),
+                        "; undecided=", Length(undecidedPairs), "\n"
+                    );
+                fi;
+            od;
+        od;
+    fi;
+
+    if equalDimensionOnly then
+        searchMode := "equal_dimension_lazy";
+    else
+        searchMode := "all_dimensions_lazy";
+    fi;
+
+    preprocessedRecordCount := Number(
+        entries,
+        entry -> IsBound(entry.info)
+    );
+
+    return rec(
+        mode := searchMode,
+        recordCount := prepared.recordCount,
+        testedPairCount := Length(allPairs),
+        cheapRejectedCount := cheapRejectedCount,
+        abstractRejectedCount := abstractRejectedCount,
+        abstractUnknownCount := abstractUnknownCount,
+        abstractCacheEntryCount := Length(abstractCache.entries),
+        strictTestCount := strictTestCount,
+        preprocessedRecordCount := preprocessedRecordCount,
+        embeddedCount := Length(embeddedEdges),
+        noEmbeddingCount := Length(noEmbeddingPairs),
+        undecidedCount := Length(undecidedPairs),
+        allPairs := allPairs,
+        embeddedEdges := embeddedEdges,
+        noEmbeddingPairs := noEmbeddingPairs,
+        undecidedPairs := undecidedPairs
+    );
+end;
+
+
+#############################################################################
+## Direct maximal-list search
+#############################################################################
+
+## Test one already oriented candidate pair.  The mutable state contains the
+## abstract-ID cache and audit counters shared by the maximal-list driver.
+CF_TestContainmentEntryPairLazy := function(first, second, options, state)
+    local source, target, sourceInfo, targetInfo, abstractCheck, search;
+
+    if first.familyDimension <> second.familyDimension then
+        Error("The direct pair test requires equal family dimensions.");
+    fi;
+
+    if first.order <= second.order then
+        source := first;
+        target := second;
+    else
+        source := second;
+        target := first;
+    fi;
+
+    state.testedPairCount := state.testedPairCount + 1;
+
+    if target.order mod source.order <> 0 then
+        search := rec(
+            status := "no_embedding",
+            reason := "source order does not divide target order",
+            method := "documentary order divisibility"
+        );
+        state.cheapRejectedCount := state.cheapRejectedCount + 1;
+    elif source.order = target.order
+         and CF_ContainmentDifferentEqualOrderGroupIds(source, target) then
+        search := rec(
+            status := "no_embedding",
+            reason := "different documented group IDs at equal order",
+            method := "documentary group IDs"
+        );
+        state.cheapRejectedCount := state.cheapRejectedCount + 1;
+    else
+        if state.useAbstractIdFilter then
+            abstractCheck := CF_AbstractEmbeddingPossibilityFromIds(
+                source.groupId,
+                target.groupId,
+                state.abstractCache
+            );
+        else
+            abstractCheck := rec(
+                status := "unknown",
+                reason := "abstract ID filter disabled"
+            );
+        fi;
+
+        if abstractCheck.status = "no_embedding" then
+            search := rec(
+                status := "no_embedding",
+                reason := abstractCheck.reason,
+                method := "abstract SmallGroup IDs"
+            );
+            state.abstractRejectedCount :=
+                state.abstractRejectedCount + 1;
+        else
+            if abstractCheck.status = "unknown" then
+                state.abstractUnknownCount :=
+                    state.abstractUnknownCount + 1;
+            fi;
+
+            sourceInfo := CF_ContainmentEnsureEntryInfo(source);
+            targetInfo := CF_ContainmentEnsureEntryInfo(target);
+            source.order := CF_ContainmentEntryOrder(source);
+            target.order := CF_ContainmentEntryOrder(target);
+
+            if source.order > target.order then
+                first := source;
+                source := target;
+                target := first;
+                sourceInfo := source.info;
+                targetInfo := target.info;
+            fi;
+
+            search := SearchEmbeddingStrict(
+                sourceInfo,
+                targetInfo,
+                options
+            );
+            state.strictTestCount := state.strictTestCount + 1;
+        fi;
+    fi;
+
+    return rec(
+        sourcePosition := source.position,
+        targetPosition := target.position,
+        sourceKey := source.key,
+        targetKey := target.key,
+        sourceOrder := source.order,
+        targetOrder := target.order,
+        sourceFamilyDimension := source.familyDimension,
+        targetFamilyDimension := target.familyDimension,
+        status := search.status,
+        reason := search.reason,
+        method := search.method,
+        familyDirection := "target family is contained in source family",
+        embeddingResult := search
+    );
+end;
+
+
+## Process each dimension bucket in decreasing group order.  A record is
+## compared only with records currently retained in that bucket.  Once a
+## proved embedding removes it, it never participates in a later comparison.
+CF_StripEqualDimensionSmallerGroupsLazy := function(data, arg...)
+    local prepared, entries, options, useAbstractIdFilter, progressInterval,
+          targetOrder, pairProgress, candidateIndex, pairIndex,
+          state, processingPositions, keptProcessingPositions,
+          removedPositions, certificates, undecidedPairs, position, entry,
+          targetPositions, targetPosition, pair, wasRemoved, keptPositions;
+
+    prepared := CF_AsContainmentHeaderPreparation(data);
+    entries := prepared.entries;
+    options := CF_ContainmentSearchOptions(arg);
+
+    if ForAny(entries, item -> item.familyDimension = fail) then
+        Error(
+            "Every record needs familyDimension or expectedModuliDimension ",
+            "for an equal-dimension search."
+        );
+    fi;
+
+    if IsBound(options.use_abstract_id_filter) then
+        useAbstractIdFilter := options.use_abstract_id_filter;
+    else
+        useAbstractIdFilter := true;
+    fi;
+    if IsBound(options.progress_interval) then
+        progressInterval := options.progress_interval;
+    else
+        progressInterval := 0;
+    fi;
+    if IsBound(options.target_order) then
+        targetOrder := options.target_order;
+    else
+        targetOrder := "input";
+    fi;
+    if not targetOrder in [ "input", "ascending", "descending" ] then
+        Error("target_order must be input, ascending, or descending.");
+    fi;
+    if IsBound(options.pair_progress) then
+        pairProgress := options.pair_progress;
+    else
+        pairProgress := false;
+    fi;
+    if pairProgress <> true and pairProgress <> false then
+        Error("pair_progress must be true or false.");
+    fi;
+
+    state := rec(
+        useAbstractIdFilter := useAbstractIdFilter,
+        abstractCache := rec(entries := []),
+        testedPairCount := 0,
+        cheapRejectedCount := 0,
+        abstractRejectedCount := 0,
+        abstractUnknownCount := 0,
+        strictTestCount := 0,
+        startRuntime := Runtime()
+    );
+
+    processingPositions := [ 1 .. Length(entries) ];
+    state.initialSaturatedPositions := Filtered(
+        processingPositions,
+        position ->
+            IsBound(entries[position].record.initiallySaturated)
+            and entries[position].record.initiallySaturated = true
+    );
+    processingPositions := Difference(
+        processingPositions,
+        state.initialSaturatedPositions
+    );
+    Sort(processingPositions, function(firstPosition, secondPosition)
+        local first, second;
+        first := entries[firstPosition];
+        second := entries[secondPosition];
+        if first.familyDimension <> second.familyDimension then
+            return first.familyDimension < second.familyDimension;
+        elif first.order <> second.order then
+            return first.order > second.order;
+        fi;
+        return first.position < second.position;
+    end);
+
+    ## Initially saturated families are permanent targets.  They are never
+    ## tested as sources and can therefore never be removed.
+    keptProcessingPositions := ShallowCopy(
+        state.initialSaturatedPositions
+    );
+    removedPositions := [];
+    certificates := [];
+    undecidedPairs := [];
+
+    candidateIndex := 0;
+    for position in processingPositions do
+        candidateIndex := candidateIndex + 1;
+        entry := entries[position];
+        targetPositions := Filtered(
+            keptProcessingPositions,
+            targetPosition ->
+                entries[targetPosition].familyDimension
+                    = entry.familyDimension
+                and entries[targetPosition].order mod entry.order = 0
+        );
+        if targetOrder = "ascending" then
+            Sort(targetPositions, function(firstTarget, secondTarget)
+                if entries[firstTarget].order
+                   <> entries[secondTarget].order then
+                    return entries[firstTarget].order
+                           < entries[secondTarget].order;
+                fi;
+                return firstTarget < secondTarget;
+            end);
+        elif targetOrder = "descending" then
+            Sort(targetPositions, function(firstTarget, secondTarget)
+                if entries[firstTarget].order
+                   <> entries[secondTarget].order then
+                    return entries[firstTarget].order
+                           > entries[secondTarget].order;
+                fi;
+                return firstTarget < secondTarget;
+            end);
+        fi;
+
+        if pairProgress then
+            Print(
+                "Candidate ", candidateIndex, "/",
+                Length(processingPositions), ": key=", entry.key,
+                "; dimension=", entry.familyDimension,
+                "; order=", entry.order,
+                "; possible targets=", Length(targetPositions),
+                "; elapsed=", Runtime() - state.startRuntime, " ms\n"
+            );
+        fi;
+
+        wasRemoved := false;
+        pairIndex := 0;
+        for targetPosition in targetPositions do
+            pairIndex := pairIndex + 1;
+            if pairProgress then
+                Print(
+                    "  Pair ", pairIndex, "/", Length(targetPositions),
+                    ": ", entry.key, " -> ",
+                    entries[targetPosition].key,
+                    " (", entry.order, " -> ",
+                    entries[targetPosition].order, ") started; elapsed=",
+                    Runtime() - state.startRuntime, " ms\n"
+                );
+            fi;
+            pair := CF_TestContainmentEntryPairLazy(
+                entry,
+                entries[targetPosition],
+                options,
+                state
+            );
+            if pairProgress then
+                Print(
+                    "    status=", pair.status,
+                    "; method=", pair.method,
+                    "; reason=", pair.reason,
+                    "; elapsed=", Runtime() - state.startRuntime, " ms\n"
+                );
+            fi;
+
+            if pair.status = "embedded" then
+                Add(removedPositions, position);
+                Add(certificates, rec(
+                    removedPosition := position,
+                    keptPosition := targetPosition,
+                    edge := pair
+                ));
+                wasRemoved := true;
+                break;
+            elif pair.status = "undecided" then
+                Add(undecidedPairs, pair);
+            fi;
+        od;
+
+        if not wasRemoved then
+            Add(keptProcessingPositions, position);
+        fi;
+
+        if progressInterval > 0
+           and candidateIndex mod progressInterval = 0
+        then
+            Print(
+                "Candidates processed: ",
+                candidateIndex,
+                "/", Length(processingPositions),
+                "; kept=", Length(keptProcessingPositions),
+                "; removed=", Length(removedPositions),
+                "; strict=", state.strictTestCount,
+                "; undecided=", Length(undecidedPairs),
+                "; elapsed=", Runtime() - state.startRuntime, " ms\n"
+            );
+        fi;
+    od;
+
+    keptPositions := Set(keptProcessingPositions);
+    removedPositions := Set(removedPositions);
+
+    return rec(
+        mode := "equal_dimension_direct_maxima_lazy",
+        removalMode := "smaller_group",
+        originalCount := Length(entries),
+        initialSaturatedCount := Length(state.initialSaturatedPositions),
+        initialSaturatedPositions := state.initialSaturatedPositions,
+        initialSaturatedRecords := List(
+            state.initialSaturatedPositions,
+            p -> entries[p].record
+        ),
+        remainingCount := Length(keptPositions),
+        removedCount := Length(removedPositions),
+        keptPositions := keptPositions,
+        removedPositions := removedPositions,
+        remainingRecords := List(keptPositions, p -> entries[p].record),
+        removedRecords := List(removedPositions, p -> entries[p].record),
+        removalCertificates := certificates,
+        testedPairCount := state.testedPairCount,
+        cheapRejectedCount := state.cheapRejectedCount,
+        abstractRejectedCount := state.abstractRejectedCount,
+        abstractUnknownCount := state.abstractUnknownCount,
+        abstractCacheEntryCount := Length(state.abstractCache.entries),
+        strictTestCount := state.strictTestCount,
+        preprocessedRecordCount := Number(
+            entries,
+            item -> IsBound(item.info)
+        ),
+        undecidedPairs := undecidedPairs,
+        undecidedCount := Length(undecidedPairs),
+        maximaComplete := Length(undecidedPairs) = 0
+    );
+end;
+
+
+#############################################################################
+## Traceable equal-dimensional saturation search
+#############################################################################
+
+CF_ContainmentEntryIsKnownSaturated := function(entry)
+    if IsBound(entry.record.saturationTag) then
+        return entry.record.saturationTag = "known_saturated";
+    fi;
+    return IsBound(entry.record.initiallySaturated)
+           and entry.record.initiallySaturated = true;
+end;
+
+
+CF_ContainmentParentPath := function(position, parentPositions)
+    local path, current, next;
+
+    path := [ position ];
+    current := position;
+    while parentPositions[current] <> fail do
+        next := parentPositions[current];
+        if next in path then
+            Error("A cycle was found in the equal-dimensional containment graph.");
+        fi;
+        Add(path, next);
+        current := next;
+    od;
+    return path;
+end;
+
+
+## Phase 1 merges proved equal-order conjugate actions.  Phase 2 processes
+## the remaining representatives in increasing group order and tries every
+## strictly larger target from the complete representative list, also in
+## increasing order.  A target remains available even if it is later removed.
+## The resulting parent graph is acyclic: equal-order edges point to an
+## earlier representative, and proper edges strictly increase group order.
+CF_TraceEqualDimensionSaturationLazy := function(data, arg...)
+    local prepared, entries, options, useAbstractIdFilter, pairProgress,
+          progressInterval, state, allPositions, knownPositions,
+          equivalenceOrder, representativePositions, position, entry,
+          targetPositions, targetPosition, pairIndex, pair, found,
+          parentPositions, parentEdgeNumbers, certificates,
+          noEmbeddingPairs, undecidedPairs, sourcePositions, sourceIndex,
+          removedPositions, survivorPositions, computedSaturatedPositions,
+          unresolvedSurvivorPositions, uncertainSourcePositions, traces,
+          path, finalPosition, pathEdgeNumbers, finalStatus, disposition,
+          pathUndecidedCount, directTargetPosition, directTargetKey, classes,
+          memberPositions, knownInputCount, sourceUndecidedCount;
+
+    prepared := CF_AsContainmentHeaderPreparation(data);
+    entries := prepared.entries;
+    options := CF_ContainmentSearchOptions(arg);
+
+    if ForAny(entries, item -> item.familyDimension = fail) then
+        Error(
+            "Every record needs familyDimension or expectedModuliDimension ",
+            "for an equal-dimension search."
+        );
+    fi;
+
+    if IsBound(options.use_abstract_id_filter) then
+        useAbstractIdFilter := options.use_abstract_id_filter;
+    else
+        useAbstractIdFilter := true;
+    fi;
+    if IsBound(options.pair_progress) then
+        pairProgress := options.pair_progress;
+    else
+        pairProgress := true;
+    fi;
+    if pairProgress <> true and pairProgress <> false then
+        Error("pair_progress must be true or false.");
+    fi;
+    if IsBound(options.progress_interval) then
+        progressInterval := options.progress_interval;
+    else
+        progressInterval := 10;
+    fi;
+    if not IsInt(progressInterval) or progressInterval < 0 then
+        Error("progress_interval must be a nonnegative integer.");
+    fi;
+
+    state := rec(
+        useAbstractIdFilter := useAbstractIdFilter,
+        abstractCache := rec(entries := []),
+        testedPairCount := 0,
+        cheapRejectedCount := 0,
+        abstractRejectedCount := 0,
+        abstractUnknownCount := 0,
+        strictTestCount := 0,
+        startRuntime := Runtime()
+    );
+
+    allPositions := [ 1 .. Length(entries) ];
+    for position in allPositions do
+        CF_ContainmentEntryOrder(entries[position]);
+    od;
+    knownPositions := Filtered(
+        allPositions,
+        position -> CF_ContainmentEntryIsKnownSaturated(entries[position])
+    );
+    knownInputCount := Length(knownPositions);
+
+    parentPositions := ListWithIdenticalEntries(Length(entries), fail);
+    parentEdgeNumbers := ListWithIdenticalEntries(Length(entries), fail);
+    certificates := [];
+    noEmbeddingPairs := [];
+    undecidedPairs := [];
+
+    #########################################################################
+    ## Phase 1: equal-order equivalence
+    #########################################################################
+
+    equivalenceOrder := ShallowCopy(allPositions);
+    Sort(equivalenceOrder, function(firstPosition, secondPosition)
+        local first, second, firstKnown, secondKnown;
+        first := entries[firstPosition];
+        second := entries[secondPosition];
+        if first.familyDimension <> second.familyDimension then
+            return first.familyDimension < second.familyDimension;
+        elif first.order <> second.order then
+            return first.order < second.order;
+        fi;
+        firstKnown := CF_ContainmentEntryIsKnownSaturated(first);
+        secondKnown := CF_ContainmentEntryIsKnownSaturated(second);
+        if firstKnown <> secondKnown then
+            return firstKnown;
+        fi;
+        return first.position < second.position;
+    end);
+
+    representativePositions := [];
+    Print("Phase 1: equal-order equivalence; candidates=",
+          Length(equivalenceOrder), "\n");
+    for position in equivalenceOrder do
+        entry := entries[position];
+        targetPositions := Filtered(
+            representativePositions,
+            targetPosition ->
+                entries[targetPosition].familyDimension
+                    = entry.familyDimension
+                and entries[targetPosition].order = entry.order
+        );
+        Sort(targetPositions, function(firstTarget, secondTarget)
+            local firstKnown, secondKnown;
+            firstKnown := CF_ContainmentEntryIsKnownSaturated(
+                entries[firstTarget]
+            );
+            secondKnown := CF_ContainmentEntryIsKnownSaturated(
+                entries[secondTarget]
+            );
+            if firstKnown <> secondKnown then
+                return firstKnown;
+            fi;
+            return firstTarget < secondTarget;
+        end);
+
+        found := false;
+        pairIndex := 0;
+        for targetPosition in targetPositions do
+            pairIndex := pairIndex + 1;
+            if pairProgress then
+                Print(
+                    "  Equivalence pair ", pairIndex, "/",
+                    Length(targetPositions), ": ", entry.key, " -> ",
+                    entries[targetPosition].key, " (dimension=",
+                    entry.familyDimension, ", order=", entry.order,
+                    ") started; elapsed=", Runtime() - state.startRuntime,
+                    " ms\n"
+                );
+            fi;
+            pair := CF_TestContainmentEntryPairLazy(
+                entry,
+                entries[targetPosition],
+                options,
+                state
+            );
+            if pairProgress then
+                Print(
+                    "    status=", pair.status, "; method=", pair.method,
+                    "; elapsed=", Runtime() - state.startRuntime, " ms\n"
+                );
+            fi;
+
+            if pair.status = "embedded" then
+                parentPositions[position] := targetPosition;
+                Add(certificates, rec(
+                    kind := "equal_order_equivalence",
+                    removedPosition := position,
+                    directTargetPosition := targetPosition,
+                    edge := pair
+                ));
+                parentEdgeNumbers[position] := Length(certificates);
+                found := true;
+                break;
+            elif pair.status = "no_embedding" then
+                Add(noEmbeddingPairs, pair);
+            elif pair.status = "undecided" then
+                Add(undecidedPairs, pair);
+            else
+                Error("Unexpected strict-embedding status: ", pair.status);
+            fi;
+        od;
+
+        if not found then
+            Add(representativePositions, position);
+        fi;
+    od;
+    Print(
+        "Phase 1 completed: representatives=",
+        Length(representativePositions), "; equal-order duplicates=",
+        Length(certificates), "; strict=", state.strictTestCount,
+        "; undecided=", Length(undecidedPairs), "; elapsed=",
+        Runtime() - state.startRuntime, " ms\n\n"
+    );
+
+    #########################################################################
+    ## Phase 2: nearest proper overgroup in the complete target list
+    #########################################################################
+
+    sourcePositions := Filtered(
+        representativePositions,
+        position -> not CF_ContainmentEntryIsKnownSaturated(entries[position])
+    );
+    Sort(sourcePositions, function(firstPosition, secondPosition)
+        local first, second;
+        first := entries[firstPosition];
+        second := entries[secondPosition];
+        if first.familyDimension <> second.familyDimension then
+            return first.familyDimension < second.familyDimension;
+        elif first.order <> second.order then
+            return first.order < second.order;
+        fi;
+        return first.position < second.position;
+    end);
+
+    Print("Phase 2: proper equal-dimensional overgroups; sources=",
+          Length(sourcePositions), "\n");
+    sourceIndex := 0;
+    for position in sourcePositions do
+        sourceIndex := sourceIndex + 1;
+        entry := entries[position];
+        targetPositions := Filtered(
+            representativePositions,
+            targetPosition ->
+                entries[targetPosition].familyDimension
+                    = entry.familyDimension
+                and entries[targetPosition].order > entry.order
+                and entries[targetPosition].order mod entry.order = 0
+        );
+        Sort(targetPositions, function(firstTarget, secondTarget)
+            local firstKnown, secondKnown;
+            if entries[firstTarget].order <> entries[secondTarget].order then
+                return entries[firstTarget].order
+                       < entries[secondTarget].order;
+            fi;
+            firstKnown := CF_ContainmentEntryIsKnownSaturated(
+                entries[firstTarget]
+            );
+            secondKnown := CF_ContainmentEntryIsKnownSaturated(
+                entries[secondTarget]
+            );
+            if firstKnown <> secondKnown then
+                return firstKnown;
+            fi;
+            return firstTarget < secondTarget;
+        end);
+
+        Print(
+            "Candidate ", sourceIndex, "/", Length(sourcePositions),
+            ": key=", entry.key, "; dimension=", entry.familyDimension,
+            "; order=", entry.order, "; possible targets=",
+            Length(targetPositions), "; elapsed=",
+            Runtime() - state.startRuntime, " ms\n"
+        );
+
+        found := false;
+        pairIndex := 0;
+        for targetPosition in targetPositions do
+            pairIndex := pairIndex + 1;
+            if pairProgress then
+                Print(
+                    "  Pair ", pairIndex, "/", Length(targetPositions),
+                    ": ", entry.key, " -> ", entries[targetPosition].key,
+                    " (", entry.order, " -> ",
+                    entries[targetPosition].order, ") started; elapsed=",
+                    Runtime() - state.startRuntime, " ms\n"
+                );
+            fi;
+            pair := CF_TestContainmentEntryPairLazy(
+                entry,
+                entries[targetPosition],
+                options,
+                state
+            );
+            if pairProgress then
+                Print(
+                    "    status=", pair.status, "; method=", pair.method,
+                    "; elapsed=", Runtime() - state.startRuntime, " ms\n"
+                );
+            fi;
+
+            if pair.status = "embedded" then
+                parentPositions[position] := targetPosition;
+                Add(certificates, rec(
+                    kind := "proper_equal_dimension_overgroup",
+                    removedPosition := position,
+                    directTargetPosition := targetPosition,
+                    edge := pair
+                ));
+                parentEdgeNumbers[position] := Length(certificates);
+                found := true;
+                break;
+            elif pair.status = "no_embedding" then
+                Add(noEmbeddingPairs, pair);
+            elif pair.status = "undecided" then
+                Add(undecidedPairs, pair);
+            else
+                Error("Unexpected strict-embedding status: ", pair.status);
+            fi;
+        od;
+
+        if progressInterval > 0
+           and (sourceIndex mod progressInterval = 0
+                or sourceIndex = Length(sourcePositions)) then
+            Print(
+                "Progress: sources=", sourceIndex, "/",
+                Length(sourcePositions), "; direct removals=",
+                Number(parentPositions, parent -> parent <> fail),
+                "; strict=", state.strictTestCount, "; undecided=",
+                Length(undecidedPairs), "; elapsed=",
+                Runtime() - state.startRuntime, " ms\n"
+            );
+        fi;
+    od;
+
+    #########################################################################
+    ## Resolve every direct parent to its final survivor.
+    #########################################################################
+
+    removedPositions := Filtered(
+        allPositions,
+        position -> parentPositions[position] <> fail
+    );
+    survivorPositions := Difference(allPositions, removedPositions);
+    uncertainSourcePositions := Set(List(
+        undecidedPairs,
+        undecided -> undecided.sourcePosition
+    ));
+    computedSaturatedPositions := Filtered(
+        survivorPositions,
+        position ->
+            not CF_ContainmentEntryIsKnownSaturated(entries[position])
+            and not (position in uncertainSourcePositions)
+    );
+    unresolvedSurvivorPositions := Filtered(
+        survivorPositions,
+        position ->
+            not CF_ContainmentEntryIsKnownSaturated(entries[position])
+            and position in uncertainSourcePositions
+    );
+
+    traces := [];
+    for position in allPositions do
+        path := CF_ContainmentParentPath(position, parentPositions);
+        finalPosition := path[Length(path)];
+        if Length(path) = 1 then
+            pathEdgeNumbers := [];
+            directTargetPosition := fail;
+            directTargetKey := fail;
+        else
+            pathEdgeNumbers := List(
+                path{[ 1 .. Length(path) - 1 ]},
+                pathPosition -> parentEdgeNumbers[pathPosition]
+            );
+            directTargetPosition := path[2];
+            directTargetKey := entries[directTargetPosition].key;
+        fi;
+
+        sourceUndecidedCount := Number(
+            undecidedPairs,
+            undecided -> undecided.sourcePosition = position
+        );
+        pathUndecidedCount := Number(
+            undecidedPairs,
+            undecided -> undecided.sourcePosition in path
+        );
+        if CF_ContainmentEntryIsKnownSaturated(entries[finalPosition]) then
+            finalStatus := "known_saturated";
+        elif finalPosition in unresolvedSurvivorPositions then
+            finalStatus := "unresolved";
+        else
+            finalStatus := "computed_saturated";
+        fi;
+
+        if parentPositions[position] = fail then
+            disposition := finalStatus;
+        elif certificates[parentEdgeNumbers[position]].kind
+             = "equal_order_equivalence" then
+            disposition := "equal_order_duplicate";
+        else
+            disposition := "contained_same_dimension";
+        fi;
+
+        Add(traces, rec(
+            inputPosition := position,
+            key := entries[position].key,
+            familyDimension := entries[position].familyDimension,
+            groupOrder := entries[position].order,
+            disposition := disposition,
+            directTargetPosition := directTargetPosition,
+            directTargetKey := directTargetKey,
+            finalTargetPosition := finalPosition,
+            finalTargetKey := entries[finalPosition].key,
+            finalStatus := finalStatus,
+            pathPositions := path,
+            pathKeys := List(path, pathPosition -> entries[pathPosition].key),
+            pathEdgeNumbers := pathEdgeNumbers,
+            sourceUndecidedCount := sourceUndecidedCount,
+            pathUndecidedCount := pathUndecidedCount
+        ));
+    od;
+
+    Sort(survivorPositions, function(firstPosition, secondPosition)
+        local first, second;
+        first := entries[firstPosition];
+        second := entries[secondPosition];
+        if first.familyDimension <> second.familyDimension then
+            return first.familyDimension < second.familyDimension;
+        elif first.order <> second.order then
+            return first.order < second.order;
+        fi;
+        return first.position < second.position;
+    end);
+    classes := [];
+    for finalPosition in survivorPositions do
+        memberPositions := Filtered(
+            allPositions,
+            position -> traces[position].finalTargetPosition = finalPosition
+        );
+        Add(classes, rec(
+            finalTargetPosition := finalPosition,
+            finalTargetKey := entries[finalPosition].key,
+            finalStatus := traces[finalPosition].finalStatus,
+            familyDimension := entries[finalPosition].familyDimension,
+            groupOrder := entries[finalPosition].order,
+            memberCount := Length(memberPositions),
+            memberPositions := memberPositions,
+            memberKeys := List(
+                memberPositions,
+                memberPosition -> entries[memberPosition].key
+            )
+        ));
+    od;
+
+    return rec(
+        mode := "equal_dimension_traceable_ascending_lazy",
+        removalMode := "smaller_group",
+        originalCount := Length(entries),
+        knownSaturatedInputCount := knownInputCount,
+        knownSaturatedInputPositions := knownPositions,
+        representativeCountAfterEqualOrder := Length(representativePositions),
+        representativePositionsAfterEqualOrder := representativePositions,
+        remainingCount := Length(survivorPositions),
+        removedCount := Length(removedPositions),
+        keptPositions := survivorPositions,
+        removedPositions := removedPositions,
+        remainingRecords := List(
+            survivorPositions,
+            position -> entries[position].record
+        ),
+        removedRecords := List(
+            removedPositions,
+            position -> entries[position].record
+        ),
+        knownSaturatedSurvivorPositions := Intersection(
+            survivorPositions,
+            knownPositions
+        ),
+        computedSaturatedPositions := computedSaturatedPositions,
+        unresolvedSurvivorPositions := unresolvedSurvivorPositions,
+        directEdges := certificates,
+        removalCertificates := certificates,
+        parentPositions := parentPositions,
+        familyTraces := traces,
+        saturationClasses := classes,
+        testedPairCount := state.testedPairCount,
+        noEmbeddingPairs := noEmbeddingPairs,
+        noEmbeddingCount := Length(noEmbeddingPairs),
+        cheapRejectedCount := state.cheapRejectedCount,
+        abstractRejectedCount := state.abstractRejectedCount,
+        abstractUnknownCount := state.abstractUnknownCount,
+        abstractCacheEntryCount := Length(state.abstractCache.entries),
+        strictTestCount := state.strictTestCount,
+        preprocessedRecordCount := Number(
+            entries,
+            item -> IsBound(item.info)
+        ),
+        undecidedPairs := undecidedPairs,
+        undecidedCount := Length(undecidedPairs),
+        maximaComplete := Length(undecidedPairs) = 0,
+        runtimeMilliseconds := Runtime() - state.startRuntime
+    );
+end;
+
+
+#############################################################################
+## Remove endpoints of proved containment edges
+#############################################################################
+
+CF_StripListByContainment := function(records, containmentData, removeWhich)
+    local normalizedMode, removedPositions, certificates, edge,
+          removedPosition, keptPosition, keptPositions;
+
+    if not IsList(records) then
+        Error("The first argument must be the original record list.");
+    fi;
+    if not IsRecord(containmentData)
+       or not IsBound(containmentData.embeddedEdges) then
+        Error("The second argument must be a containment-search result.");
+    fi;
+    if IsBound(containmentData.recordCount)
+       and containmentData.recordCount <> Length(records) then
+        Error("The record list does not match the containment result.");
+    fi;
+
+    if removeWhich = "smaller" or removeWhich = "smaller_group" then
+        normalizedMode := "smaller_group";
+    elif removeWhich = "larger" or removeWhich = "larger_group" then
+        normalizedMode := "larger_group";
+    else
+        Error(
+            "removeWhich must be smaller_group or larger_group."
+        );
+    fi;
+
+    removedPositions := [];
+    certificates := [];
+    for edge in containmentData.embeddedEdges do
+        if edge.sourceOrder < edge.targetOrder then
+            if normalizedMode = "smaller_group" then
+                removedPosition := edge.sourcePosition;
+                keptPosition := edge.targetPosition;
+            else
+                removedPosition := edge.targetPosition;
+                keptPosition := edge.sourcePosition;
+            fi;
+        elif edge.sourceOrder = edge.targetOrder then
+            # Equal-order embeddings are conjugacies.  Keep the earlier input
+            # record deterministically, independently of the removal mode.
+            removedPosition := Maximum(
+                edge.sourcePosition,
+                edge.targetPosition
+            );
+            keptPosition := Minimum(
+                edge.sourcePosition,
+                edge.targetPosition
+            );
+        else
+            Error("Containment edge orientation is inconsistent with orders.");
+        fi;
+
+        Add(removedPositions, removedPosition);
+        Add(certificates, rec(
+            removedPosition := removedPosition,
+            keptPosition := keptPosition,
+            edge := edge
+        ));
+    od;
+
+    removedPositions := Set(removedPositions);
+    keptPositions := Difference(
+        [ 1 .. Length(records) ],
+        removedPositions
+    );
+
+    return rec(
+        removalMode := normalizedMode,
+        originalCount := Length(records),
+        remainingCount := Length(keptPositions),
+        removedCount := Length(removedPositions),
+        keptPositions := keptPositions,
+        removedPositions := removedPositions,
+        remainingRecords := records{keptPositions},
+        removedRecords := records{removedPositions},
+        removalCertificates := certificates
+    );
+end;
+
+
+CF_ContainmentFilteredList := function(records, containmentData, removeWhich)
+    return CF_StripListByContainment(
+        records,
+        containmentData,
+        removeWhich
+    ).remainingRecords;
+end;
+
+
+#############################################################################
+## Public search entries
+#############################################################################
+
+CF_ContainmentsEqualDimension := function(data, arg...)
+    local prepared;
+
+    prepared := CF_AsContainmentPreparation(data);
+    return CF_SearchContainmentPairs(
+        prepared,
+        true,
+        CF_ContainmentSearchOptions(arg)
+    );
+end;
+
+
+## Preferred entry point for large catalogues.  Unlike
+## CF_ContainmentsEqualDimension, this does not require an eager call to
+## CF_PrepareContainmentRecords.
+CF_ContainmentsEqualDimensionLazy := function(data, arg...)
+    return CF_SearchContainmentPairsLazy(
+        data,
+        true,
+        CF_ContainmentSearchOptions(arg)
+    );
+end;
+
+
+CF_ContainmentsAllDimensions := function(data, arg...)
+    local prepared, result, records, maximalData;
+
+    prepared := CF_AsContainmentPreparation(data);
+    result := CF_SearchContainmentPairs(
+        prepared,
+        false,
+        CF_ContainmentSearchOptions(arg)
+    );
+    records := List(prepared.entries, entry -> entry.record);
+    maximalData := CF_StripListByContainment(
+        records,
+        result,
+        "smaller_group"
+    );
+
+    # This is the full proved relation, not only its transitive reduction.
+    result.containmentPairs := result.embeddedEdges;
+    result.maximalRecords := maximalData.remainingRecords;
+    result.maximalPositions := maximalData.keptPositions;
+    result.maximalKeys := List(
+        maximalData.keptPositions,
+        position -> prepared.entries[position].key
+    );
+    result.maximalCount := maximalData.remainingCount;
+    result.maximaComplete := result.undecidedCount = 0;
+    result.maximalReduction := maximalData;
+
+    return result;
+end;
+
+GAP CODE: DRIVER
+
+#############################################################################
+## Traceable equal-dimensional saturation search.
+##
+## The 177 certified-smooth families are loaded from gap_saturation_input.g.
+## The seven unresolved small non-abelian families are excluded.  Records
+## tagged known_saturated remain permanent targets and are never proper-order
+## sources.  The tag is mathematical input, not a conclusion of this driver.
+##
+## Output:
+##   gap_equal_dimension_saturation.log  incremental readable transcript;
+##   gap_equal_dimension_saturation.out  GAP-readable final audit record.
+## A deliberate run replaces both files.
+#############################################################################
+
+CF_EQSAT_Paths := function()
+    if IsExistingFile("gap_equal_dimension_saturation.g") then
+        return rec(
+            saturationDirectory := "",
+            outputFile := "gap_equal_dimension_saturation.out",
+            logFile := "gap_equal_dimension_saturation.log"
+        );
+    fi;
+    if IsExistingFile(Concatenation(
+        "gap_classification/gap_saturation/",
+        "gap_equal_dimension_saturation.g"
+    )) then
+        return rec(
+            saturationDirectory := "gap_classification/gap_saturation/",
+            outputFile := Concatenation(
+                "gap_classification/gap_saturation/",
+                "gap_equal_dimension_saturation.out"
+            ),
+            logFile := Concatenation(
+                "gap_classification/gap_saturation/",
+                "gap_equal_dimension_saturation.log"
+            )
+        );
+    fi;
+    Error("Run from the repository root or gap_classification/gap_saturation.");
+end;
+
+
+CF_EQSAT_PathRecord := CF_EQSAT_Paths();
+if IsBound(CF_EQSAT_OUTPUT_FILE_OVERRIDE) then
+    CF_EQSAT_PathRecord.outputFile := CF_EQSAT_OUTPUT_FILE_OVERRIDE;
+fi;
+if IsBound(CF_EQSAT_LOG_FILE_OVERRIDE) then
+    CF_EQSAT_PathRecord.logFile := CF_EQSAT_LOG_FILE_OVERRIDE;
+fi;
+
+Read(Concatenation(
+    CF_EQSAT_PathRecord.saturationDirectory,
+    "gap_saturation_input.g"
+));
+Read(Concatenation(
+    CF_EQSAT_PathRecord.saturationDirectory,
+    "gap_containment_functions.g"
+));
+
+
+CF_EQSAT_Candidates := Filtered(
+    SaturationInputCandidates,
+    record -> record.smoothnessStatus <> "unresolved"
+);
+CF_EQSAT_KnownSaturated := Filtered(
+    CF_EQSAT_Candidates,
+    record -> record.saturationTag = "known_saturated"
+);
+CF_EQSAT_Sources := Filtered(
+    CF_EQSAT_Candidates,
+    record -> record.eligibleForSaturation = true
+);
+
+if Length(CF_EQSAT_Candidates) <> 177
+   or Length(CF_EQSAT_KnownSaturated) <> 60
+   or Length(CF_EQSAT_Sources) <> 117
+   or Length(SaturationInputSmallNonabelianUnresolved) <> 7 then
+    Error("The equal-dimensional saturation input failed its audit.");
+fi;
+
+
+CF_EQSAT_CompactPair := function(pair)
+    return rec(
+        sourcePosition := pair.sourcePosition,
+        targetPosition := pair.targetPosition,
+        sourceKey := pair.sourceKey,
+        targetKey := pair.targetKey,
+        sourceOrder := pair.sourceOrder,
+        targetOrder := pair.targetOrder,
+        familyDimension := pair.sourceFamilyDimension,
+        status := pair.status,
+        method := pair.method,
+        reason := pair.reason
+    );
+end;
+
+
+CF_EQSAT_CompactEdge := function(edgeNumber, certificate)
+    local result, search;
+
+    search := certificate.edge.embeddingResult;
+    result := rec(
+        edgeNumber := edgeNumber,
+        kind := certificate.kind,
+        sourcePosition := certificate.edge.sourcePosition,
+        targetPosition := certificate.edge.targetPosition,
+        sourceKey := certificate.edge.sourceKey,
+        targetKey := certificate.edge.targetKey,
+        sourceOrder := certificate.edge.sourceOrder,
+        targetOrder := certificate.edge.targetOrder,
+        familyDimension := certificate.edge.sourceFamilyDimension,
+        method := certificate.edge.method,
+        reason := certificate.edge.reason,
+        images := fail,
+        conjugatingMatrix := fail
+    );
+    if IsBound(search.images) then
+        result.images := search.images;
+    fi;
+    if IsBound(search.P) then
+        result.conjugatingMatrix := search.P;
+    fi;
+    return result;
+end;
+
+
+CF_EQSAT_FamilyResult := function(position, trace)
+    local candidate;
+
+    candidate := CF_EQSAT_Candidates[position];
+    return rec(
+        inputPosition := position,
+        key := candidate.sourceKey,
+        sourceCategory := candidate.sourceCategory,
+        symplecticPart := candidate.symplecticPart,
+        projectiveGroupId := candidate.projectiveGroupId,
+        linearGroupId := candidate.linearGroupId,
+        fullIndex := candidate.fullIndex,
+        familyDimension := candidate.familyDimension,
+        groupOrder := trace.groupOrder,
+        inputSaturationTag := candidate.saturationTag,
+        disposition := trace.disposition,
+        directTargetPosition := trace.directTargetPosition,
+        directTargetKey := trace.directTargetKey,
+        finalTargetPosition := trace.finalTargetPosition,
+        finalTargetKey := trace.finalTargetKey,
+        finalStatus := trace.finalStatus,
+        containmentPathPositions := trace.pathPositions,
+        containmentPathKeys := trace.pathKeys,
+        containmentPathEdgeNumbers := trace.pathEdgeNumbers,
+        sourceUndecidedCount := trace.sourceUndecidedCount,
+        pathUndecidedCount := trace.pathUndecidedCount
+    );
+end;
+
+
+## Use an explicit stream so that a deliberate rerun replaces the preceding
+## transcript instead of stopping because the log file already exists.
+CF_EQSAT_LogStream := OutputTextFile(
+    CF_EQSAT_PathRecord.logFile,
+    false
+);
+LogTo(CF_EQSAT_LogStream);
+PrintTo(
+    CF_EQSAT_PathRecord.outputFile,
+    "EqualDimensionSaturationAudit := rec(",
+    "status := \"running\", inputCount := 177);\n"
+);
+Print("============================================================\n");
+Print("Traceable equal-dimensional saturation search\n");
+Print("============================================================\n");
+Print("Certified-smooth input: 177\n");
+Print("Known saturated permanent targets: 60\n");
+Print("Candidates requiring comparison: 117\n");
+Print("Unresolved smoothness records excluded: 7\n");
+Print("Dimension-zero input: ", Number(
+    CF_EQSAT_Candidates,
+    record -> record.familyDimension = 0
+), "\n\n");
+
+CF_EQSAT_Headers := CF_PrepareContainmentRecordHeaders(
+    CF_EQSAT_Candidates
+);
+CF_EQSAT_Result := CF_TraceEqualDimensionSaturationLazy(
+    CF_EQSAT_Headers,
+    rec(
+        stop_first := true,
+        construct_witness := false,
+        try_literal_inclusion := true,
+        use_abstract_id_filter := true,
+        pair_progress := true,
+        progress_interval := 5
+    )
+);
+
+
+CF_EQSAT_DirectEdges := [];
+for CF_EQSAT_Number in [ 1 .. Length(CF_EQSAT_Result.directEdges) ] do
+    Add(
+        CF_EQSAT_DirectEdges,
+        CF_EQSAT_CompactEdge(
+            CF_EQSAT_Number,
+            CF_EQSAT_Result.directEdges[CF_EQSAT_Number]
+        )
+    );
+od;
+
+CF_EQSAT_NoEmbeddingPairs := List(
+    CF_EQSAT_Result.noEmbeddingPairs,
+    CF_EQSAT_CompactPair
+);
+CF_EQSAT_UndecidedPairs := List(
+    CF_EQSAT_Result.undecidedPairs,
+    CF_EQSAT_CompactPair
+);
+
+CF_EQSAT_FamilyResults := [];
+for CF_EQSAT_Number in [ 1 .. Length(CF_EQSAT_Candidates) ] do
+    Add(
+        CF_EQSAT_FamilyResults,
+        CF_EQSAT_FamilyResult(
+            CF_EQSAT_Number,
+            CF_EQSAT_Result.familyTraces[CF_EQSAT_Number]
+        )
+    );
+od;
+
+CF_EQSAT_SaturationClasses := [];
+for CF_EQSAT_Number in [ 1 .. Length(CF_EQSAT_Result.saturationClasses) ] do
+    CF_EQSAT_Class := CF_EQSAT_Result.saturationClasses[CF_EQSAT_Number];
+    Add(CF_EQSAT_SaturationClasses, rec(
+        classNumber := CF_EQSAT_Number,
+        finalTargetPosition := CF_EQSAT_Class.finalTargetPosition,
+        finalTargetKey := CF_EQSAT_Class.finalTargetKey,
+        finalStatus := CF_EQSAT_Class.finalStatus,
+        familyDimension := CF_EQSAT_Class.familyDimension,
+        groupOrder := CF_EQSAT_Class.groupOrder,
+        memberCount := CF_EQSAT_Class.memberCount,
+        memberPositions := CF_EQSAT_Class.memberPositions,
+        memberKeys := CF_EQSAT_Class.memberKeys
+    ));
+od;
+
+CF_EQSAT_Dimensions := Set(List(
+    CF_EQSAT_Candidates,
+    record -> record.familyDimension
+));
+CF_EQSAT_DimensionSummary := List(
+    CF_EQSAT_Dimensions,
+    dimension -> rec(
+        familyDimension := dimension,
+        inputCount := Number(
+            CF_EQSAT_FamilyResults,
+            result -> result.familyDimension = dimension
+        ),
+        removedCount := Number(
+            CF_EQSAT_FamilyResults,
+            result -> result.familyDimension = dimension
+                      and result.directTargetPosition <> fail
+        ),
+        survivorCount := Number(
+            CF_EQSAT_FamilyResults,
+            result -> result.familyDimension = dimension
+                      and result.directTargetPosition = fail
+        ),
+        knownSaturatedSurvivorCount := Number(
+            CF_EQSAT_FamilyResults,
+            result -> result.familyDimension = dimension
+                      and result.directTargetPosition = fail
+                      and result.finalStatus = "known_saturated"
+        ),
+        computedSaturatedSurvivorCount := Number(
+            CF_EQSAT_FamilyResults,
+            result -> result.familyDimension = dimension
+                      and result.directTargetPosition = fail
+                      and result.finalStatus = "computed_saturated"
+        ),
+        unresolvedSurvivorCount := Number(
+            CF_EQSAT_FamilyResults,
+            result -> result.familyDimension = dimension
+                      and result.directTargetPosition = fail
+                      and result.finalStatus = "unresolved"
+        )
+    )
+);
+
+CF_EQSAT_Audit := rec(
+    schemaVersion := 2,
+    status := "completed",
+    algorithm := rec(
+        equalOrderFirst := true,
+        sourceOrder := "ascending within each dimension",
+        targetOrder := "ascending group order",
+        targetPool := "all equal-dimensional representatives",
+        stopAtFirstProperOvergroup := true,
+        parentChainsResolvedToFinalTargets := true
+    ),
+    inputAudit := rec(
+        certifiedSmoothCount := Length(CF_EQSAT_Candidates),
+        knownSaturatedCount := Length(CF_EQSAT_KnownSaturated),
+        comparisonSourceCount := Length(CF_EQSAT_Sources),
+        unresolvedExcludedCount :=
+            Length(SaturationInputSmallNonabelianUnresolved),
+        dimensionZeroCount := Number(
+            CF_EQSAT_Candidates,
+            record -> record.familyDimension = 0
+        )
+    ),
+    testedPairCount := CF_EQSAT_Result.testedPairCount,
+    strictTestCount := CF_EQSAT_Result.strictTestCount,
+    cheapRejectedCount := CF_EQSAT_Result.cheapRejectedCount,
+    abstractRejectedCount := CF_EQSAT_Result.abstractRejectedCount,
+    abstractUnknownCount := CF_EQSAT_Result.abstractUnknownCount,
+    abstractCacheEntryCount := CF_EQSAT_Result.abstractCacheEntryCount,
+    preprocessedRecordCount := CF_EQSAT_Result.preprocessedRecordCount,
+    equalOrderDuplicateCount := Number(
+        CF_EQSAT_DirectEdges,
+        edge -> edge.kind = "equal_order_equivalence"
+    ),
+    properRemovalCount := Number(
+        CF_EQSAT_DirectEdges,
+        edge -> edge.kind = "proper_equal_dimension_overgroup"
+    ),
+    removedCount := CF_EQSAT_Result.removedCount,
+    survivorCount := CF_EQSAT_Result.remainingCount,
+    knownSaturatedSurvivorCount := Length(
+        CF_EQSAT_Result.knownSaturatedSurvivorPositions
+    ),
+    computedSaturatedSurvivorCount := Length(
+        CF_EQSAT_Result.computedSaturatedPositions
+    ),
+    unresolvedSurvivorCount := Length(
+        CF_EQSAT_Result.unresolvedSurvivorPositions
+    ),
+    undecidedCount := CF_EQSAT_Result.undecidedCount,
+    maximaComplete := CF_EQSAT_Result.maximaComplete,
+    runtimeMilliseconds := CF_EQSAT_Result.runtimeMilliseconds,
+    dimensionSummary := CF_EQSAT_DimensionSummary,
+    survivorKeys := List(
+        CF_EQSAT_Result.keptPositions,
+        position -> CF_EQSAT_Candidates[position].sourceKey
+    ),
+    removedKeys := List(
+        CF_EQSAT_Result.removedPositions,
+        position -> CF_EQSAT_Candidates[position].sourceKey
+    ),
+    directEdges := CF_EQSAT_DirectEdges,
+    noEmbeddingPairs := CF_EQSAT_NoEmbeddingPairs,
+    undecidedPairs := CF_EQSAT_UndecidedPairs,
+    familyResults := CF_EQSAT_FamilyResults,
+    saturationClasses := CF_EQSAT_SaturationClasses
+);
+
+PrintTo(
+    CF_EQSAT_PathRecord.outputFile,
+    "EqualDimensionSaturationAudit := ",
+    CF_EQSAT_Audit,
+    ";\n"
+);
+
+Print("\n============================================================\n");
+Print("Equal-dimensional saturation search completed\n");
+Print("============================================================\n");
+Print("Tested pairs: ", CF_EQSAT_Audit.testedPairCount, "\n");
+Print("Strict embedding tests: ", CF_EQSAT_Audit.strictTestCount, "\n");
+Print("Equal-order duplicates: ",
+      CF_EQSAT_Audit.equalOrderDuplicateCount, "\n");
+Print("Proper-order removals: ",
+      CF_EQSAT_Audit.properRemovalCount, "\n");
+Print("Surviving families: ", CF_EQSAT_Audit.survivorCount, "\n");
+Print("Unresolved surviving families: ",
+      CF_EQSAT_Audit.unresolvedSurvivorCount, "\n");
+Print("Undecided pairs: ", CF_EQSAT_Audit.undecidedCount, "\n");
+Print("Complete: ", CF_EQSAT_Audit.maximaComplete, "\n");
+Print("Runtime: ", CF_EQSAT_Audit.runtimeMilliseconds, " ms\n");
+Print("Output: ", CF_EQSAT_PathRecord.outputFile, "\n");
+Print("Log: ", CF_EQSAT_PathRecord.logFile, "\n");
+LogTo();
+CloseStream(CF_EQSAT_LogStream);
+
+Unbind(CF_EQSAT_Number);
+Unbind(CF_EQSAT_LogStream);
+if IsBound(CF_EQSAT_Class) then
+    Unbind(CF_EQSAT_Class);
+fi;
+
+RECORDED RESULT
+
+The normalized input contains 184 records: 76 large-group candidates, 53 liftable abelian candidates, two non-liftable abelian candidates, 46 smooth small non-abelian candidates, and seven unresolved small non-abelian candidates.  The 129 small non-abelian candidates with family-wide singularity certificates are omitted.  The seven unresolved candidates are retained in the data but are not used in the saturation calculation.
+
+Among the 177 smooth candidates, 60 are already known to be saturated.  These are the 48 connected symplectic families, five proper families covered by the rank-at-least-19 or order-divisible-by-7 results, C32 and C48, the three proper families with symplectic part 3^(1+4):2 and indices 4, 6, and 12, S3 x C24, and the index-2 family with symplectic part QD16.
+
+The remaining 117 candidates were compared with all admissible equal-dimensional targets.  Every comparison was decided.  Twenty-one candidates were contained in a larger equal-dimensional candidate, and 156 families remained.
+
+Containment between different dimensions was computed separately for the final 156 families.  There are 433 cover relations; their transitive closure contains 1793 proper containment relations.  No admissible pair remains undecided, and 21 strict lifts are maximal under linear-conjugacy containment.
+

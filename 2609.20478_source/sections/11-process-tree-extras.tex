@@ -1,0 +1,78 @@
+\section{Process tree supplements}\label{sec:pt-extras}
+
+This appendix characterises the sequence and parallel fragment of the process-tree construction of
+Section~\ref{sec:process_trees} as series-parallel partial orders.
+
+\subsection{Process trees and series-parallel posets}\label{subsec:pt-sp-appendix}
+
+The sequence and parallel operators of Definition~\ref{def:process-tree} have an exact
+characterisation in terms of series-parallel (SP) partial orders.
+The definition and results below make this precise. They are also used in the
+related-work discussion of Section~\ref{subsec:pt-sp-related}.
+
+\begin{definition}[Occurrence-level semantics for process trees]\label{def:pt-occ-semantics}
+  Let $\mathcal{A}$ be the set of activity names, and let $\mathcal{SP}$ denote the class of finite series-parallel (SP) posets.
+  A behaviour is a finite labelled occurrence poset $(E,\leq,\lambda)$, where $E$ is a finite set of event occurrences, $\leq$ is a partial order, and $\lambda:E\to\mathcal{A}$ is the activity-label map.
+
+  For a process tree $T$ over operators $\to$ (sequence), $+$ (AND), $\times$ (XOR), and $\circlearrowleft$ (loop), define its denotation
+  \[
+    \mathrm{sem}_{\mathrm{pt}}(T) \subseteq \mathcal{SP}
+  \]
+  inductively as follows:
+  \begin{align*}
+    \mathrm{sem}_{\mathrm{pt}}(a)
+    &:= \{(\{e\},\{(e,e)\},\{e\mapsto a\})\},\\
+    \mathrm{sem}_{\mathrm{pt}}(\to(T_1,T_2))
+    &:= \{P_1;P_2 \mid\twocolalignbreak P_1\in\mathrm{sem}_{\mathrm{pt}}(T_1),\twocolalignbreak P_2\in\mathrm{sem}_{\mathrm{pt}}(T_2)\},\\
+    \mathrm{sem}_{\mathrm{pt}}(+(T_1,T_2))
+    &:= \{P_1\otimes P_2 \mid\twocolalignbreak P_1\in\mathrm{sem}_{\mathrm{pt}}(T_1),\twocolalignbreak P_2\in\mathrm{sem}_{\mathrm{pt}}(T_2)\},\\
+    \mathrm{sem}_{\mathrm{pt}}(\times(T_1,\dots,T_k))
+    &:= \bigcup_{i=1}^k \mathrm{sem}_{\mathrm{pt}}(T_i),
+  \end{align*}
+  \begin{gather*}
+    \mathrm{sem}_{\mathrm{pt}}(\circlearrowleft(S,B_1,\dots,B_m)) :=\twocolbreak 
+    \bigcup_{n\ge 0}\ \bigcup_{j_1,\dots,j_n\in\{1,\dots,m\}}\twocolbreak 
+    \mathrm{sem}_{\mathrm{pt}}\bigl(S;B_{j_1};S;\cdots;B_{j_n};S\bigr).
+  \end{gather*}
+  Here $(;)$ is series composition of posets and $(\otimes)$ is parallel composition of posets.
+  The binary $\to$ and $+$ extend to arbitrary arity by associativity.
+\end{definition}
+
+\begin{theorem}[Process trees as sets of SP partial orders]\label{thm:pt-as-sp-language}
+  For every process tree $T$, $\mathrm{sem}_{\mathrm{pt}}(T)$ is a (finite or countably infinite) set of finite SP posets.
+  \begin{enumerate}
+    \item Every $P\in\mathrm{sem}_{\mathrm{pt}}(T)$ is obtained by
+      (i) unrolling loops (choosing a finite iteration count and redo-body sequence at each $\circlearrowleft$),
+      then (ii) exploding XOR (choosing one branch at each $\times$ node of the unrolled tree, independently for each copy),
+      yielding a residual tree over only $\to$ and $+$ whose unique denotation is $P$.
+    \item Conversely, every such finite XOR-choice and loop-unrolling yields some $P\in\mathrm{sem}_{\mathrm{pt}}(T)$.
+  \end{enumerate}
+  Hence the full behaviour of $T$ is exactly characterised as a language of SP posets.
+\end{theorem}
+
+\begin{proof}[Proof sketch]
+  Structural induction on $T$. SP posets are closed under series and parallel composition, XOR
+  contributes a union, and a loop at a fixed iteration count and redo-body sequence is a finite
+  $\to,+,\times$ expression, so every denotation is a set of finite SP posets. The two-sided
+  characterisation follows by unrolling each loop and choosing one branch at each XOR of the
+  unrolled tree, which leaves a $\to,+$ tree denoting a single SP poset, and the converse is
+  immediate from the inductive definition as unions over exactly those choices.
+\end{proof}
+
+\begin{remark}[Depth-$n$ unrolling]\label{rem:depth-n-unrolling}
+For a loop $\circlearrowleft(S,B_1,\dots,B_m)$, fixing an iteration count $n$ and a redo-body sequence gives the loop-free residual expression $S;B_{j_1};S;\cdots;B_{j_n};S$. Call it the depth-$n$ unrolling $D_n$. Exploding any remaining XOR in $D_n$ leaves a tree over $\to$ and $+$ only, whose denotation is a single SP poset by item~(1) of Theorem~\ref{thm:pt-as-sp-language}, a behaviour of the loop at that depth.
+\end{remark}
+
+\begin{remark}[Unique occurrence labels and DAG recovery]\label{rem:unique-occurrence-dag}
+  To avoid ambiguity from repeated activity names, each leaf occurrence is given a fresh event identifier in $E$.
+  The activity name is recovered by the map $\lambda:E\to\mathcal{A}$.
+  Given $P=(E,\leq,\lambda)$, its Hasse DAG $H(P)=(E,\prec,\lambda)$ (where $\prec$ is the cover relation) is unique up to isomorphism, and the original order $\leq$ is recovered from it by taking the reflexive-transitive closure of $\prec$, so the DAG representation preserves exactly the same partial-order behaviour.
+\end{remark}
+
+\begin{corollary}[Exact fragment without XOR/loop]\label{cor:pt-sp-iff}
+  If $T$ uses only $\to$ and $+$, then $\mathrm{sem}_{\mathrm{pt}}(T)=\{P\}$ for some finite SP poset $P$.
+  Conversely, every finite SP poset $P$ is denoted by a $\to,+$-only process tree, and this tree is canonical. Taking the decomposition tree of $P$~\cite{valdesRecognitionSeriesParallel1982,mohringComputationallyTractableClasses1989} (the unique alternating series/parallel tree in which no $\to$ node has a $\to$ child and no $+$ node has a $+$ child) yields a process tree that is unique up to associativity of $\to$ and associativity and commutativity of $+$, and is computable in linear time in $|P|$.
+  Thus $\to,+$ process trees are exactly finite SP posets (up to isomorphism), and the correspondence is constructive in both directions.
+\end{corollary}
+
+The inverse problem for the full operator set, recovering a process tree from a set of SP posets including XOR and loop structure, is more delicate and is taken up as part of the general conversion framework of Section~\ref{sec:conversion-framework}.

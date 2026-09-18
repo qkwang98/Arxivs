@@ -1,0 +1,283 @@
+\section{One Construction for Every Notation}\label{sec:general-framework}
+
+One construction turns a process model into a signature of generator cospans, and it is the
+same for every notation in Sections~\ref{sec:petri-nets}--\ref{sec:bpmn}. Pick an activity,
+follow the edges around it through the mediators, and stop at the first activities met on each
+side, recording the object types and edge weights seen on the way. Each way of joining what the
+activity receives to what it emits is one generator. Composing generators freely gives a
+symmetric monoidal category, each of its morphisms is a partial order of activity occurrences,
+and its traces are the orderings of those occurrences. For any choice of morphisms made from the
+signature alone, models with equal signatures have equal languages. A badly specified model appears as composites that cannot be satisfied.
+
+\subsection{The AND/OR graph}
+\label{subsec:firing-graphs}
+
+Every notation is first mapped to one kind of graph. Its nodes are activities, which a trace
+records, and mediators, which it does not. A mediator sends flow along all its
+branches at once (AND) or along exactly one of them (XOR). Edges carry the typing and weighting
+that the notation records.
+
+\begin{definition}[AND/OR graph]
+  \label{def:lm-graph}
+  An AND/OR graph over a finite set $\mathcal{O}$ of object types is a tuple
+  $G=(\mathcal{A},R,E,\ell,\nu,\mathrm{type},\mathrm{wt},\rho)$ in which $(\mathcal{A}\sqcup R,E)$
+  is a finite directed graph whose nodes are the activities $\mathcal{A}$ and the mediators $R$,
+  $\ell:\mathcal{A}\to\mathcal{L}$ labels the activities, $\nu:R\to\{\mathrm{AND},\mathrm{XOR}\}$
+  gives each mediator its kind, $\mathrm{type}:E\to\mathcal{O}$ and
+  $\mathrm{wt}:E\to\mathbb{N}_{\ge 1}\cup\{\mathrm{var}\}$ give each edge a type and a weight, and
+  $\rho(a)$ is a set of linear equalities and inequalities among the weights of the edges at the
+  activity $a$. The weight $\mathrm{var}$ marks an edge that carries zero or more objects, and
+  $\rho(a)$ is empty unless the notation relates the weights. Silent transitions are mediators,
+  and a notation with no types takes $\mathcal{O}=\{\ast\}$.
+\end{definition}
+
+Object-centric Petri nets, object-centric causal nets, process trees and BPMN are instances.
+The work specific to a notation is the correctness of its map to AND/OR graphs, which each
+notation's section establishes. Everything below is the same for all of them.
+
+\subsection{Reach families, contexts and generators}
+\label{subsec:generators}
+
+\begin{definition}[Reach families and contexts]
+  \label{def:contexts-general}
+  Let $a\in\mathcal{A}$. For a node $x$ reached from $a$ along a path $\pi$ of out-edges, let
+  $w_\pi\subseteq\mathcal{O}$ be the set of types on the edges of $\pi$ and let $N(x)$ be the
+  out-neighbours $y$ of $x$ with $R_a(y,\pi y)\ne\emptyset$. The reached family $R_a(x,\pi)$, a set of
+  finite sets of typed wires, is
+  \begin{gather*}
+    R_a(x,\pi)=\twocolbreak
+    \begin{cases}
+      \{\{(a,w_\pi,x)\}\} & x\in\mathcal{A},\\
+      \emptyset & x\text{ earlier on }\pi,\\
+      \{\{(a,w_\pi,\top)\}\} & \text{no out-edges},\\
+      \textstyle\bigcup_{y\in N(x)}R_a(y,\pi y) & \nu(x)=\mathrm{XOR},\\
+      \{\textstyle\bigcup_{y\in N(x)}S_y : S_y\in R_a(y,\pi y)\} & \nu(x)=\mathrm{AND},
+    \end{cases}
+  \end{gather*}
+  taking the cases in order, so the last four apply to mediators, with the AND case empty when
+  $N(x)$ is. The forward family $\mathcal{F}_a$ joins the out-edges of
+  $a$ as an AND mediator does, and $\mathcal{F}_a=\{\emptyset\}$ when no out-edge reaches anything.
+  The backward family $\mathcal{B}_a$ is the same construction along in-edges, with typed wires
+  $(x,w_\pi,a)$ and $(\bot,w_\pi,a)$. The contexts of $a$ are the pairs
+  $\mathrm{Contexts}(a)=\mathcal{B}_a\times\mathcal{F}_a$.
+\end{definition}
+
+The walk visits each node at most once per path, so $\mathcal{F}_a$ and $\mathcal{B}_a$ are
+finite on every finite graph, cycles included. Activities are identified by their labels, so
+typed wires are compared by label.
+
+\begin{definition}[Generator cospan]
+  \label{def:generator-cospan-general}
+  For $a\in\mathcal{A}$, each context $c=(P,S)\in\mathrm{Contexts}(a)$ gives the generator
+  $g_{a,c}=(P\hookrightarrow P+S\hookleftarrow S,\ d_{a,c})$ with one hyperedge $e_a$, labelled
+  $\lambda(e_a)=\ell(a)$, whose source is $P$ and whose target is $S$. Its decoration $d_{a,c}$
+  also carries the constraint system $\Lambda_{a,c}$ of
+  Definition~\ref{def:multiplicity-decoration}. Every context gives a generator and none is
+  discarded. The signature of $G$ is
+  $\Sigma=\{g_{a,c} : a\in\mathcal{A},\ c\in\mathrm{Contexts}(a)\}$.
+\end{definition}
+
+A typed wire is identified by its triple $(a,w,b)$. The set of edge weights met on its paths is
+data of the typed wire and plays no part in its identity, and each generator's constraints use the weight of
+the edge at its own end. The counts of a generator are fixed by its own legs only. Nothing
+outside the generator ties its input counts to its output counts, so an activity may create or
+consume objects of a type that appears on one side only.
+
+\begin{definition}[Constraint system]
+  \label{def:multiplicity-decoration}
+  Each leg $p\in P\cup S$ of $g_{a,c}$ has a count $n_p\in\mathbb{N}$, the number of objects
+  on $p$ in one occurrence of $a$. If the edge at $a$'s end of the path has weight $k$ then
+  $n_p=k$, and if that edge is variable then $n_p\ge 0$. The equalities and inequalities
+  $\rho(a)$ of Definition~\ref{def:lm-graph} apply to the counts of the legs whose edge at $a$'s
+  end they name, as the shared keys and cardinality intervals of object-centric causal nets do. The constraint system $\Lambda_{a,c}$ is the conjunction of these
+  constraints. Two generators are equal when they have the same label, the same typed wires and
+  constraint systems with the same solutions.
+\end{definition}
+
+\subsection{The free category and its traces}
+\label{subsec:free-category}
+
+A leg with count $n$ is the $n$-fold tensor power of its typed wire, with $n$ ports. A port joins
+an output of one occurrence to an input of another on the same typed wire, and nothing else
+composes.
+
+\begin{definition}[Free category of a signature]
+  \label{def:free-category}
+  For $g=g_{a,c}\in\Sigma$ and a count $k_p\in\mathbb{N}$ for each leg $p$, the count assignment of
+  $g$ with these counts is the box
+  \[
+    g^{k}:\ \textstyle\bigotimes_{p\in P}p^{\otimes k_p}\ \to\ \bigotimes_{q\in S}q^{\otimes k_q}
+  \]
+  labelled $\ell(a)$, with $k_p$ ports on each leg $p$ in a fixed order of the legs.
+  $\mathbf{F}(\Sigma)$ is the free symmetric monoidal category whose objects are the finite lists of typed wires and
+  whose generating morphisms are all count assignments. A morphism $f$ is satisfiable when every count
+  assignment $g^k$ in it satisfies $\Lambda_{a,c}$ with $n_p=k_p$.
+\end{definition}
+
+A morphism of $\mathbf{F}(\Sigma)$ is a string diagram built from count assignments, identities and
+symmetries by $;$ and $\otimes$. A count assignment is an activity morphism of
+Section~\ref{sec:hypergraphs} whose multiplicities on each typed wire are the counts $k_p$, so each
+generator of $\mathbf{H}(\Sigma)$ gives one count assignment per choice of counts. $\mathbf{F}(\Sigma)$ is
+the Frobenius-free part of $\mathbf{H}(\Sigma)$, the diagrams in which no port is copied, merged,
+created or discarded.
+
+A morphism belongs to $\mathbf{F}(\Sigma)$ whatever its boundary. An open input port stands
+for an object that enters from outside, and therefore every initialisation of the model is some
+morphism. A loop in the model appears as repeated composition, since a diagram has no cycles.
+
+\begin{definition}[Trace semantics of a morphism]
+  \label{def:trace-map}
+  The occurrences of a morphism $f$ of $\mathbf{F}(\Sigma)$ are its count assignments. An occurrence $e$ precedes an occurrence
+  $e'$ when a port of $f$ joins an output of $e$ to an input of $e'$, and the causal partial
+  order $D_f$ is the reflexive and transitive closure of this relation. If $f$ is satisfiable then
+  \begin{gather*}
+    \Gamma(f)=\{\ell(e_1)\cdots\ell(e_m) :\twocolbreak
+      e_1,\dots,e_m \text{ a linear extension of } D_f\},
+  \end{gather*}
+  where a silent label contributes the empty word, and otherwise $\Gamma(f)=\emptyset$.
+\end{definition}
+
+The relation $D_f$ is a partial order because diagrams are acyclic. A composite that contains
+an unsatisfiable count assignment is itself unsatisfiable, and $\Gamma$ is empty on it.
+
+\begin{exmp}[An AND split and join]
+  \label{ex:and-fanout}
+  Let $a$ lead through an AND mediator to $b$ and $c$, and let both lead through a second AND mediator to
+  $d$, with one type and weight $1$ throughout. Write $(a,b)$ for $(a,\{\ast\},b)$, and write an
+  activity's name for the count assignment of its generator with one port on each leg, and $I$ for the
+  monoidal unit, the empty list of typed wires. The walk gives
+  $\mathcal{F}_a=\{\{(a,b),(a,c)\}\}$ and $\mathcal{B}_d=\{\{(b,d),(c,d)\}\}$, and the count assignments include
+  \[
+    a:\ I\to(a,b)\otimes(a,c),\qquad b:\ (a,b)\to(b,d).
+  \]
+  With $c:(a,c)\to(c,d)$ and $d:(b,d)\otimes(c,d)\to I$, the composite
+  $f=a\,;(b\otimes c);d$ has the order $a\le b\le d$ and $a\le c\le d$. Its two linear extensions
+  give $\Gamma(f)=\{abcd,\ acbd\}$. The open composite $a\,;(b\otimes\mathrm{id}_{(a,c)})$ also
+  belongs to $\mathbf{F}(\Sigma)$ and gives $\{ab\}$. Had the edge leaving $a$ carried weight $2$,
+  the count assignment of $a$ with one port on each leg would be unsatisfiable and $\Gamma(f)=\emptyset$
+  for this $f$, while the count assignment of $a$ with two ports on each leg composes.
+\end{exmp}
+
+\begin{lemma}[$\Gamma$ is well defined]
+  \label{lem:gamma-well-defined}
+  Equal morphisms of $\mathbf{F}(\Sigma)$ have equal images under $\Gamma$.
+\end{lemma}
+\begin{proof}
+  A morphism is a class of terms under the symmetric monoidal equations, and $\Gamma$ depends on a
+  term only through its occurrences, their labels and which output port reaches which input. Identities
+  and symmetries have no occurrences and only relay ports. The associativity and unit laws regroup a
+  term without adding occurrences or redirecting ports. Interchange, $(f\otimes g);(f'\otimes g')=
+  (f;f')\otimes(g;g')$, joins the same outputs to the same inputs on both sides, and naturality
+  of the symmetry moves a crossing past a box with every port ending where it did. The law
+  $\sigma;\sigma=\mathrm{id}$ and the hexagons relay each port unchanged. Each equation therefore
+  preserves the occurrences, satisfiability and the wiring, which records which output reaches
+  which input, the boundary included. The wiring of $f;g$ and of $f\otimes g$ is fixed by
+  those of $f$ and $g$, so the invariance extends to every term containing an equated part, and
+  $D_f$ is determined by the wiring.
+\end{proof}
+
+\subsection{The model invariant}
+\label{subsec:theorem}
+\label{subsec:minimal-signatures}
+
+A selection $\mathcal{S}$ assigns to each signature $\Sigma$ a set $\mathcal{S}(\Sigma)$ of morphisms of
+$\mathbf{F}(\Sigma)$ by a rule that uses $\Sigma$ alone. Its language is
+$L_{\mathcal{S}}(\Sigma)=\bigcup_{f\in \mathcal{S}(\Sigma)}\Gamma(f)$.
+
+\begin{theorem}[Model invariant]
+  \label{thm:canonical-presentation}
+  For every selection $\mathcal{S}$, if $\Sigma_1=\Sigma_2$ then $L_{\mathcal{S}}(\Sigma_1)=L_{\mathcal{S}}(\Sigma_2)$.
+\end{theorem}
+\begin{proof}
+  Equal signatures have the same typed wires and the same count assignments, with the same labels and the same
+  satisfiable counts, so $\mathbf{F}(\Sigma_1)=\mathbf{F}(\Sigma_2)$. A rule that uses the
+  signature alone selects the same morphisms from both, and by
+  Lemma~\ref{lem:gamma-well-defined} the unions defining $L_{\mathcal{S}}$ agree.
+\end{proof}
+
+The theorem holds for every selection, and how well the language separates models depends on the
+selection. The default selection takes the connected process diagrams of Section~\ref{sec:hypergraphs},
+the morphisms with any boundary that have at least one count assignment and whose count assignments are
+joined into one piece by their ports. It covers every
+initialisation, including a pure cycle $a\to b\to c\to a$ started at whichever activity receives the first object, and it
+keeps the order of occurrences, whereas over all of $\mathbf{F}(\Sigma)$ count assignments placed side by side
+give every ordering of the labels. The converse of the theorem fails, since different signatures
+can give equal languages.
+
+Signatures can also be compared by inclusion. Write $\Sigma_1\subseteq\Sigma_2$ when every generator of
+$\Sigma_1$ is equal to a generator of $\Sigma_2$ in the sense of
+Definition~\ref{def:multiplicity-decoration}, with the same label, the same typed wires and
+constraint systems with the same solutions.
+
+\begin{proposition}[Inclusion of free categories]
+  \label{prop:inclusion-functor}
+  If $\Sigma_1\subseteq\Sigma_2$ then there is a strict symmetric monoidal functor
+  $\mathrm{inc}\colon\mathbf{F}(\Sigma_1)\to\mathbf{F}(\Sigma_2)$ that is the identity on typed wires
+  and on count assignments, and $\Gamma(\mathrm{inc}\,f)=\Gamma(f)$ for every morphism $f$.
+\end{proposition}
+\begin{proof}
+  Every typed wire of $\Sigma_1$ is a typed wire of $\Sigma_2$, so every object of
+  $\mathbf{F}(\Sigma_1)$ is an object of $\mathbf{F}(\Sigma_2)$. A count assignment $g^{k}$ of
+  $\Sigma_1$ has the label, legs and counts of the count assignment $g^{k}$ of the equal generator of
+  $\Sigma_2$, and it satisfies one constraint system exactly when it satisfies the other, since the
+  two have the same solutions. Sending each generating morphism of $\mathbf{F}(\Sigma_1)$ to the same
+  generating morphism of $\mathbf{F}(\Sigma_2)$ extends to a strict symmetric monoidal functor by
+  the universal property of the free symmetric monoidal category. The functor sends a term built by
+  $;$ and $\otimes$ from count assignments, identities and symmetries to the same term, so
+  $\mathrm{inc}\,f$ has the occurrences of $f$ with the same labels and the same satisfiability, and
+  each of its ports joins the output and input it joins in $f$. Hence $D_{\mathrm{inc}\,f}=D_f$ and
+  $\Gamma(\mathrm{inc}\,f)=\Gamma(f)$. By Lemma~\ref{lem:gamma-well-defined} the equation holds for
+  every term representing the morphism.
+\end{proof}
+
+A selection $\mathcal{S}$ is monotone when $\Sigma_1\subseteq\Sigma_2$ implies
+$\mathrm{inc}(\mathcal{S}(\Sigma_1))\subseteq\mathcal{S}(\Sigma_2)$.
+
+\begin{corollary}[Signature inclusion]
+  \label{cor:signature-inclusion}
+  For every monotone selection $\mathcal{S}$, if $\Sigma_1\subseteq\Sigma_2$ then
+  $L_{\mathcal{S}}(\Sigma_1)\subseteq L_{\mathcal{S}}(\Sigma_2)$.
+\end{corollary}
+\begin{proof}
+  A word of $L_{\mathcal{S}}(\Sigma_1)$ lies in $\Gamma(f)$ for some $f\in\mathcal{S}(\Sigma_1)$. By
+  Proposition~\ref{prop:inclusion-functor} it lies in $\Gamma(\mathrm{inc}\,f)$, and
+  $\mathrm{inc}\,f\in\mathcal{S}(\Sigma_2)$ because $\mathcal{S}$ is monotone.
+\end{proof}
+
+The connected process diagrams form a monotone selection. Having at least one count assignment
+and having all count assignments joined into one piece by ports are properties of the occurrences
+and the wiring, and $\mathrm{inc}$ preserves both. The corollary needs monotonicity, whereas
+Theorem~\ref{thm:canonical-presentation} holds for every selection. The rule that selects the
+morphisms in which every generator of $\Sigma$ occurs uses $\Sigma$ alone, yet a larger signature
+can lose morphisms under it. The corollary gives no strictness, since a proper inclusion of
+signatures may still give equal languages.
+
+\subsection{Analysis of composites}
+\label{subsec:analysis}
+
+The analysis of a particular model selects and diagnoses composites of $\mathbf{F}(\Sigma)$, and
+the \texttt{proc-posets} implementation performs it without changing $\Sigma$. A start generator
+provides objects for one way the process can begin, a set of first activities that receive
+objects together, and an end generator takes objects at the matching finish. These generators
+form $\Sigma_\gamma$, every report states them as an assumption, and a selection that uses them
+needs $\Sigma_\gamma$ equal as well as $\Sigma$ for Theorem~\ref{thm:canonical-presentation} to
+apply. It is monotone when the start and end generators of the smaller signature are among those
+of the larger, since a closed run stays closed under $\mathrm{inc}$, and
+Corollary~\ref{cor:signature-inclusion} then applies. A closed run joins a start generator to an end generator with no open port. A livelock
+family is a sequence of composites that another pass of a loop can always extend and that never
+closes. A base run is a closed run from which no loop pass can be removed. Removal is
+read on labels, so a closed run is a base run when no shorter closed run with the same start and
+end generators differs from it, as label counts, by a sum of loop passes. Every closed run is then a
+base run with loop passes inserted, and the closed runs fall into classes indexed by how many
+passes are inserted where (Section~\ref{sec:validation}). Loops are classed by how one pass changes the object counts. A bounded loop leaves them
+unchanged, a growing but closable loop adds objects that an end generator still absorbs, an
+explosive loop produces objects that nothing can absorb, and a livelock loop is never left. Run
+coverage lists the generators that lie on no run and the reason for each. When counts cannot
+balance from the stated start, the report gives the least extra supply that would balance them.
+Open typed wires that nothing joins, typed wires whose paths carry more than one type and models whose
+activities form separate components are reported as well.
+
+The \texttt{proc-posets} test suite checks the extraction on 26 hand-derived models against an
+independent token game. On its bench, equal signatures never gave different languages under any
+selection tried, and the connected process diagrams gave the fewest pairs of models with different
+signatures and equal languages.

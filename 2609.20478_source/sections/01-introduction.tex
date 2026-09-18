@@ -1,0 +1,273 @@
+\section{Introduction}\label{sec:introduction}
+
+\begin{figure*}[!t]
+  \centering
+  \resizebox{\linewidth}{!}{\input{tikz/categories/motive_three_faces}\unskip}
+  \caption{One process in four notations and its string diagram. Accept an order with two
+    items~($a$), pack each item~($p$), and ship once both are packed~($s$), over the object types
+    order (blue) and item (red). Panels~(i) and~(iv) are two object-centric Petri nets, whose
+    circles are places holding resources. The object-centric causal net of panel~(ii) has no places
+    and carries the same resources as markers on its arcs. Circle nodes in the process tree of
+    panel~(iii) encode structure rather than resources, and the diamond gateways of the typed BPMN
+    model in panel~(v) do the same. Panel~(vi) is the string diagram, which encodes both minimally,
+    structure as topology and resources as wires. Each panel is equivalent to panel~(vi),
+    reconstructed from the local connectivity of its activities, and all six emit the language
+    $\{\langle a,p,p,s\rangle\}$.}
+  \label{fig:oc-two-faces}
+\end{figure*}
+
+Organisations audit, redesign, and argue over a picture of the process that a process-mining tool
+drew from an event log. A second tool given the same log draws a different picture. The pictures
+come in several incompatible kinds, and a
+modeller given two of them cannot decide whether they describe the same process without first
+choosing a translation from one kind into the other. The comparisons that survive such a translation
+run over sequences, either the activity sequences a model allows or the states a model passes
+through as it produces them, and both readings replace concurrent activities by the orders in which
+they might have occurred. Here we give the four notations used in practice a single common form in
+which the concurrency survives, and a test that decides whether two models, drawn in the same
+notation or in two, have the same structure. The test computes for each model a signature, a
+finite description of which activities hand which objects to which activities, and compares the
+two signatures for equality.
+
+No comparison in current use decides whether two models describe the same process. Comparing
+trace languages conflates two activities that run concurrently with an exclusive choice between
+their two orders, because both allow the same two sequences. The transition systems behind those
+sequences make the same identification, one interleaved state graph for the concurrent pair and
+one for the choice, and the two graphs are
+bisimilar~\cite{sassoneModelsConcurrencyClassification1996}, so bisimulation inherits the
+conflation. The equivalences that do see the difference, among them history-preserving
+bisimulation~\cite{vanglabbeekRefinementActionsEquivalence2001}, compare runs as partial orders,
+but each is defined inside a single notation's unfolding semantics and settled by a matching game
+over its state space, so applying one across notations requires the very translation whose
+correctness is in question. Replay-based conformance checking measures a model against a log
+rather than against a second model. None of the four routes settles the question.
+
+The reason is shared by all four. Every notation records a process through routing devices of its
+own, the constructs that steer objects between activities. We take the four that
+process-discovery tools return, and between them they exhaust the devices in use, namely a buffer drawn
+as a node, a buffer folded into an edge, an operator node, and a gateway.
+
+\emph{Object-centric Petri nets}~\cite{vanderaalstDiscoveringObjectCentricPetri2020} hold objects
+in typed places and count them on arc weights. We assume a net is type-consistent, so that no chain
+of silent transitions joins places of different object type
+(Definition~\ref{def:type-consistent}), which nets produced by object-centric discovery satisfy
+automatically. \emph{Object-centric causal nets}~\cite{lissObjectCentricCausalNets2025} have no
+places at all and record the same fact in binding markers on their arcs. They are the reference
+instance of the construction of Section~\ref{sec:general-framework}, the one in which the routing devices appear in their most
+collapsed form. \emph{Object-centric process
+trees}~\cite{leemansDiscoveringBlockStructuredProcess2013} route through operator nodes, and are
+block-structured and hence series-parallel at the level of
+occurrences~(Theorem~\ref{thm:pt-as-sp-language}), the assumption that guarantees their soundness and
+excludes the non-series-parallel behaviours. \emph{Typed models in the Business Process Model and
+Notation} (BPMN)~\cite{BusinessProcessModel} route through gateways. We take a model to be finite
+and expand its OR gateways into combinations of AND and XOR, and require nothing else of it.
+
+No routing device is
+determined by the behaviour it encodes, so two correct models of one process may use different
+devices, and comparing drawings then compares devices. Section~\ref{sec:related-work} takes up
+this literature in detail.
+
+Figure~\ref{fig:oc-two-faces} shows the routing devices at their smallest, on the process its
+caption describes, drawn in panels (i)--(v) in the four notations a process-mining tool is most
+likely to hand back. Write $a$ for accept order, $p$ for pack item,
+and $s$ for ship order, over the two object types $\mathrm{order}$ (blue) and
+$\mathrm{item}$ (red).
+
+The five drawings agree on the activities and on little else. The object-centric Petri net of
+Figure~\ref{fig:oc-two-faces}(i) records the two items in a typed place carrying the arc weight
+$2$. Figure~\ref{fig:oc-two-faces}(iv) draws the same process with one transition per item and
+every arc weight $1$, so the device of panel~(i) is a property of the drawing alone.
+The object-centric causal net of Figure~\ref{fig:oc-two-faces}(ii) has no places anywhere and
+records the same fact on its arcs, so the buffer one notation draws as a node the other folds into
+an edge. No picture is a special case of another. The process tree of
+Figure~\ref{fig:oc-two-faces}(iii) routes on the arity of a parallel operator, and the BPMN model
+of Figure~\ref{fig:oc-two-faces}(v) on a pair of gateways, devices of a third and a fourth kind.
+
+Figure~\ref{fig:oc-two-faces}(vi) is the same process with the routing devices removed, and it is
+the picture this paper builds on. A box is an activity occurrence and a wire is a typed object
+passing from the activity that produces it to the one that consumes it
+(Table~\ref{tab:intuition}). Here $a$ sends one $\mathrm{order}$ wire and two $\mathrm{item}$ wires outward, each
+$\mathrm{item}$ wire passes through its own $p$ box, and all three arrive at $s$. Nothing else is
+drawn, because the picture records only which activity hands which object to which other activity.
+
+A picture of this kind is a string diagram. It is not a fifth notation to model in.
+Nothing in it is left to choose, since every routing device is gone and only the typed hand-overs
+remain. The string diagram is the normal
+form the four notations share, the way regular expressions are compared through their minimal
+automata, and it comes with an algebra that says how two diagrams combine.
+
+The reading of a run as a partially ordered set of occurrences is itself old. Partial orders have
+modelled concurrency since the sixties~\cite{prattModelingConcurrencyPartial1986}, net theory
+reads each run of a Petri net as such an order, and the equivalences above compare those orders
+configuration by configuration. The missing step is from semantics to syntax. In net theory the
+partial order is something a model means, computed from the model by unfolding it. Here the partial order is
+something a modeller writes, the drawing shared by four notations, and equality of drawings is
+decided by comparing finite sets rather than by playing a game.
+
+The signature turns this into the promised test. Every model in the four notations reduces to its
+signature, the finite record of its activities and their typed inputs and outputs, and the
+reduction removes the routing devices and nothing else. Equal signatures certify the same
+structure, the same activities with the same typed inputs and outputs, and hence the same trace language,
+whichever notations the two models were drawn in, while unequal signatures witness a structural
+difference that no drawing convention removes. Included signatures certify included trace
+languages in the same way. The comparison fixes no modelling convention, and
+it runs on models as discovery tools emit them. Section~\ref{sec:validation} runs it on the output
+of two discovery algorithms from one log. The discovered causal net has exactly the ground-truth
+signature, and the discovered Petri net's signature strictly contains it, so the comparison names
+each behaviour the Petri net adds. The step from structure to behaviour runs one way, since two models of different
+structure can still allow the same traces, and the contribution list below states the direction.
+
+Three properties make the string diagram usable as a common form, and
+Table~\ref{tab:intuition} records the vocabulary the rest of the paper uses, with a plain reading
+for each term.
+
+\begin{description}
+  \item[Connectivity, not order.] The wires record which activities exchange which objects, not
+    when anything fires. Two activities with no wire between them are concurrent, and no ordering
+    is implied or stored.
+  \item[Typed resources with multiplicity.] Each wire carries an object type, and two boxes join
+    only where their types agree. An order and a pair of items are therefore different data rather
+    than differently labelled data, and object-centric coherence follows from the joining rule with
+    no further bookkeeping.
+  \item[Deformation invariance.] Only the connections matter. The picture may be stretched, and its
+    boxes slid past one another, without changing the process it denotes.
+\end{description}
+
+Two rules assemble diagrams from smaller ones. Sequential composition $(;)$ joins two diagrams end
+to end by matching outgoing wires to incoming wires of the same type. Parallel composition
+$(\otimes)$ sets two diagrams side by side with no interaction between them. A box may have several
+output wires of one type, which is how $a$ hands its two $\mathrm{item}$ wires to the two packs of
+Figure~\ref{fig:oc-two-faces}(vi). Wires may also split and merge, which copies one object to
+several activities and joins the copies again.
+
+\begin{table*}[t]
+  \centering
+  \caption{The vocabulary of the construction, in the order the paper introduces it. Each term is
+    given its plain reading here and its formal definition at the section listed.}
+  \label{tab:intuition}
+  \begin{tabular}{l p{0.52\linewidth} l}
+    \hline
+    term & plain reading & defined in \\
+    \hline
+    string diagram & a picture of one process, with a box for each activity and a wire for each
+      object passing between activities & Section~\ref{sec:hypergraphs} \\
+    wire & one object of one type, running from the activity that produces it to the activity that
+      consumes it & Section~\ref{sec:hypergraphs} \\
+    cospan & a fragment with a designated input side and output side, so that two fragments
+      glue by matching the wires on the sides they meet & Section~\ref{sec:hypergraphs} \\
+    pushout & the gluing itself, which identifies the wires two fragments hand to each other and
+      keeps everything else & Section~\ref{sec:hypergraphs} \\
+    decorated cospan & a cospan carrying data of its own, which the gluing carries along
+      & Section~\ref{sec:hypergraphs} \\
+    object type & the kind of thing a wire carries, so that two boxes join only where their types agree
+      & Section~\ref{sec:hypergraphs} \\
+    generator $g_{a,c}$ & one box, meaning an activity together with the types of the objects it
+      consumes and produces. An activity gets one box for each context, one way of joining what it
+      receives to what it emits &
+      Section~\ref{sec:general-framework} \\
+    signature $\Sigma$ & the set of a model's boxes, unconnected, each distinguished by its label, its typed
+      boundary of incoming and outgoing wires and its constraints on their counts & Section~\ref{sec:hypergraphs} \\
+    mediator & a notation's routing device, meaning a place, a gateway, an operator node, or a
+      binding set & Section~\ref{sec:general-framework} \\
+    $(;)$ and $(\otimes)$ & join two diagrams end to end, and set two diagrams side by side &
+      Section~\ref{sec:hypergraphs} \\
+    hypergraph category & the setting in which the two joins and wire splitting and merging are
+      always available, subject to the axioms of Appendix~\ref{sec:axioms} &
+      Section~\ref{sec:hypergraphs} \\
+    trace semantics $\Gamma$ & the map sending a diagram to the sequences its partial order admits
+      & Section~\ref{sec:hypergraphs} \\
+    \hline
+  \end{tabular}
+\end{table*}
+
+Because routing devices are never recorded, models that differ only in their devices become the
+same string diagram. Figure~\ref{fig:routing-collapse} shows the effect within a single notation.
+Two object-centric Petri nets returned by two discovery algorithms from one event log, agreeing on
+their activity labels and differing in their places and silent transitions, both reduce to the one
+string diagram of Figure~\ref{fig:routing-collapse}(iii) (Remark~\ref{rem:ab-place-vs-tau}).
+
+The same picture keeps the structure a sequence comparison loses. The parallel composite
+$a\otimes b$, in which two activities are both required with no constraint on their order, and the
+exclusive choice between the sequential runs $a\,;\,b$ and $b\,;\,a$ admit the same two sequences
+$\langle a,b\rangle$ and $\langle b,a\rangle$ and have bisimilar transition systems. As string diagrams the two are plainly different, one diagram
+whose causal order is discrete against two diagrams that are each a total order. For a modeller
+the two models are not interchangeable, and no sequence-based comparison warns of it. The reading
+extends to choice in general, which Section~\ref{sec:general-framework} makes formal. A
+model with choice denotes a family of diagrams, one for each resolution of its choices.
+
+\begin{figure*}[!t]
+  \centering
+  \resizebox{\linewidth}{!}{\input{tikz/introduction/routing_collapse}\unskip}
+  \caption{One behaviour over two object types, receive order~($a$), pick item~($b$), and
+    invoice~($c$). Panels (i) and (ii) are object-centric Petri nets as two discovery algorithms
+    emit them, differing only in a silent transition splitting the item place and an implicit
+    place duplicating the order constraint. Both reduce to the single string diagram (iii).}
+  \label{fig:routing-collapse}
+\end{figure*}
+
+The rest of the paper builds the mathematics and the machinery this picture needs. We work in a
+hypergraph category, the setting of compositional category
+theory~\cite{fongHypergraphCategories2018} in which wires may split and merge, and we assign to each
+notation a signature $\Sigma$, the collection of boxes its models are built from. Places,
+silent transitions, gateways and tree operators are all mediators, and contribute nothing to it. Every notation is then presented in
+one vocabulary and joined by one composition algebra, so comparing and translating models across
+notations becomes well defined.
+
+The paper makes three lines of contribution, each stated as a modelling deliverable.
+
+\begin{itemize}
+
+  \item \textbf{Four canonical presentations as one category.} Every model in each of the four
+    notations reduces to a signature, and one construction~(Section~\ref{sec:general-framework})
+    does it in all four cases. Formally,
+    object-centric Petri nets~(Theorem~\ref{thm:petri-to-cospan-signature}), object-centric causal
+    nets~(Theorem~\ref{thm:causal-to-cospan-signature}), object-centric process
+    trees~(Theorem~\ref{thm:ptree-to-cospan-signature}), and typed
+    BPMN~(Theorem~\ref{thm:bpmn-cospan}) each receive a canonical presentation as a cospan-algebra
+    signature. BPMN needs no structural precondition, and its OR
+    gateways are handled by finite expansion into AND and XOR combinations. The presentation is
+    notation-independent, so the same behaviour receives the same signature whichever notation
+    expresses it (Remark~\ref{rem:ptree-recovers-pn}).
+
+  \item \textbf{An equivalence certificate more detailed than traces.} Two models can be checked for
+    agreement by comparing their signatures, with no modelling convention to fix first. Equal
+    signatures certify the same structure~(Lemma~\ref{lem:sig-complete}) and hence the same trace
+    language~(Theorem~\ref{thm:signature-equivalence}), and the certificate separates the genuine
+    concurrency $a\otimes b$ from the exclusive choice that trace comparison and bisimulation both
+    conflate with it. Included signatures certify included trace
+    languages~(Corollary~\ref{cor:signature-inclusion}).
+    Because the maps preserve $(;)$ and $(\otimes)$, the verdict persists when a fragment is
+    composed into a larger model. The implication runs in one direction only and we do not claim its
+    converse.
+
+  \item \textbf{Object-centric by construction.} Object types live on the wires. Generator-cospan
+    boundaries carry object-type labels, and type-matching composability enforces multi-object
+    coherence structurally, with no reachability bookkeeping, so a model that mixes types cannot be
+    assembled wrongly in the first place. The classical untyped notations are the one-type
+    specialisation.
+
+\end{itemize}
+
+As a byproduct we prove that the sequence and parallel fragment of process trees generates the
+finite series-parallel posets, and only those, at the level of
+occurrences~(Theorem~\ref{thm:pt-as-sp-language}, Corollary~\ref{cor:pt-sp-iff}).
+
+The construction covers notations that are procedural and local, in which a model is assembled from
+pieces each wired to its immediate neighbours. Globally-constrained declarative languages such as
+Declare~\cite{diciccioGeneratingEventLogs2015} or Dynamic Condition Response (DCR)
+graphs~\cite{deboisDeclarativeProcessMining2017}, whose constraints range over whole traces, fall
+outside it.
+
+Section~\ref{sec:hypergraphs} develops the
+categorical background and the trace semantics $\Gamma$ that connects string diagrams to process
+behaviour, and Section~\ref{sec:general-framework} presents the single construction the four
+notation sections instantiate. The construction theorems appear in Sections~\ref{sec:petri-nets},
+\ref{sec:causal-nets}, \ref{sec:process_trees}, and~\ref{sec:bpmn}, each exercised on a small
+object-centric model that reduces to its cospan signature. Section~\ref{sec:validation} reports
+the recovery study, in which each of two discovered models is compared against a known
+ground-truth signature. The full pipeline, from log to signature to verdict, is implemented in the
+\texttt{proc-posets} package released alongside the paper. Section~\ref{sec:conversion-framework} develops cross-notation equivalence and
+conversion, Section~\ref{sec:related-work} places the work, and Section~\ref{sec:conclusion}
+concludes. Appendix~\ref{sec:axioms} collects the hypergraph-category axioms, and
+Appendix~\ref{sec:pt-extras} develops the series-parallel representation theorem for process
+trees.

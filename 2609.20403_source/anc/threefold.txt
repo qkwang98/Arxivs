@@ -1,0 +1,2248 @@
+CUBIC THREEFOLDS
+
+This file records the extraction of cubic-threefold families from the cubic-fourfold catalogue and the direct five-dimensional containment calculation.  It contains the main GAP functions and drivers.  The complete matrix and invariant-basis data and the individual embedding certificates are omitted.
+
+A source fourfold is used when its index is divisible by three and its invariant cubic space has a Fermat summand.  Removing that summand gives the five-variable invariant space.  The resulting strict group contains the cubic scalar matrix.  Containment is then tested directly in GL(5,C), using the same exact linear-conjugacy criterion as in the fourfold calculation.
+
+GAP CODE: COMMON FUNCTIONS
+
+#############################################################################
+##
+## gap_threefold_functions.g
+##
+## Uniform extraction of cubic-threefold automorphism groups from the final
+## cubic-fourfold matrix catalogue. Loading this file defines functions only.
+##
+## Let Fhat be smooth and Hhat = Aut(Fhat) < GL(6,C) its full strict
+## stabilizer.  An element delta with
+##
+##     Order(delta) = 3,   Trace(delta) = 5 + E(3)
+##
+## scales one one-dimensional Fermat summand by E(3) and fixes its
+## five-dimensional complement.  If V = Ker(delta-I), then
+##
+##     Aut(F) = Image(C_Hhat(delta) -> GL(V)),
+##
+## and the kernel of the restriction map is <delta>. Every successful result
+## rechecks the relevant element, centralizer, kernel, and scalar subgroup.
+## Fullness is essential. See gap_threefold_script.md for the maximal additive-splitting
+## theorem and the argument that extraction needs no further saturation.
+##
+## This file only defines functions.  It expects gap_functions.g to have
+## been read first.  It does not start a catalogue computation.
+## Catalogue wrappers use the fixed fourfold search-input records, with
+## standardPosition and extraGenerator. They do not accept the final
+## five-dimensional family records.
+##
+#############################################################################
+
+
+#############################################################################
+## 1. Options and input construction
+#############################################################################
+
+CF_TF_ExtractionOptions := function(arg)
+    local supplied, options;
+
+    if Length(arg) > 1 then
+        Error("Use CF_TF_ExtractionOptions([options]).");
+    fi;
+
+    options := rec(
+        computeInvariantBasis := false,
+        buildPolynomialObjects := false,
+        buildPolynomialStrings := false,
+        computeGroupDescriptions := false,
+        directEnumerationBound := 400,
+        requireExpectedFermatRanks := true,
+        requireSingleFermatClass := true,
+        retainNoFermatSources := true,
+        printProgress := false
+    );
+
+    if Length(arg) = 0 then
+        return options;
+    fi;
+
+    supplied := arg[1];
+    if not IsRecord(supplied) then
+        Error("The threefold-extraction options must be a record.");
+    fi;
+
+    if IsBound(supplied.computeInvariantBasis) then
+        options.computeInvariantBasis := supplied.computeInvariantBasis;
+    fi;
+    if IsBound(supplied.buildPolynomialObjects) then
+        options.buildPolynomialObjects := supplied.buildPolynomialObjects;
+    fi;
+    if IsBound(supplied.buildPolynomialStrings) then
+        options.buildPolynomialStrings := supplied.buildPolynomialStrings;
+    fi;
+    if IsBound(supplied.computeGroupDescriptions) then
+        options.computeGroupDescriptions := supplied.computeGroupDescriptions;
+    fi;
+    if IsBound(supplied.directEnumerationBound) then
+        options.directEnumerationBound := supplied.directEnumerationBound;
+    fi;
+    if IsBound(supplied.requireExpectedFermatRanks) then
+        options.requireExpectedFermatRanks :=
+            supplied.requireExpectedFermatRanks;
+    fi;
+    if IsBound(supplied.requireSingleFermatClass) then
+        options.requireSingleFermatClass :=
+            supplied.requireSingleFermatClass;
+    fi;
+    if IsBound(supplied.retainNoFermatSources) then
+        options.retainNoFermatSources := supplied.retainNoFermatSources;
+    fi;
+    if IsBound(supplied.printProgress) then
+        options.printProgress := supplied.printProgress;
+    fi;
+
+    if not ForAll(
+        [
+            options.computeInvariantBasis,
+            options.buildPolynomialObjects,
+            options.buildPolynomialStrings,
+            options.computeGroupDescriptions,
+            options.requireExpectedFermatRanks,
+            options.requireSingleFermatClass,
+            options.retainNoFermatSources,
+            options.printProgress
+        ],
+        value -> value = true or value = false
+    ) then
+        Error("Every threefold-extraction option must be boolean.");
+    fi;
+
+    if options.buildPolynomialObjects or options.buildPolynomialStrings then
+        options.computeInvariantBasis := true;
+    fi;
+    if not IsInt(options.directEnumerationBound)
+       or options.directEnumerationBound < 0 then
+        Error("The direct-enumeration bound must be a nonnegative integer.");
+    fi;
+
+    return options;
+end;
+
+
+CF_TF_StrictGroupFromCatalogueEntry := function(family)
+    local standard, generators, strictGroup, reportedOrder;
+
+    if not IsRecord(family) or not IsBound(family.number)
+       or not IsBound(family.standardPosition)
+       or not IsBound(family.extraGenerator) then
+        Error("A canonical family record is required.");
+    fi;
+    if not IsBound(CanonicalKoikeStandardGroups) then
+        Error(
+            "Read gap_fourfold_cross_dimension/input/fourfold_search_catalogue.g ",
+            "before constructing ",
+            "a catalogue group."
+        );
+    fi;
+    if family.standardPosition < 1
+       or family.standardPosition > Length(CanonicalKoikeStandardGroups) then
+        Error("Invalid standard position for family ", family.number, ".");
+    fi;
+
+    standard := CanonicalKoikeStandardGroups[family.standardPosition];
+    if standard.standardPosition <> family.standardPosition
+       or standard.symplecticPart <> family.symplecticPart then
+        Error("The standard-family metadata are inconsistent.");
+    fi;
+
+    generators := ShallowCopy(standard.symplecticGenerators);
+    if family.extraGenerator <> fail then
+        Add(generators, family.extraGenerator);
+    fi;
+    strictGroup := Group(generators);
+
+    reportedOrder := fail;
+    if IsBound(family.linearGroupId) then
+        reportedOrder := family.linearGroupId[1];
+        if Size(strictGroup) <> reportedOrder then
+            Error(
+                "Strict group order mismatch for fourfold family ",
+                family.number, "."
+            );
+        fi;
+    fi;
+
+    return rec(
+        family := family,
+        standard := standard,
+        generators := generators,
+        group := strictGroup,
+        order := Size(strictGroup),
+        reportedOrder := reportedOrder
+    );
+end;
+
+
+CF_TF_PrepareStrictGroup := function(strictGroup)
+    local identity, dimension, scalarMatrix, permutationIsomorphism,
+          permutationGroup;
+
+    if not IsGroup(strictGroup) or not IsFinite(strictGroup) then
+        Error("A finite strict matrix group is required.");
+    fi;
+
+    identity := One(strictGroup);
+    if not IsMatrix(identity) then
+        Error("The strict group must be a matrix group.");
+    fi;
+    dimension := Length(identity);
+    if dimension <> 6 then
+        Error("The source strict group must act on six variables.");
+    fi;
+
+    scalarMatrix := E(3) * IdentityMat(6);
+    if not scalarMatrix in strictGroup then
+        Error("The source strict group does not contain E(3) I_6.");
+    fi;
+
+    permutationIsomorphism := IsomorphismPermGroup(strictGroup);
+    if permutationIsomorphism = fail then
+        Error("Could not construct a permutation model of the source group.");
+    fi;
+    permutationGroup := Image(permutationIsomorphism);
+    if Size(permutationGroup) <> Size(strictGroup) then
+        Error("The permutation model is not faithful.");
+    fi;
+
+    return rec(
+        strictGroup := strictGroup,
+        strictGenerators := GeneratorsOfGroup(strictGroup),
+        linearOrder := Size(strictGroup),
+        scalarMatrix := scalarMatrix,
+        permutationIsomorphism := permutationIsomorphism,
+        permutationGroup := permutationGroup
+    );
+end;
+
+
+#############################################################################
+## 2. Fermat elements
+#############################################################################
+
+CF_TF_IsFermatElement := function(matrix)
+    if not IsMatrix(matrix) or Length(matrix) <> 6 then
+        Error("CF_TF_IsFermatElement expects a 6 by 6 matrix.");
+    fi;
+
+    return Order(matrix) = 3 and TraceMat(matrix) = 5 + E(3);
+end;
+
+
+CF_TF_FermatClassData := function(prepared)
+    local classes, matches, total, class, permutationRepresentative,
+          matrixRepresentative, classSize;
+
+    if not IsRecord(prepared)
+       or not IsBound(prepared.permutationGroup)
+       or not IsBound(prepared.permutationIsomorphism) then
+        Error("Use CF_TF_PrepareStrictGroup before the class computation.");
+    fi;
+
+    classes := ConjugacyClasses(prepared.permutationGroup);
+    matches := [];
+    total := 0;
+
+    for class in classes do
+        permutationRepresentative := Representative(class);
+        if Order(permutationRepresentative) = 3 then
+            matrixRepresentative := PreImagesRepresentative(
+                prepared.permutationIsomorphism,
+                permutationRepresentative
+            );
+            if TraceMat(matrixRepresentative) = 5 + E(3) then
+                classSize := Size(class);
+                Add(
+                    matches,
+                    rec(
+                        permutationClass := class,
+                        permutationRepresentative :=
+                            permutationRepresentative,
+                        matrixRepresentative := matrixRepresentative,
+                        classSize := classSize
+                    )
+                );
+                total := total + classSize;
+            fi;
+        fi;
+    od;
+
+    return rec(
+        classCount := Length(matches),
+        classes := matches,
+        elementCount := total,
+        fourfoldFermatRank := total,
+        hasFermatSummand := total > 0
+    );
+end;
+
+
+#############################################################################
+## 3. Centralizer restriction to the fixed five-space
+#############################################################################
+
+CF_TF_TopLeftBlock := function(matrix, blockSize)
+    return List(
+        [1 .. blockSize],
+        row -> matrix[row]{[1 .. blockSize]}
+    );
+end;
+
+
+CF_TF_VerifyBlockDiagonal := function(matrix, blockSize)
+    local dimension;
+
+    dimension := Length(matrix);
+    if dimension <> blockSize + 1 then
+        return false;
+    fi;
+
+    return ForAll(
+        [1 .. blockSize],
+        row -> matrix[row][dimension] = 0
+    ) and ForAll(
+        [1 .. blockSize],
+        column -> matrix[dimension][column] = 0
+    );
+end;
+
+
+CF_TF_RestrictMatrixCentralizer := function(
+    delta,
+    centralizerMatrixGenerators,
+    centralizerOrder
+)
+    local identity6, fixedBasis, zetaBasis, changeBasis,
+          inverseChangeBasis,
+          conjugatedGenerators, restrictedGenerators, restrictedGroup,
+          identity5, expectedRestrictedOrder,
+          scalarMatrix, scalarGroup, projectiveMap, projectiveGroup,
+          deltaInAdaptedBasis, deltaRestriction;
+
+    if not CF_TF_IsFermatElement(delta) then
+        Error("The selected element does not satisfy the Fermat criterion.");
+    fi;
+    if not IsList(centralizerMatrixGenerators)
+       or Length(centralizerMatrixGenerators) = 0 then
+        Error("Centralizer matrix generators are required.");
+    fi;
+    if not IsInt(centralizerOrder) or centralizerOrder < 3 then
+        Error("The centralizer order is invalid.");
+    fi;
+
+    identity6 := IdentityMat(6);
+    ## NullspaceMat returns a left nullspace.  Transposing the equations
+    ## therefore gives column eigenvectors of delta, stored here as rows.
+    ## The transpose of their concatenation is the usual change-of-basis
+    ## matrix whose columns are the adapted basis vectors.
+    fixedBasis := NullspaceMat(TransposedMat(delta - identity6));
+    zetaBasis := NullspaceMat(
+        TransposedMat(delta - E(3) * identity6)
+    );
+    if Length(fixedBasis) <> 5 or Length(zetaBasis) <> 1 then
+        Error("The Fermat element does not have eigenspace dimensions 5+1.");
+    fi;
+
+    changeBasis := TransposedMat(Concatenation(fixedBasis, zetaBasis));
+    if RankMat(changeBasis) <> 6 then
+        Error("The two eigenspaces do not form a basis of the source space.");
+    fi;
+    inverseChangeBasis := Inverse(changeBasis);
+
+    conjugatedGenerators := List(
+        centralizerMatrixGenerators,
+        generator -> inverseChangeBasis * generator * changeBasis
+    );
+
+    if not ForAll(
+        conjugatedGenerators,
+        generator -> CF_TF_VerifyBlockDiagonal(generator, 5)
+    ) then
+        Error("A centralizer generator does not preserve the eigenspace split.");
+    fi;
+
+    restrictedGenerators := List(
+        conjugatedGenerators,
+        generator -> CF_TF_TopLeftBlock(generator, 5)
+    );
+    identity5 := IdentityMat(5);
+    restrictedGenerators := Filtered(
+        restrictedGenerators,
+        generator -> generator <> identity5
+    );
+    if Length(restrictedGenerators) = 0 then
+        Error("The restricted strict group has no nontrivial generator.");
+    fi;
+    restrictedGroup := Group(restrictedGenerators);
+
+    if not IsInt(centralizerOrder / 3) then
+        Error("The centralizer order is not divisible by three.");
+    fi;
+    expectedRestrictedOrder := centralizerOrder / 3;
+    if Size(restrictedGroup) <> expectedRestrictedOrder then
+        Error(
+            "The restriction kernel is not the expected group <delta> ",
+            "of order three."
+        );
+    fi;
+
+    deltaInAdaptedBasis := inverseChangeBasis * delta * changeBasis;
+    deltaRestriction := CF_TF_TopLeftBlock(deltaInAdaptedBasis, 5);
+    if deltaRestriction <> identity5 then
+        Error("The Fermat element does not restrict trivially to its fixed space.");
+    fi;
+
+    scalarMatrix := E(3) * identity5;
+    if not scalarMatrix in restrictedGroup then
+        Error("The extracted strict group does not contain E(3) I_5.");
+    fi;
+    scalarGroup := Group([scalarMatrix]);
+    if Size(scalarGroup) <> 3 or not IsCentral(restrictedGroup, scalarGroup) then
+        Error("The extracted scalar subgroup is not central of order three.");
+    fi;
+
+    projectiveMap := NaturalHomomorphismByNormalSubgroup(
+        restrictedGroup,
+        scalarGroup
+    );
+    projectiveGroup := Image(projectiveMap);
+    if Size(restrictedGroup) <> 3 * Size(projectiveGroup) then
+        Error("The strict/projective threefold group orders are inconsistent.");
+    fi;
+
+    return rec(
+        fermatElement := delta,
+        fixedSpaceBasis := fixedBasis,
+        zetaEigenspaceBasis := zetaBasis,
+        sourceToAdaptedBasis := changeBasis,
+        adaptedToSourceBasis := inverseChangeBasis,
+        centralizerOrder := centralizerOrder,
+        centralizerMatrixGenerators := centralizerMatrixGenerators,
+        adaptedCentralizerGenerators := conjugatedGenerators,
+        strictGenerators := restrictedGenerators,
+        strictGroup := restrictedGroup,
+        strictOrder := Size(restrictedGroup),
+        restrictionKernelGenerator := delta,
+        restrictionKernelOrder := 3,
+        scalarMatrix := scalarMatrix,
+        scalarGroup := scalarGroup,
+        projectiveMap := projectiveMap,
+        projectiveGroup := projectiveGroup,
+        projectiveOrder := Size(projectiveGroup)
+    );
+end;
+
+
+CF_TF_RestrictCentralizer := function(prepared, fermatClass)
+    local delta, deltaPermutation, centralizerPermutationGroup,
+          centralizerPermutationGenerators, centralizerMatrixGenerators,
+          restriction;
+
+    if not IsRecord(fermatClass)
+       or not IsBound(fermatClass.matrixRepresentative)
+       or not IsBound(fermatClass.permutationRepresentative) then
+        Error("A Fermat conjugacy-class record is required.");
+    fi;
+
+    delta := fermatClass.matrixRepresentative;
+    deltaPermutation := fermatClass.permutationRepresentative;
+    centralizerPermutationGroup := Centralizer(
+        prepared.permutationGroup,
+        deltaPermutation
+    );
+    centralizerPermutationGenerators := GeneratorsOfGroup(
+        centralizerPermutationGroup
+    );
+    centralizerMatrixGenerators := List(
+        centralizerPermutationGenerators,
+        generator -> PreImagesRepresentative(
+            prepared.permutationIsomorphism,
+            generator
+        )
+    );
+
+    restriction := CF_TF_RestrictMatrixCentralizer(
+        delta,
+        centralizerMatrixGenerators,
+        Size(centralizerPermutationGroup)
+    );
+    restriction.fermatPermutationElement := deltaPermutation;
+    restriction.centralizerPermutationGroup :=
+        centralizerPermutationGroup;
+
+    return restriction;
+end;
+
+
+#############################################################################
+## 4. One source group and one catalogue entry
+#############################################################################
+
+CF_TF_ValidateFermatData := function(fermatData, options)
+    if options.requireExpectedFermatRanks
+       and not fermatData.fourfoldFermatRank in [0, 1, 2, 3, 6] then
+        Error(
+            "Unexpected number of Fermat summands: ",
+            fermatData.fourfoldFermatRank, "."
+        );
+    fi;
+    if fermatData.hasFermatSummand
+       and options.requireSingleFermatClass
+       and fermatData.classCount <> 1 then
+        Error(
+            "The Fermat elements do not form one conjugacy class in the ",
+            "full source group."
+        );
+    fi;
+end;
+
+
+CF_TF_NoFermatResult := function(strictGroup, fermatData, searchMethod)
+    return rec(
+        status := "no_Fermat_summand",
+        sourceStrictGroup := strictGroup,
+        sourceStrictOrder := Size(strictGroup),
+        fermatSearchMethod := searchMethod,
+        fermatClassData := fermatData,
+        fourfoldFermatRank := 0,
+        producesThreefold := false
+    );
+end;
+
+
+CF_TF_BuildExtractionResult := function(
+    strictGroup,
+    fermatData,
+    restriction,
+    options,
+    searchMethod
+)
+    local result, cubicData, centralizerData;
+
+    result := rec(
+        status := "extracted",
+        producesThreefold := true,
+        sourceStrictGroup := strictGroup,
+        sourceStrictOrder := Size(strictGroup),
+        fermatSearchMethod := searchMethod,
+        fermatClassData := fermatData,
+        fourfoldFermatRank := fermatData.fourfoldFermatRank,
+        threefoldFermatRank := fermatData.fourfoldFermatRank - 1,
+        fermatElement := restriction.fermatElement,
+        fixedSpaceBasis := restriction.fixedSpaceBasis,
+        sourceToAdaptedBasis := restriction.sourceToAdaptedBasis,
+        adaptedToSourceBasis := restriction.adaptedToSourceBasis,
+        centralizerOrder := restriction.centralizerOrder,
+        restrictionKernelOrder := restriction.restrictionKernelOrder,
+        strictGenerators := restriction.strictGenerators,
+        strictGroup := restriction.strictGroup,
+        strictOrder := restriction.strictOrder,
+        scalarMatrix := restriction.scalarMatrix,
+        projectiveGroup := restriction.projectiveGroup,
+        projectiveOrder := restriction.projectiveOrder,
+        liveRestrictionData := restriction
+    );
+
+    if options.computeInvariantBasis then
+        if not IsBound(CF_CubicInvariantBasis)
+           or not IsBound(CF_CentralizerAlgebraBasis) then
+            Error("Read gap_functions.g before computing invariant cubics.");
+        fi;
+
+        cubicData := CF_CubicInvariantBasis(
+            result.strictGenerators,
+            rec(
+                ambientDimension := 5,
+                buildPolynomialObjects := options.buildPolynomialObjects,
+                buildStrings := options.buildPolynomialStrings
+            )
+        );
+        centralizerData := CF_CentralizerAlgebraBasis(
+            result.strictGenerators,
+            false,
+            5
+        );
+
+        result.cubicInvariantData := cubicData;
+        result.cubicInvariantBasisVectors := cubicData.coefficientBasis;
+        result.cubicInvariantBasisStrings := cubicData.polynomialStrings;
+        result.cubicInvariantDimension := cubicData.invariantDimension;
+        result.centralizerAlgebraDimension := centralizerData.dimension;
+        result.familyDimension :=
+            cubicData.invariantDimension - centralizerData.dimension;
+    fi;
+
+    if options.computeGroupDescriptions then
+        if not IsBound(CF_GroupIdentificationData) then
+            Error("Read gap_functions.g before identifying groups.");
+        fi;
+        result.strictGroupData := CF_GroupIdentificationData(
+            result.strictGroup
+        );
+        result.projectiveGroupData := CF_GroupIdentificationData(
+            result.projectiveGroup
+        );
+    fi;
+
+    return result;
+end;
+
+
+## For small groups, exact element enumeration is usually much faster than
+## constructing a permutation model of a cyclotomic matrix group.  The class
+## size is |H|/|C_H(delta)|.  Equality with the total number of Fermat
+## elements proves that they form one conjugacy class.
+CF_TF_EnumerateMatrixGroupBFS := function(strictGroup)
+    local generators, elements, position, element, generator, product;
+
+    generators := GeneratorsOfGroup(strictGroup);
+    generators := Set(Concatenation(
+        generators,
+        List(generators, Inverse)
+    ));
+    elements := [One(strictGroup)];
+    position := 1;
+
+    while position <= Length(elements) do
+        element := elements[position];
+        for generator in generators do
+            product := element * generator;
+            if not product in elements then
+                Add(elements, product);
+            fi;
+        od;
+        position := position + 1;
+    od;
+
+    if Length(elements) <> Size(strictGroup) then
+        Error("The direct matrix BFS did not enumerate the full group.");
+    fi;
+    return elements;
+end;
+
+
+CF_TF_ExtractCentralFermatGenerator := function(
+    strictGroup,
+    delta,
+    options
+)
+    local generators, fermatData, restriction;
+
+    generators := GeneratorsOfGroup(strictGroup);
+    if not CF_TF_IsFermatElement(delta) then
+        Error("The supplied central element is not a Fermat element.");
+    fi;
+    if not ForAll(
+        generators,
+        generator -> generator * delta = delta * generator
+    ) then
+        Error("The supplied Fermat element is not central.");
+    fi;
+
+    fermatData := rec(
+        classCount := 1,
+        classes := [rec(
+            matrixRepresentative := delta,
+            classSize := 1
+        )],
+        elementCount := 1,
+        fourfoldFermatRank := 1,
+        hasFermatSummand := true
+    );
+    CF_TF_ValidateFermatData(fermatData, options);
+    restriction := CF_TF_RestrictMatrixCentralizer(
+        delta,
+        generators,
+        Size(strictGroup)
+    );
+
+    return CF_TF_BuildExtractionResult(
+        strictGroup,
+        fermatData,
+        restriction,
+        options,
+        "central_Fermat_generator"
+    );
+end;
+
+
+CF_TF_ExtractByDirectEnumeration := function(
+    strictGroup,
+    options
+)
+    local identity, elements, fermatElements, fermatData, delta,
+          centralizerElements, centralizerGroup, centralizerGenerators,
+          classSize, restriction;
+
+    identity := One(strictGroup);
+    if not IsMatrix(identity) or Length(identity) <> 6 then
+        Error("The source strict group must act on six variables.");
+    fi;
+    if not E(3) * IdentityMat(6) in strictGroup then
+        Error("The source strict group does not contain E(3) I_6.");
+    fi;
+
+    elements := CF_TF_EnumerateMatrixGroupBFS(strictGroup);
+    fermatElements := Filtered(elements, CF_TF_IsFermatElement);
+    if Length(fermatElements) = 0 then
+        fermatData := rec(
+            classCount := 0,
+            classes := [],
+            elementCount := 0,
+            fourfoldFermatRank := 0,
+            hasFermatSummand := false
+        );
+        CF_TF_ValidateFermatData(fermatData, options);
+        return CF_TF_NoFermatResult(
+            strictGroup,
+            fermatData,
+            "direct_element_enumeration"
+        );
+    fi;
+
+    delta := fermatElements[1];
+    centralizerElements := Filtered(
+        elements,
+        element -> element * delta = delta * element
+    );
+    centralizerGroup := Group(centralizerElements);
+    if Size(centralizerGroup) <> Length(centralizerElements) then
+        Error("The directly enumerated centralizer has the wrong order.");
+    fi;
+
+    centralizerGenerators := GeneratorsOfGroup(centralizerGroup);
+
+    classSize := Size(strictGroup) / Length(centralizerElements);
+    if not IsInt(classSize) then
+        Error("The directly computed Fermat class size is not integral.");
+    fi;
+    fermatData := rec(
+        classCount := fail,
+        classes := [rec(
+            matrixRepresentative := delta,
+            classSize := classSize
+        )],
+        elementCount := Length(fermatElements),
+        fourfoldFermatRank := Length(fermatElements),
+        hasFermatSummand := true
+    );
+    if Length(fermatElements) = classSize then
+        fermatData.classCount := 1;
+    fi;
+    CF_TF_ValidateFermatData(fermatData, options);
+
+    restriction := CF_TF_RestrictMatrixCentralizer(
+        delta,
+        centralizerGenerators,
+        Length(centralizerElements)
+    );
+    restriction.centralizerMatrixGroup := centralizerGroup;
+
+    return CF_TF_BuildExtractionResult(
+        strictGroup,
+        fermatData,
+        restriction,
+        options,
+        "direct_element_enumeration"
+    );
+end;
+
+
+CF_TF_ExtractFromStrictGroup := function(arg)
+    local strictGroup, options, prepared, fermatData, restriction;
+
+    if Length(arg) < 1 or Length(arg) > 2 then
+        Error("Use CF_TF_ExtractFromStrictGroup(group[, options]).");
+    fi;
+
+    strictGroup := arg[1];
+    if Length(arg) = 2 then
+        options := CF_TF_ExtractionOptions(arg[2]);
+    else
+        options := CF_TF_ExtractionOptions();
+    fi;
+
+    if options.directEnumerationBound > 0
+       and Size(strictGroup) <= options.directEnumerationBound then
+        return CF_TF_ExtractByDirectEnumeration(strictGroup, options);
+    fi;
+
+    prepared := CF_TF_PrepareStrictGroup(strictGroup);
+    fermatData := CF_TF_FermatClassData(prepared);
+    CF_TF_ValidateFermatData(fermatData, options);
+
+    if not fermatData.hasFermatSummand then
+        return CF_TF_NoFermatResult(
+            strictGroup,
+            fermatData,
+            "permutation_conjugacy_classes"
+        );
+    fi;
+
+    restriction := CF_TF_RestrictCentralizer(
+        prepared,
+        fermatData.classes[1]
+    );
+
+    return CF_TF_BuildExtractionResult(
+        strictGroup,
+        fermatData,
+        restriction,
+        options,
+        "permutation_conjugacy_classes"
+    );
+end;
+
+
+CF_TF_ExtractCatalogueFamily := function(arg)
+    local family, options, source, result, centralFermatGenerator;
+
+    if Length(arg) < 1 or Length(arg) > 2 then
+        Error("Use CF_TF_ExtractCatalogueFamily(family[, options]).");
+    fi;
+
+    family := arg[1];
+    if Length(arg) = 2 then
+        options := CF_TF_ExtractionOptions(arg[2]);
+    else
+        options := CF_TF_ExtractionOptions();
+    fi;
+
+    source := CF_TF_StrictGroupFromCatalogueEntry(family);
+    centralFermatGenerator := First(
+        source.generators,
+        generator -> CF_TF_IsFermatElement(generator)
+            and ForAll(
+                source.generators,
+                other -> other * generator = generator * other
+            )
+    );
+
+    ## These are certified full automorphism groups.  A central Fermat
+    ## element therefore gives exactly one Fermat summand: with at least two
+    ## such summands, their coordinate transpositions would be automorphisms
+    ## and would not centralize an individual scaling element.
+    if centralFermatGenerator <> fail
+       and IsBound(family.fullGroupVerified)
+       and family.fullGroupVerified = true then
+        result := CF_TF_ExtractCentralFermatGenerator(
+            source.group,
+            centralFermatGenerator,
+            options
+        );
+    else
+        result := CF_TF_ExtractFromStrictGroup(source.group, options);
+    fi;
+
+    result.sourceFamilyNumber := family.number;
+    result.sourceStandardFamilyNumber := family.standardFamilyNumber;
+    result.sourceStandardPosition := family.standardPosition;
+    result.sourceSymplecticPart := family.symplecticPart;
+    result.sourceRankS := family.rankS;
+    result.sourceFamilyDimension := family.familyDimension;
+    result.sourceGenericIndex := family.genericIndex;
+    result.sourceFullIndex := family.fullIndex;
+    result.sourceLinearGroupId := family.linearGroupId;
+    result.sourceProjectiveGroupId := family.projectiveGroupId;
+    if IsBound(family.sourceCategory) then
+        result.sourceCategory := family.sourceCategory;
+    fi;
+    if IsBound(family.sourceKey) then
+        result.sourceKey := family.sourceKey;
+    fi;
+    if IsBound(family.sourceReference) then
+        result.sourceReference := family.sourceReference;
+    fi;
+
+    return result;
+end;
+
+
+#############################################################################
+## 5. Batch wrapper
+#############################################################################
+
+CF_TF_ExtractCatalogue := function(arg)
+    local families, options, audits, extracted, skipped, position,
+          family, result;
+
+    if Length(arg) < 1 or Length(arg) > 2 then
+        Error("Use CF_TF_ExtractCatalogue(families[, options]).");
+    fi;
+
+    families := arg[1];
+    if not IsList(families) then
+        Error("The catalogue input must be a list of family records.");
+    fi;
+    if Length(arg) = 2 then
+        options := CF_TF_ExtractionOptions(arg[2]);
+    else
+        options := CF_TF_ExtractionOptions();
+    fi;
+
+    audits := [];
+    extracted := [];
+    skipped := [];
+
+    for position in [1 .. Length(families)] do
+        family := families[position];
+        if options.printProgress then
+            Print(
+                position, "/", Length(families),
+                ": fourfold family ", family.number, "\n"
+            );
+        fi;
+
+        result := CF_TF_ExtractCatalogueFamily(family, options);
+        if options.retainNoFermatSources or result.producesThreefold then
+            Add(audits, result);
+        fi;
+        if result.producesThreefold then
+            Add(extracted, result);
+        else
+            Add(skipped, result);
+        fi;
+    od;
+
+    return rec(
+        sourceCount := Length(families),
+        auditCount := Length(audits),
+        extractedSourceCount := Length(extracted),
+        skippedSourceCount := Length(skipped),
+        audits := audits,
+        extracted := extracted,
+        skipped := skipped,
+        options := options
+    );
+end;
+
+GAP CODE: EXTRACTION
+
+#############################################################################
+##
+## gap_threefold_index_three.g
+##
+## Extract cubic-threefold matrix groups from the fixed cubic-fourfold
+## search catalogue. Only non-symplectic source families whose actual index is
+## divisible by three are inspected.  The source family dimension is
+## inherited and independently checked from the extracted five-dimensional
+## representation. The saved GAP record retains both extracted and
+## no-Fermat-summand source rows in increasing fourfold-source order.
+##
+#############################################################################
+
+
+#############################################################################
+## 1. Paths and input
+#############################################################################
+
+CF_TFB_Paths := function()
+    if IsExistingFile("gap_threefold_index_three.g") then
+        return rec(
+            selfDirectory := "",
+            functionsFile := "../gap_functions.g",
+            catalogueFile := Concatenation(
+                "../gap_fourfold_cross_dimension/input/",
+                "fourfold_search_catalogue.g"
+            ),
+            extractionFile := "gap_threefold_functions.g"
+        );
+    fi;
+    if IsExistingFile(
+        "gap_classification/gap_threefold/gap_threefold_index_three.g"
+    ) then
+        return rec(
+            selfDirectory := "gap_classification/gap_threefold/",
+            functionsFile := "gap_classification/gap_functions.g",
+            catalogueFile := Concatenation(
+                "gap_classification/gap_fourfold_cross_dimension/input/",
+                "fourfold_search_catalogue.g"
+            ),
+            extractionFile := Concatenation(
+                "gap_classification/gap_threefold/",
+                "gap_threefold_functions.g"
+            )
+        );
+    fi;
+    if IsExistingFile("gap_threefold/gap_threefold_index_three.g") then
+        return rec(
+            selfDirectory := "gap_threefold/",
+            functionsFile := "gap_functions.g",
+            catalogueFile := Concatenation(
+                "gap_fourfold_cross_dimension/input/",
+                "fourfold_search_catalogue.g"
+            ),
+            extractionFile := "gap_threefold/gap_threefold_functions.g"
+        );
+    fi;
+    Error(
+        "Run from the repository root, gap_classification, or ",
+        "gap_classification/gap_threefold."
+    );
+end;
+
+
+CF_TFB_PathRecord := CF_TFB_Paths();
+
+if not IsBound(CF_CubicInvariantBasis) then
+    Read(CF_TFB_PathRecord.functionsFile);
+fi;
+if not IsBound(CanonicalFamilyMatrixGroups) then
+    Read(CF_TFB_PathRecord.catalogueFile);
+fi;
+if not IsBound(CF_TF_ExtractCatalogueFamily) then
+    Read(CF_TFB_PathRecord.extractionFile);
+fi;
+
+
+if not IsBound(CF_TFB_PRINT_PROGRESS) then
+    CF_TFB_PRINT_PROGRESS := true;
+fi;
+if not IsBound(CF_TFB_COMPUTE_INVARIANTS) then
+    CF_TFB_COMPUTE_INVARIANTS := true;
+fi;
+if not IsBound(CF_TFB_LOG_FILE) then
+    CF_TFB_LOG_FILE := Concatenation(
+        CF_TFB_PathRecord.selfDirectory,
+        "output/gap_threefold_index_three.log"
+    );
+fi;
+if not IsBound(CF_TFB_RESULT_FILE) then
+    CF_TFB_RESULT_FILE := Concatenation(
+        CF_TFB_PathRecord.selfDirectory,
+        "input/gap_threefold_extraction.g"
+    );
+fi;
+
+
+CF_TFB_Log := function(arg)
+    local item;
+
+    for item in arg do
+        if CF_TFB_PRINT_PROGRESS then
+            Print(item);
+        fi;
+        AppendTo(CF_TFB_LOG_FILE, item);
+    od;
+end;
+
+
+CF_TFB_ValidateCatalogue := function()
+    local numbers;
+
+    if Length(CanonicalKoikeStandardGroups) <> 48 then
+        Error("Expected 48 standard symplectic families.");
+    fi;
+    if Length(CanonicalFamilyMatrixGroups) <> 156 then
+        Error("Expected the fixed search catalogue of 156 families.");
+    fi;
+
+    numbers := List(CanonicalFamilyMatrixGroups, family -> family.number);
+    if numbers <> [1 .. 156] then
+        Error("The search family numbering is not 1 through 156.");
+    fi;
+    if not ForAll(
+        CanonicalFamilyMatrixGroups,
+        family -> family.fullGroupVerified = true
+            and family.determinantKernelVerified = true
+    ) then
+        Error("The search catalogue contains an unaudited matrix group.");
+    fi;
+end;
+
+
+## The actual index is used here.  The generic index belongs to the connected
+## symplectic family and need not equal the index of a special member.
+CF_TFB_IsSelectedSource := function(family)
+    return family.extraGenerator <> fail
+        and IsInt(family.fullIndex)
+        and family.fullIndex mod 3 = 0;
+end;
+
+
+#############################################################################
+## 2. Compact, GAP-readable records
+#############################################################################
+
+CF_TFB_SourceMetadata := function(family)
+    return rec(
+        sourceFamilyNumber := family.number,
+        sourceKey := family.sourceKey,
+        sourceCategory := family.sourceCategory,
+        sourceStandardFamilyNumber := family.standardFamilyNumber,
+        sourceStandardPosition := family.standardPosition,
+        sourceSymplecticPart := family.symplecticPart,
+        sourceRankS := family.rankS,
+        sourceGenericIndex := family.genericIndex,
+        sourceFullIndex := family.fullIndex,
+        sourceFamilyDimension := family.familyDimension,
+        sourceLinearGroupId := family.linearGroupId,
+        sourceProjectiveGroupId := family.projectiveGroupId
+    );
+end;
+
+
+CF_TFB_CompactResult := function(family, extraction)
+    local result, fermatClass, computedDimension;
+
+    result := CF_TFB_SourceMetadata(family);
+    result.status := extraction.status;
+    result.producesThreefold := extraction.producesThreefold;
+    result.fermatSearchMethod := extraction.fermatSearchMethod;
+    result.sourceStrictOrder := extraction.sourceStrictOrder;
+    result.fourfoldFermatRank := extraction.fourfoldFermatRank;
+
+    if not extraction.producesThreefold then
+        result.fermatClassCount := extraction.fermatClassData.classCount;
+        result.familyDimension := family.familyDimension;
+        result.dimensionMethod := "inherited_from_fourfold_family";
+        return result;
+    fi;
+
+    fermatClass := extraction.fermatClassData.classes[1];
+    result.threefoldFermatRank := extraction.threefoldFermatRank;
+    result.fermatClassCount := extraction.fermatClassData.classCount;
+    result.fermatClassSize := fermatClass.classSize;
+    result.fermatElement := extraction.fermatElement;
+    result.fixedSpaceBasis := extraction.fixedSpaceBasis;
+    result.sourceToAdaptedBasis := extraction.sourceToAdaptedBasis;
+    result.strictGenerators := extraction.strictGenerators;
+    result.strictOrder := extraction.strictOrder;
+    result.projectiveOrder := extraction.projectiveOrder;
+
+    ## The inherited value is the catalogue dimension used downstream.
+    result.familyDimension := family.familyDimension;
+    result.dimensionMethod := "inherited_from_fourfold_family";
+
+    if CF_TFB_COMPUTE_INVARIANTS then
+        computedDimension := extraction.familyDimension;
+        result.cubicMonomialExponents :=
+            extraction.cubicInvariantData.monomialExponents;
+        result.cubicInvariantBasisVectors :=
+            extraction.cubicInvariantBasisVectors;
+        result.cubicInvariantBasisStrings :=
+            extraction.cubicInvariantBasisStrings;
+        result.cubicInvariantDimension :=
+            extraction.cubicInvariantDimension;
+        result.centralizerAlgebraDimension :=
+            extraction.centralizerAlgebraDimension;
+        result.computedFamilyDimension := computedDimension;
+        result.dimensionVerified :=
+            computedDimension = family.familyDimension;
+    else
+        result.cubicMonomialExponents := fail;
+        result.cubicInvariantBasisVectors := fail;
+        result.cubicInvariantBasisStrings := fail;
+        result.cubicInvariantDimension := fail;
+        result.centralizerAlgebraDimension := fail;
+        result.computedFamilyDimension := fail;
+        result.dimensionVerified := fail;
+    fi;
+
+    return result;
+end;
+
+
+#############################################################################
+## 3. GAP-readable output
+#############################################################################
+
+
+CF_TFB_WriteGapResult := function(audit)
+    local stream;
+
+    stream := OutputTextFile(CF_TFB_RESULT_FILE, false);
+    if stream = fail then
+        Error("Could not open the GAP-readable result file.");
+    fi;
+    SetPrintFormattingStatus(stream, false);
+    AppendTo(
+        stream,
+        "CubicThreefoldIndexThreeAudit := ",
+        audit,
+        ";\n"
+    );
+    CloseStream(stream);
+end;
+
+
+#############################################################################
+## 4. Run
+#############################################################################
+
+CF_TFB_ValidateCatalogue();
+CF_TFB_SelectedSources := Filtered(
+    CanonicalFamilyMatrixGroups,
+    CF_TFB_IsSelectedSource
+);
+
+PrintTo(CF_TFB_LOG_FILE, "");
+CF_TFB_Log(
+    "============================================================\n",
+    "Cubic-threefold extraction from index-three sources\n",
+    "============================================================\n",
+    "Fixed cubic-fourfold search catalogue: ",
+    Length(CanonicalFamilyMatrixGroups), " families\n",
+    "Selected non-symplectic sources with 3 dividing the index: ",
+    Length(CF_TFB_SelectedSources), "\n",
+    "Invariant bases: ", CF_TFB_COMPUTE_INVARIANTS, "\n\n"
+);
+
+CF_TFB_Results := [];
+CF_TFB_StartTime := Runtime();
+
+for CF_TFB_Position in [1 .. Length(CF_TFB_SelectedSources)] do
+    CF_TFB_Source := CF_TFB_SelectedSources[CF_TFB_Position];
+    CF_TFB_ItemStart := Runtime();
+    CF_TFB_Log(
+        CF_TFB_Position, "/", Length(CF_TFB_SelectedSources),
+        ": source family ", CF_TFB_Source.number,
+        ", dimension ", CF_TFB_Source.familyDimension,
+        ", index ", CF_TFB_Source.fullIndex, "\n"
+    );
+
+    CF_TFB_Extraction := CF_TF_ExtractCatalogueFamily(
+        CF_TFB_Source,
+        rec(
+            computeInvariantBasis := CF_TFB_COMPUTE_INVARIANTS,
+            buildPolynomialObjects := false,
+            buildPolynomialStrings := CF_TFB_COMPUTE_INVARIANTS,
+            computeGroupDescriptions := false,
+            directEnumerationBound := 400,
+            retainNoFermatSources := true,
+            printProgress := false
+        )
+    );
+    CF_TFB_Result := CF_TFB_CompactResult(
+        CF_TFB_Source,
+        CF_TFB_Extraction
+    );
+    CF_TFB_Result.runtimeMilliseconds := Runtime() - CF_TFB_ItemStart;
+    Add(CF_TFB_Results, CF_TFB_Result);
+
+    if CF_TFB_Result.producesThreefold then
+        CF_TFB_Log(
+            "    extracted: r=", CF_TFB_Result.fourfoldFermatRank,
+            " -> ", CF_TFB_Result.threefoldFermatRank,
+            ", strict/projective orders=", CF_TFB_Result.strictOrder,
+            "/", CF_TFB_Result.projectiveOrder,
+            ", dimension=", CF_TFB_Result.familyDimension,
+            ", verified=", CF_TFB_Result.dimensionVerified,
+            ", method=", CF_TFB_Result.fermatSearchMethod,
+            ", elapsed=", CF_TFB_Result.runtimeMilliseconds, " ms\n"
+        );
+    else
+        CF_TFB_Log(
+            "    skipped: no Fermat summand, elapsed=",
+            CF_TFB_Result.runtimeMilliseconds,
+            " ms, method=", CF_TFB_Result.fermatSearchMethod, "\n"
+        );
+    fi;
+od;
+
+CF_TFB_ExtractedResults := Filtered(
+    CF_TFB_Results,
+    result -> result.producesThreefold
+);
+CF_TFB_SkippedResults := Filtered(
+    CF_TFB_Results,
+    result -> not result.producesThreefold
+);
+
+CF_TFB_Audit := rec(
+    schemaVersion := 1,
+    status := "completed",
+    gapVersion := GAPInfo.Version,
+    sourceCatalogueFile := Concatenation(
+        "gap_classification/gap_fourfold_cross_dimension/input/",
+        "fourfold_search_catalogue.g"
+    ),
+    sourceCatalogueCount := Length(CanonicalFamilyMatrixGroups),
+    selection :=
+        "extraGenerator <> fail and fullIndex divisible by three",
+    selectedSourceNumbers := List(
+        CF_TFB_SelectedSources,
+        family -> family.number
+    ),
+    selectedSourceCount := Length(CF_TFB_SelectedSources),
+    extractedSourceCount := Length(CF_TFB_ExtractedResults),
+    skippedSourceCount := Length(CF_TFB_SkippedResults),
+    dimensionVerifiedCount := Number(
+        CF_TFB_ExtractedResults,
+        result -> result.dimensionVerified = true
+    ),
+    invariantBasesComputed := CF_TFB_COMPUTE_INVARIANTS,
+    runtimeMilliseconds := Runtime() - CF_TFB_StartTime,
+    results := CF_TFB_Results
+);
+
+if CF_TFB_COMPUTE_INVARIANTS
+   and CF_TFB_Audit.dimensionVerifiedCount
+       <> CF_TFB_Audit.extractedSourceCount then
+    Error("At least one inherited family dimension failed verification.");
+fi;
+
+CF_TFB_WriteGapResult(CF_TFB_Audit);
+
+CF_TFB_Log(
+    "\nCompleted.\n",
+    "Extracted sources: ", CF_TFB_Audit.extractedSourceCount, "\n",
+    "Skipped sources: ", CF_TFB_Audit.skippedSourceCount, "\n",
+    "Verified inherited dimensions: ",
+    CF_TFB_Audit.dimensionVerifiedCount, "/",
+    CF_TFB_Audit.extractedSourceCount, "\n",
+    "Runtime: ", CF_TFB_Audit.runtimeMilliseconds, " ms\n",
+    "GAP-readable result: ", CF_TFB_RESULT_FILE, "\n"
+);
+
+GAP CODE: DIRECT CONTAINMENT
+
+#############################################################################
+## Direct five-dimensional containment tests for the 40 threefold families.
+## Every eligible pair is tested independently. No fourfold decisions,
+## transitive decisions, saturation, or deduplication are used here.
+## See gap_threefold_script.md.
+#############################################################################
+
+TD_Paths := function()
+    local self, shared;
+    if IsExistingFile("gap_threefold_cross_dimension.g") then
+        self := ""; shared := "../";
+    elif IsExistingFile("gap_threefold/gap_threefold_cross_dimension.g") then
+        self := "gap_threefold/"; shared := "";
+    elif IsExistingFile(
+        "gap_classification/gap_threefold/gap_threefold_cross_dimension.g") then
+        self := "gap_classification/gap_threefold/";
+        shared := "gap_classification/";
+    else
+        Error("Run from the repository root, gap_classification, or ",
+            "gap_classification/gap_threefold.");
+    fi;
+    return rec(self := self,
+        functionsFile := Concatenation(shared,"gap_functions.g"),
+        catalogueFile := Concatenation(self,"result/gap_threefold_families.g"));
+end;
+
+TD_PathRecord := TD_Paths();
+if not IsBound(SearchEmbeddingStrict) then Read(TD_PathRecord.functionsFile); fi;
+
+TD_Read := function(path, name)
+    if IsBoundGlobal(name) then UnbindGlobal(name); fi;
+    Read(path);
+    if not IsBoundGlobal(name) then Error("Missing saved object: ",name); fi;
+    return ValueGlobal(name);
+end;
+
+TD_Write := function(path, name, value)
+    local stream;
+    stream := OutputTextFile(path,false);
+    if stream = fail then Error("Cannot open result: ",path); fi;
+    SetPrintFormattingStatus(stream,false);
+    AppendTo(stream,name," := ",value,";\n");
+    CloseStream(stream);
+end;
+
+TD_Log := function(log, message)
+    local line;
+    log.step := log.step + 1;
+    line := Concatenation(String(log.step),". ",message,"; elapsed ",
+        String(Runtime()-log.started)," ms\n");
+    Print(line);
+    AppendTo(log.stream,line);
+end;
+
+TD_Options := rec(stop_first := true, allow_hard_iso := true,
+    construct_witness := true, try_literal_inclusion := true,
+    use_fingerprints := false);
+TD_Algorithm := "direct-five-dimensional-strict-embedding-1";
+TD_WitnessConvention := "P^-1 * g * P belongs to the target group for every source generator";
+
+TD_Binding := function(catalogue)
+    return List(catalogue,r -> rec(number := r.number,
+        sourceFourfoldNumber := r.sourceFourfoldNumber, sourceKey := r.sourceKey,
+        familyDimension := r.familyDimension, strictOrder := r.strictOrder,
+        projectiveOrder := r.projectiveOrder,
+        matrixGenerators := r.matrixGenerators));
+end;
+
+TD_CheckWitness := function(sourceGenerators, targetGroup, matrix)
+    local inverse;
+    if matrix = fail or not IsList(matrix) or Length(matrix) <> 5
+       or not ForAll(matrix,r -> IsList(r) and Length(r)=5)
+       or IsZero(DeterminantMat(matrix)) then return false; fi;
+    inverse := matrix^-1;
+    return ForAll(sourceGenerators,g -> inverse*g*matrix in targetGroup);
+end;
+
+TD_Preprocess := function(family)
+    local info;
+    if CF_MatrixListDimension(family.matrixGenerators) <> 5 then
+        Error("Expected five-dimensional generators at family ",family.number);
+    fi;
+    info := PreprocessMatrixGroupStrict(family.matrixGenerators,
+        family.strictOrder,family.linearGroupId);
+    if Size(info.G) <> family.strictOrder
+       or family.strictOrder <> 3*family.projectiveOrder then
+        Error("Strict/projective order mismatch at family ",family.number);
+    fi;
+    if not E(3)*IdentityMat(5) in info.G then
+        Error("Missing cubic scalar at family ",family.number);
+    fi;
+    return info;
+end;
+
+TD_NewPair := function(source, target)
+    local eligible;
+    eligible := source.familyDimension > target.familyDimension
+        and target.strictOrder mod source.strictOrder = 0;
+    return rec(sourcePosition := source.number, targetPosition := target.number,
+        sourceNumber := source.number, targetNumber := target.number,
+        sourceFourfoldNumber := source.sourceFourfoldNumber,
+        targetFourfoldNumber := target.sourceFourfoldNumber,
+        sourceDimension := source.familyDimension,
+        targetDimension := target.familyDimension,
+        sourceOrder := source.strictOrder, targetOrder := target.strictOrder,
+        eligible := eligible, ok := fail, status := "not_compared",
+        reason := "dimension_orientation", method := "dimension_filter",
+        direct := true, classification := "direct", viaNumber := fail,
+        P := fail, witnessVerified := false, characterEmbeddingProved := false);
+end;
+
+TD_TestPair := function(source, target, sourceInfo, targetInfo)
+    local pair, caught, result, matrix;
+    pair := TD_NewPair(source,target);
+    if source.familyDimension <= target.familyDimension then return pair; fi;
+    if target.strictOrder mod source.strictOrder <> 0 then
+        pair.ok := false; pair.status := "no_embedding";
+        pair.reason := "order_divisibility"; pair.method := "order_filter";
+        return pair;
+    fi;
+    caught := CALL_WITH_CATCH(SearchEmbeddingStrict,
+        [sourceInfo,targetInfo,TD_Options]);
+    if not caught[1] then
+        pair.status := "undecided"; pair.reason := "embedding_computation_error";
+        pair.method := "strict";
+        return pair;
+    fi;
+    result := caught[2];
+    pair.reason := result.reason; pair.method := result.method;
+    if result.ok = false and result.status = "no_embedding" then
+        pair.ok := false; pair.status := "no_embedding";
+        return pair;
+    fi;
+    if result.ok <> true or result.status <> "embedded" then
+        pair.status := "undecided";
+        return pair;
+    fi;
+    pair.characterEmbeddingProved := true;
+    matrix := fail;
+    if IsBound(result.P) then matrix := result.P; fi;
+    ## Failure of the finite witness search is not a negative decision.
+    if matrix = fail and IsBound(result.images) and result.images <> fail then
+        caught := CALL_WITH_CATCH(FindInvertibleIntertwiner,
+            [sourceInfo.gens,result.images]);
+        if caught[1] then matrix := caught[2]; fi;
+    fi;
+    caught := CALL_WITH_CATCH(TD_CheckWitness,
+        [sourceInfo.gens,targetInfo.G,matrix]);
+    if caught[1] and caught[2] then
+        pair.ok := true; pair.status := "embedded";
+        pair.P := matrix; pair.witnessVerified := true;
+    else
+        pair.status := "undecided";
+        pair.reason := "explicit_five_dimensional_witness_not_verified";
+    fi;
+    return pair;
+end;
+
+TD_CheckSavedPair := function(pair, source, target, infos)
+    local expected;
+    expected := TD_NewPair(source,target);
+    if not ForAll(["sourcePosition","targetPosition","sourceNumber",
+        "targetNumber","sourceFourfoldNumber","targetFourfoldNumber",
+        "sourceDimension","targetDimension","sourceOrder","targetOrder",
+        "eligible","direct","classification","viaNumber"],
+        name -> IsBound(pair.(name)) and pair.(name)=expected.(name)) then
+        Error("Saved pair metadata mismatch at ",[source.number,target.number]);
+    fi;
+    if not expected.eligible then
+        if pair.witnessVerified or pair.characterEmbeddingProved then
+            Error("An excluded pair has unsupported witness metadata.");
+        fi;
+        if source.familyDimension <= target.familyDimension then
+            if pair.status <> "not_compared" or pair.ok <> fail
+               or pair.reason <> "dimension_orientation" or pair.P <> fail then
+                Error("Invalid saved dimension exclusion.");
+            fi;
+        elif pair.status <> "no_embedding" or pair.ok <> false
+           or pair.reason <> "order_divisibility" or pair.P <> fail then
+            Error("Invalid saved order exclusion.");
+        fi;
+    elif pair.status = "embedded" and pair.ok = true then
+        if not pair.witnessVerified or not pair.characterEmbeddingProved
+           or not TD_CheckWitness(source.matrixGenerators,
+                infos[target.number].G,pair.P) then
+            Error("Saved five-dimensional witness failed at ",
+                [source.number,target.number]);
+        fi;
+    elif pair.status = "no_embedding" and pair.ok = false then
+        if pair.P <> fail or pair.witnessVerified
+           or pair.characterEmbeddingProved then Error("Invalid negative record."); fi;
+    elif pair.status <> "undecided" or pair.ok <> fail or pair.P <> fail then
+        Error("Invalid saved unresolved record.");
+    fi;
+end;
+
+TD_Manifest := function(catalogue, pairs, status)
+    local eligible, positive, negative, unresolved, orientations, orders;
+    eligible := Filtered(pairs,p -> p.eligible);
+    positive := Filtered(eligible,p -> p.ok=true and p.status="embedded");
+    negative := Filtered(eligible,p -> p.ok=false and p.status="no_embedding");
+    unresolved := Filtered(eligible,p -> p.status="undecided");
+    orientations := Filtered(pairs,p -> p.status="not_compared");
+    orders := Filtered(pairs,p -> not p.eligible and p.status="no_embedding");
+    return rec(status := status, algorithm := TD_Algorithm, options := TD_Options,
+        gapVersion := GAPInfo.Version, catalogueBinding := TD_Binding(catalogue),
+        catalogueGenerators := List(catalogue,r -> r.matrixGenerators),
+        witnessConvention := TD_WitnessConvention, pairCount := Length(pairs),
+        eligiblePairCount := Length(eligible), positiveCount := Length(positive),
+        eligibleNegativeCount := Length(negative), undecidedCount := Length(unresolved),
+        orientationExcludedCount := Length(orientations), orderExcludedCount := Length(orders),
+        pairCoverageVerified := Length(pairs)=1560,
+        allEligiblePairsDirect := ForAll(eligible,p -> p.direct=true
+            and p.classification="direct" and p.viaNumber=fail),
+        allPositiveWitnessesVerified := ForAll(positive,p -> p.witnessVerified));
+end;
+
+TD_SelfTest := function()
+    local scalar, involution, other, swap, source, target, infos, result,
+          witness, reducedOptions;
+    Print("Five-dimensional embedding regression checks\nGAP ",
+        GAPInfo.Version,"\n\n");
+    scalar := E(3)*IdentityMat(5);
+    involution := DiagonalMat([-1,1,1,1,1]);
+    other := DiagonalMat([-1,-1,1,1,1]);
+    swap := IdentityMat(5); swap[1] := [0,1,0,0,0];
+    swap[2] := [1,0,0,0,0];
+    source := rec(number:=1,sourceFourfoldNumber:=1,familyDimension:=2,
+        strictOrder:=6,projectiveOrder:=2,linearGroupId:=[6,2],
+        matrixGenerators:=[scalar,involution]);
+    target := rec(number:=2,sourceFourfoldNumber:=2,familyDimension:=1,
+        strictOrder:=6,projectiveOrder:=2,linearGroupId:=[6,2],
+        matrixGenerators:=[scalar,swap^-1*involution*swap]);
+    infos := [TD_Preprocess(source),TD_Preprocess(target)];
+    result := TD_TestPair(source,target,infos[1],infos[2]);
+    if result.ok <> true or not result.witnessVerified
+       or not TD_CheckWitness(source.matrixGenerators,infos[2].G,result.P) then
+        Error("Positive non-literal five-dimensional regression failed.");
+    fi;
+    Print("1. Non-literal positive: invertible 5 x 5 P verified on all source generators.\n");
+    target.matrixGenerators := [scalar,other];
+    infos[2] := TD_Preprocess(target);
+    ## Disable optional fingerprints to exercise exhaustive subgroup/character
+    ## enumeration in the negative regression, not just a spectral prefilter.
+    reducedOptions := ShallowCopy(TD_Options);
+    reducedOptions.use_fingerprints := false;
+    result := SearchEmbeddingStrict(infos[1],infos[2],reducedOptions);
+    if result.ok <> false or result.status <> "no_embedding"
+       or result.reason <> "exhausted_no_verified_candidate" then
+        Error("Exhaustive negative five-dimensional regression failed.");
+    fi;
+    Print("2. Negative: exhaustive subgroup/character test without spectral fingerprints.\n");
+    witness := TD_NewPair(source,source);
+    if witness.status <> "not_compared" or witness.ok <> fail then
+        Error("Dimension exclusion regression failed.");
+    fi;
+    Print("3. Dimension exclusion: not compared, not an abstract nonembedding claim.\n");
+    Print("THREEFOLD_CROSS_DIMENSION_SELF_TEST_COMPLETED\n");
+end;
+
+TD_Run := function(resume, firstRow, lastRow)
+    local catalogue, binding, infos, log, stream, i, j, source, target,
+          targets, rowPath, saved, pairs, pair, position, keep, manifest,
+          allPairs, seen, pairPath, manifestPath, row, sourceNumbers;
+    catalogue := TD_Read(TD_PathRecord.catalogueFile,"CubicThreefoldFamilyCatalogue");
+    if Length(catalogue)<>40 or List(catalogue,r -> r.number)<>[1..40] then
+        Error("Expected the numbered 40-family presentation catalogue.");
+    fi;
+    sourceNumbers := List(catalogue,r -> r.sourceFourfoldNumber);
+    if sourceNumbers<>Set(sourceNumbers) then
+        Error("Expected ascending, distinct fourfold source numbers.");
+    fi;
+    if Sum(List(catalogue,s -> Length(Filtered(catalogue,t ->
+        s.number<>t.number and s.familyDimension>t.familyDimension
+        and t.strictOrder mod s.strictOrder=0)))) <> 493 then
+        Error("The eligible-pair schedule differs from the 40-family catalogue.");
+    fi;
+    binding := TD_Binding(catalogue);
+    stream := OutputTextFile(Concatenation(TD_PathRecord.self,
+        "output/gap_threefold_cross_dimension.log"),false);
+    if stream=fail then Error("Cannot open the direct-search log."); fi;
+    SetPrintFormattingStatus(stream,false);
+    log := rec(stream:=stream,started:=Runtime(),step:=0);
+    AppendTo(stream,"Direct five-dimensional threefold containment\nGAP ",
+        GAPInfo.Version,"\nOptions: ",TD_Options,"\nResume: ",resume,"\n\n");
+    TD_Log(log,"40 families; 1560 ordered pairs; 493 eligible direct tests");
+    pairPath := Concatenation(TD_PathRecord.self,
+        "result/gap_threefold_cross_dimension_all_pairs.g");
+    manifestPath := Concatenation(TD_PathRecord.self,
+        "result/gap_threefold_cross_dimension_manifest.g");
+    if firstRow=1 and lastRow=40 then
+        TD_Write(manifestPath,"ThreefoldCrossDimensionManifest",
+            TD_Manifest(catalogue,[],"running"));
+    fi;
+    infos := [];
+    for i in [1..40] do
+        TD_Log(log,Concatenation("Family ",String(i)," (fourfold source ",
+            String(catalogue[i].sourceFourfoldNumber),
+            "): constructing and checking its strict five-dimensional group"));
+        Add(infos,TD_Preprocess(catalogue[i]));
+    od;
+    allPairs := [];
+    for i in [firstRow..lastRow] do
+        source := catalogue[i];
+        targets := Filtered([1..40],j -> j<>i);
+        rowPath := Concatenation(TD_PathRecord.self,
+            "output/threefold_direct_row_",String(i),".g");
+        pairs := [];
+        if resume and IsExistingFile(rowPath) then
+            saved := TD_Read(rowPath,"ThreefoldDirectRow");
+            if saved.catalogueBinding<>binding or saved.options<>TD_Options
+               or saved.algorithm<>TD_Algorithm or saved.sourceNumber<>i
+               or saved.gapVersion<>GAPInfo.Version
+               or Length(saved.pairs)>39 then
+                Error("Resume input/algorithm binding mismatch in row ",i);
+            fi;
+            keep := Length(saved.pairs);
+            for position in [1..Length(saved.pairs)] do
+                pair := saved.pairs[position]; j := targets[position];
+                TD_CheckSavedPair(pair,source,catalogue[j],infos);
+                if pair.status="undecided" and keep=Length(saved.pairs) then
+                    keep := position-1;
+                fi;
+            od;
+            if keep>0 then pairs := saved.pairs{[1..keep]}; fi;
+            TD_Log(log,Concatenation("Source ",String(i),": restored ",
+                String(keep)," checked pair records"));
+        fi;
+        for position in [Length(pairs)+1..39] do
+            j := targets[position]; target := catalogue[j];
+            TD_Log(log,Concatenation("Source ",String(i)," -> target ",
+                String(j),": started; pair ",String(position),"/39"));
+            pair := TD_TestPair(source,target,infos[i],infos[j]);
+            Add(pairs,pair);
+            TD_Write(rowPath,"ThreefoldDirectRow",rec(
+                algorithm:=TD_Algorithm,options:=TD_Options,
+                catalogueBinding:=binding,sourceNumber:=i,pairs:=pairs,
+                rowComplete:=Length(pairs)=39,gapVersion:=GAPInfo.Version));
+            TD_Log(log,Concatenation("Source ",String(i)," -> target ",
+                String(j),": ",pair.status,"; ",pair.reason));
+        od;
+        Append(allPairs,pairs);
+        TD_Log(log,Concatenation("Source ",String(i),": completed; positives ",
+            String(Length(Filtered(pairs,p -> p.ok=true))),"; unresolved ",
+            String(Length(Filtered(pairs,p -> p.status="undecided")))));
+    od;
+    if firstRow=1 and lastRow=40 then
+        seen := List([1..40],i -> List([1..40],j -> false));
+        for pair in allPairs do
+            i:=pair.sourceNumber; j:=pair.targetNumber;
+            if i=j or seen[i][j] then Error("Duplicate/self direct pair."); fi;
+            TD_CheckSavedPair(pair,catalogue[i],catalogue[j],infos);
+            seen[i][j]:=true;
+        od;
+        if not ForAll([1..40],i -> ForAll([1..40],j -> i=j or seen[i][j])) then
+            Error("Incomplete ordered-pair coverage.");
+        fi;
+        manifest := TD_Manifest(catalogue,allPairs,"completed");
+        if manifest.pairCount<>1560 or manifest.eligiblePairCount<>493 then
+            Error("Invalid full direct-search coverage.");
+        fi;
+        TD_Write(pairPath,"ThreefoldCrossDimensionAllPairs",allPairs);
+        TD_Write(manifestPath,"ThreefoldCrossDimensionManifest",manifest);
+        TD_Log(log,Concatenation("Completed: eligible ",
+            String(manifest.eligiblePairCount),"; positives ",
+            String(manifest.positiveCount),"; eligible negatives ",
+            String(manifest.eligibleNegativeCount),"; undecided ",
+            String(manifest.undecidedCount)));
+        Print("THREEFOLD_CROSS_DIMENSION_COMPLETED undecided=",
+            manifest.undecidedCount,"\n");
+        AppendTo(stream,"THREEFOLD_CROSS_DIMENSION_COMPLETED undecided=",
+            manifest.undecidedCount,"\n");
+    else
+        Print("THREEFOLD_CROSS_DIMENSION_ROWS_COMPLETED\n");
+        AppendTo(stream,"THREEFOLD_CROSS_DIMENSION_ROWS_COMPLETED\n");
+    fi;
+    CloseStream(stream);
+end;
+
+TD_CommandSettings := function()
+    local position, arguments;
+    position := PositionProperty(GAPInfo.SystemCommandLine,x -> IsString(x)
+        and PositionSublist(x,"gap_threefold_cross_dimension.g")<>fail);
+    arguments := [];
+    if position<>fail and position<Length(GAPInfo.SystemCommandLine) then
+        arguments := List(GAPInfo.SystemCommandLine{
+            [position+1..Length(GAPInfo.SystemCommandLine)]},EvalString);
+    fi;
+    if Length(arguments)=0 then arguments := [0,1,40,0]; fi;
+    if Length(arguments)<>4 or not ForAll(arguments,IsInt)
+       or not arguments[1] in [0,1] or not arguments[4] in [0,1]
+       or arguments[2]<1 or arguments[3]>40 or arguments[2]>arguments[3] then
+        Error("Use: gap -r -q -b gap_threefold_cross_dimension.g ",
+            "<resume 0/1> <first row> <last row> <self-test 0/1>.");
+    fi;
+    return arguments;
+end;
+
+if not IsBound(TD_DEFINE_ONLY) or TD_DEFINE_ONLY<>true then
+    TD_Settings := TD_CommandSettings();
+    if TD_Settings[4]=1 then TD_SelfTest();
+    else TD_Run(TD_Settings[1]=1,TD_Settings[2],TD_Settings[3]); fi;
+    QUIT_GAP(0);
+fi;
+
+GAP CODE: COMPARISON WITH FOURFOLD INCIDENCE
+
+#############################################################################
+## Containment and maximal actions for the 40 final threefold families.
+## Verify the direct five-dimensional pair results and recompute covers.
+## The induced fourfold relation is used only as an independent comparison.
+## See gap_threefold_script.md. This reporting file performs no search.
+#############################################################################
+
+CF_TC_Paths := function()
+    local self, sibling;
+    if IsExistingFile("gap_threefold_containment.g") then
+        self := ""; sibling := "../";
+    elif IsExistingFile("gap_threefold/gap_threefold_containment.g") then
+        self := "gap_threefold/"; sibling := "";
+    elif IsExistingFile(
+        "gap_classification/gap_threefold/gap_threefold_containment.g") then
+        self := "gap_classification/gap_threefold/";
+        sibling := "gap_classification/";
+    else
+        Error("Run from the repository root, gap_classification, or ",
+            "gap_classification/gap_threefold.");
+    fi;
+    return rec(selfDirectory := self,
+        posetFile := Concatenation(sibling,
+            "gap_fourfold_cross_dimension/gap_family_poset_functions.g"),
+        fourfoldCatalogueFile := Concatenation(sibling,
+            "gap_manuscript_validation/gap_family_catalogue.g"),
+        fourfoldRelationFile := Concatenation(sibling,
+            "gap_fourfold_cross_dimension/result/",
+            "gap_fourfold_cross_dimension_all_pairs.g"),
+        fourfoldAuditFile := Concatenation(sibling,
+            "gap_fourfold_cross_dimension/result/",
+            "gap_fourfold_coordinate_audit.out"),
+        catalogueFile := Concatenation(self,"result/gap_threefold_families.g"),
+        extractedFile := Concatenation(self,"result/gap_threefold_extracted_families.g"),
+        directPairsFile := Concatenation(self,
+            "result/gap_threefold_cross_dimension_all_pairs.g"),
+        directManifestFile := Concatenation(self,
+            "result/gap_threefold_cross_dimension_manifest.g"),
+        auditFile := Concatenation(self,"result/gap_threefold_coordinate_audit.out"));
+end;
+
+CF_TC_PathRecord := CF_TC_Paths();
+Read(CF_TC_PathRecord.posetFile);
+
+CF_TC_BlockLift := function(matrix)
+    local result, i;
+    result := IdentityMat(6);
+    for i in [1 .. 5] do result[i]{[1 .. 5]} := matrix[i]; od;
+    return result;
+end;
+
+## Display labels only; the group data are verified separately.
+CF_TC_ProjectiveNames := [
+    [1,"(C3^4):S5"], [7,"L2(11)"], [8,"S5 x C3"],
+    [23,"S3 x ((C3^2:C3):C2)"], [24,"S3 x ((C3^2:C3):C4)"],
+    [28,"S4 x C3"], [30,"A5"], [32,"S5"], [36,"S3 x C6"],
+    [38,"(S3 x S3):C2"], [56,"S3 x C3"], [57,"S3 x S3"],
+    [61,"D12"], [62,"(C6 x C2):C2"], [64,"C6 x C2"],
+    [67,"A4"], [69,"S4"], [72,"D10"], [86,"S3"], [90,"C6"],
+    [91,"D12"], [94,"C12"], [95,"S3 x C4"], [96,"C24"],
+    [101,"C2^2"], [103,"D8"], [110,"C3"], [113,"C6"],
+    [116,"C3"], [117,"S3"], [123,"C2"], [125,"C2^2"],
+    [130,"C4 x C2"], [135,"1"], [139,"C2"], [147,"C4"],
+    [148,"C4"], [153,"C8"], [154,"C8"], [156,"C16"]
+];
+
+CF_TC_GroupName := function(sourceNumber)
+    local position;
+    position := Position(List(CF_TC_ProjectiveNames,r->r[1]),sourceNumber);
+    if position = fail then Error("Missing threefold display label."); fi;
+    return CF_TC_ProjectiveNames[position][2];
+end;
+
+CF_TC_BraceList := function(numbers)
+    return Concatenation("{",
+        JoinStringsWithSeparator(List(numbers,String),", "),"}");
+end;
+
+CF_TC_WriteMarkdown := function(output, poset)
+    local stream, family, number, coverTargets, geometricParents, dimension;
+    stream := OutputTextFile(Concatenation(CF_TC_PathRecord.selfDirectory,
+        "result/gap_threefold_result.md"),false);
+    if stream = fail then Error("Cannot write the threefold report."); fi;
+    SetPrintFormattingStatus(stream,false);
+    AppendTo(stream,
+        "# Cubic-threefold families and containment\n\n",
+        "The 40 families are numbered by increasing source fourfold number. ",
+        "Their five-dimensional strict groups and complete cubic bases are ",
+        "in [the final catalogue](gap_threefold_families.g). The ",
+        "[coordinate verification](gap_threefold_coordinate_audit.out) ",
+        "identifies them with [the extracted groups](gap_threefold_extracted_families.g).\n\n",
+        "A group relation `i -> j` means that `H_i` is linearly conjugate ",
+        "to a proper subgroup of `H_j`. The geometric inclusion is ",
+        "`Z_j subset Z_i`. An action-maximal row has no outgoing group ",
+        "relation; it is not a geometrically maximal family.\n\n",
+        "## Summary\n\n| Quantity | Count |\n| --- | ---: |\n",
+        "| Fourfold sources selected | 63 |\n",
+        "| Sources with a Fermat summand | 40 |\n",
+        "| Sources without a Fermat summand | 23 |\n",
+        "| Threefold families | ",output.familyCount," |\n",
+        "| Ordered distinct pairs | ",output.orderedDistinctPairCount," |\n",
+        "| Eligible pairs | ",output.eligiblePairCount," |\n",
+        "| Pairs excluded by dimension or order | ",output.excludedPairCount," |\n",
+        "| Positive relations | ",output.positivePairCount," |\n",
+        "| Negative eligible decisions | ",output.negativePairCount," |\n",
+        "| Undecided pairs | 0 |\n",
+        "| Cover relations | ",output.coverCount," |\n",
+        "| Action-maximal families | ",output.actionMaximalCount," |\n\n",
+        "The relation comes from the direct five-dimensional calculation. ",
+        "All positive `5 x 5` matrices have been checked on every source ",
+        "generator. Every eligible pair has a resolved decision, and all ",
+        "ordered distinct pairs are recorded. Independently, the complete ",
+        "relation agrees pair by pair with the relation induced from the ",
+        "completed fourfold calculation. The transitive closure of the ",
+        "covers recovers the full positive relation. The saved decisions ",
+        "and matrices are in [the direct pair result](gap_threefold_cross_dimension_all_pairs.g) ",
+        "and [the containment audit](gap_threefold_containment.out).\n\n",
+        "## Action-maximal families\n\n",
+        "| No. | Source fourfold | Projective group | Dimension | GL order | ",
+        "PGL order | GL ID | PGL ID |\n",
+        "| ---: | ---: | --- | ---: | ---: | ---: | --- | --- |\n");
+    for number in output.actionMaximalNumbers do
+        family := output.families[number];
+        AppendTo(stream,"| ",number," | ",family.sourceFourfoldNumber,
+            " | `",CF_TC_GroupName(family.sourceFourfoldNumber),"` | ",
+            family.familyDimension," | ",family.strictOrder," | ",
+            family.projectiveOrder," | `",CF_FP_GroupIdText(family.linearGroupId),
+            "` | `",CF_FP_GroupIdText(family.projectiveGroupId),"` |\n");
+    od;
+    AppendTo(stream,
+        "\n## All 40 families\n\n",
+        "Here `dim W` is the dimension of the complete invariant cubic ",
+        "space, `dim C` is the dimension of its linear centralizer, and ",
+        "the family dimension is `dim W - dim C`. In `[order, --]`, the ",
+        "order is known but the installed SmallGroups library has no ID. ",
+        "Identical abstract group data do not identify a matrix action.\n\n",
+        "| No. | Source fourfold | Projective group | Dimension | Fermat rank | ",
+        "dim W | dim C | GL order | PGL order | GL ID | PGL ID |\n",
+        "| ---: | ---: | --- | ---: | ---: | ---: | ---: | ---: | ---: | --- | --- |\n");
+    for family in output.families do
+        AppendTo(stream,"| ",family.number," | ",family.sourceFourfoldNumber,
+            " | `",CF_TC_GroupName(family.sourceFourfoldNumber),"` | ",
+            family.familyDimension," | ",family.threefoldFermatRank," | ",
+            family.invariantDimension," | ",family.centralizerDimension," | ",
+            family.strictOrder," | ",family.projectiveOrder," | `",
+            CF_FP_GroupIdText(family.linearGroupId),"` | `",
+            CF_FP_GroupIdText(family.projectiveGroupId),"` |\n");
+    od;
+    AppendTo(stream,
+        "\n## Group covers and action-maximal targets\n\n",
+        "Cover targets use the group direction `i -> j`, so `Z_j subset Z_i`. ",
+        "All reachable action-maximal targets are listed; an action-maximal ",
+        "row lists itself. Paths are retained in the GAP-readable audit.\n\n",
+        "| No. | Group cover targets | All action-maximal targets |\n",
+        "| ---: | --- | --- |\n");
+    for family in output.families do
+        coverTargets := List(Filtered(poset.coverPairs,
+            edge->edge[1]=family.number),edge->edge[2]);
+        AppendTo(stream,"| ",family.number," | `",CF_TC_BraceList(coverTargets),
+            "` | `",CF_TC_BraceList(family.actionMaximalTargets),"` |\n");
+    od;
+    AppendTo(stream,
+        "\n## Geometric family incidence\n\n",
+        "`#i: {j, ...}` lists the classified families `Z_j` that properly ",
+        "contain `Z_i`, with no classified family strictly between them. ",
+        "This reverses group containment. `{}` means that no classified ",
+        "family properly contains `Z_i`. These 40 lines contain all ",
+        output.coverCount," adjacent incidences.\n\n```text\n");
+    for number in [1 .. 40] do
+        geometricParents := List(Filtered(poset.coverPairs,
+            edge->edge[2]=number),edge->edge[1]);
+        AppendTo(stream,"#",number,": ",CF_TC_BraceList(geometricParents),"\n");
+    od;
+    AppendTo(stream,"```\n\n## Family dimensions\n\n",
+        "| Dimension | Families |\n| ---: | ---: |\n");
+    for dimension in Set(List(output.families,r->r.familyDimension)) do
+        AppendTo(stream,"| ",dimension," | ",
+            Number(output.families,r->r.familyDimension=dimension)," |\n");
+    od;
+    CloseStream(stream);
+end;
+
+CF_TC_AuditDirectPairs := function(catalogue, pairs, manifest, log)
+    local matrix, groups, positive, eligibleCount, negativeCount,
+          orientationCount, orderCount, witnessCount, row, source, target,
+          i, j, orientation, eligible, binding, images;
+    if manifest.status <> "completed" or manifest.pairCoverageVerified <> true
+       or manifest.allEligiblePairsDirect <> true or manifest.undecidedCount <> 0
+       or manifest.pairCount <> 40*39 or Length(pairs) <> 40*39
+       or manifest.catalogueGenerators <> List(catalogue,r->r.matrixGenerators)
+       or Length(manifest.catalogueBinding) <> 40 then
+        Error("The direct threefold calculation is incomplete or uses other groups.");
+    fi;
+    for i in [1 .. 40] do
+        source := catalogue[i]; binding := manifest.catalogueBinding[i];
+        if binding.number <> i or binding.sourceFourfoldNumber <> source.sourceFourfoldNumber
+           or binding.sourceKey <> source.sourceKey
+           or binding.familyDimension <> source.familyDimension
+           or binding.strictOrder <> source.strictOrder
+           or binding.projectiveOrder <> source.projectiveOrder
+           or binding.matrixGenerators <> source.matrixGenerators then
+            Error("The direct input binding differs at threefold ",i);
+        fi;
+    od;
+    matrix := List([1 .. 40],i->List([1 .. 40],j->fail));
+    groups := List([1 .. 40],i->fail);
+    positive := []; eligibleCount := 0; negativeCount := 0;
+    orientationCount := 0; orderCount := 0; witnessCount := 0;
+    for row in pairs do
+        i := row.sourceNumber; j := row.targetNumber;
+        if not i in [1 .. 40] or not j in [1 .. 40] or i=j then
+            Error("Invalid direct threefold pair number.");
+        fi;
+        if matrix[i][j] <> fail then Error("Repeated direct threefold pair."); fi;
+        source := catalogue[i]; target := catalogue[j];
+        orientation := source.familyDimension > target.familyDimension;
+        eligible := orientation and target.strictOrder mod source.strictOrder = 0;
+        if row.sourcePosition <> i or row.targetPosition <> j
+           or row.sourceFourfoldNumber <> source.sourceFourfoldNumber
+           or row.targetFourfoldNumber <> target.sourceFourfoldNumber
+           or row.sourceDimension <> source.familyDimension
+           or row.targetDimension <> target.familyDimension
+           or row.sourceOrder <> source.strictOrder or row.targetOrder <> target.strictOrder
+           or row.eligible <> eligible or row.direct <> true
+           or row.classification <> "direct" or row.viaNumber <> fail then
+            Error("Direct threefold pair metadata differs at ",[i,j]);
+        fi;
+        if not orientation then
+            orientationCount := orientationCount+1;
+            if row.status <> "not_compared" or row.ok <> fail or row.P <> fail
+               or row.reason <> "dimension_orientation" then
+                Error("An excluded dimension orientation has an invalid claim.");
+            fi;
+        elif not eligible then
+            orderCount := orderCount+1;
+            if row.status <> "no_embedding" or row.ok <> false or row.P <> fail
+               or row.reason <> "order_divisibility" then
+                Error("Invalid order-divisibility exclusion.");
+            fi;
+        else
+            eligibleCount := eligibleCount+1;
+            if row.status="embedded" and row.ok=true then
+                if source.strictOrder>=target.strictOrder
+                   or row.P=fail or Length(row.P)<>5
+                   or not ForAll(row.P,r->Length(r)=5)
+                   or IsZero(DeterminantMat(row.P))
+                   or row.witnessVerified<>true or row.characterEmbeddingProved<>true then
+                    Error("Missing verified five-dimensional witness at ",[i,j]);
+                fi;
+                if groups[j]=fail then groups[j]:=Group(target.matrixGenerators); fi;
+                images := List(source.matrixGenerators,g->row.P^-1*g*row.P);
+                if not ForAll(images,g->g in groups[j]) then
+                    Error("A direct five-dimensional witness fails at ",[i,j]);
+                fi;
+                witnessCount := witnessCount+1; Add(positive,[i,j]);
+                CF_FP_Log(log,Concatenation("Verified five-dimensional pair ",
+                    String(i)," -> ",String(j)));
+            elif row.status="no_embedding" and row.ok=false and row.P=fail then
+                negativeCount := negativeCount+1;
+            else
+                Error("An eligible direct threefold pair remains undecided at ",[i,j]);
+            fi;
+        fi;
+        matrix[i][j] := row;
+    od;
+    for i in [1 .. 40] do
+        for j in [1 .. 40] do
+            if i<>j and matrix[i][j]=fail then Error("Missing direct threefold pair."); fi;
+        od;
+    od;
+    if eligibleCount<>manifest.eligiblePairCount
+       or negativeCount<>manifest.eligibleNegativeCount
+       or Length(positive)<>manifest.positiveCount
+       or orientationCount<>manifest.orientationExcludedCount
+       or orderCount<>manifest.orderExcludedCount
+       or eligibleCount+orientationCount+orderCount<>40*39
+       or witnessCount<>Length(positive) then
+        Error("Direct pair counts or complete coverage differ from the manifest.");
+    fi;
+    return rec(pairMatrix:=matrix,positivePairs:=Set(positive),
+        eligiblePairCount:=eligibleCount,negativePairCount:=negativeCount,
+        orientationExcludedCount:=orientationCount,orderExcludedCount:=orderCount,
+        verifiedWitnessCount:=witnessCount,pairCoverageVerified:=true);
+end;
+
+CF_TC_Run := function()
+    local log, data, catalogue, extracted, audit, fourfoldCatalogue, fourfoldPairs,
+          fourfoldAudit, fourfoldPoset, sourceNumbers, induced,
+          pair, i, j, families, entry, canonical, targetInfo, output,
+          number, check, lifts, basis, directPairs, manifest, direct,
+          directPoset, original, metadata, name, requiredChecks;
+    log := CF_FP_StartLog(Concatenation(CF_TC_PathRecord.selfDirectory,
+        "output/gap_threefold_containment.log"),
+        "Containment and maximal full cubic-threefold actions");
+    CF_FP_TestPosetHelpers();
+    fourfoldCatalogue := CF_FP_ReadGlobal(CF_TC_PathRecord.fourfoldCatalogueFile,
+        "CubicFourfoldFamilyCatalogue");
+    fourfoldPairs := CF_FP_ReadGlobal(CF_TC_PathRecord.fourfoldRelationFile,
+        "FourfoldCrossDimensionAllPairs");
+    fourfoldAudit := CF_FP_ReadGlobal(CF_TC_PathRecord.fourfoldAuditFile,
+        "FourfoldContainmentCoordinateAudit");
+    catalogue := CF_FP_ReadGlobal(CF_TC_PathRecord.catalogueFile,
+        "CubicThreefoldFamilyCatalogue");
+    extracted := CF_FP_ReadGlobal(CF_TC_PathRecord.extractedFile,
+        "CubicThreefoldExtractedCatalogue");
+    audit := CF_FP_ReadGlobal(CF_TC_PathRecord.auditFile,
+        "CubicThreefoldCoordinateAudit");
+    directPairs := CF_FP_ReadGlobal(CF_TC_PathRecord.directPairsFile,
+        "ThreefoldCrossDimensionAllPairs");
+    manifest := CF_FP_ReadGlobal(CF_TC_PathRecord.directManifestFile,
+        "ThreefoldCrossDimensionManifest");
+    data := CF_FP_AuditPairs(fourfoldCatalogue, fourfoldPairs);
+    fourfoldPoset := CF_FP_Poset([1 .. 156], data.positivePairs);
+    if fourfoldAudit.status <> "completed"
+       or fourfoldAudit.verifiedPositiveCount <> 1793
+       or fourfoldAudit.pairCoverageVerified <> true
+       or fourfoldAudit.positiveRelationsUnchanged <> true
+       or List(fourfoldCatalogue,r->r.matrixGenerators)
+          <> fourfoldAudit.catalogueGenerators
+       or Set(fourfoldPoset.coverPairs) <> Set(fourfoldAudit.coverPairs)
+       or fourfoldPoset.maximalNumbers <> fourfoldAudit.actionMaximalNumbers then
+        Error("The complete formal fourfold relation lacks its coordinate audit.");
+    fi;
+    sourceNumbers := List(catalogue, r -> r.sourceFourfoldNumber);
+    if audit.status <> "completed" or audit.familyCount <> 40
+       or audit.verifiedCount <> 40 or audit.allPrintedIdsVerified <> true
+       or audit.selectedSourceCount <> 63 or audit.extractedSourceCount <> 40
+       or audit.skippedSourceCount <> 23 or Length(audit.rows) <> 40
+       or List(catalogue,r->r.number) <> [1 .. 40]
+       or List(extracted,r->r.number) <> [1 .. 40]
+       or audit.extractedGenerators <> List(extracted,r->r.matrixGenerators)
+       or audit.presentationGenerators <> List(catalogue,r->r.matrixGenerators)
+       or audit.extractedBases <> List(extracted,r->r.coefficientBasis)
+       or audit.presentationBases <> List(catalogue,r->r.coefficientBasis)
+       or Length(Set(sourceNumbers)) <> 40
+       or sourceNumbers <> SortedList(sourceNumbers)
+       or sourceNumbers <> audit.sourceNumbers then
+        Error("The final threefold catalogue or its coordinate audit is incomplete.");
+    fi;
+    CF_FP_Log(log, "Inputs verified: 156 formal fourfolds and 40 final threefolds");
+
+    requiredChecks := ["sourceMetadata","fiveDimensionalGroup","invariantBasis",
+        "familyDimension","abstractGroupIds","FermatSplit","fullCentralizer",
+        "restrictionKernel","formalCubicRestriction","extractedFamilyMetadata",
+        "extractedInvariantBasis","extractedFormalRestriction",
+        "displayedGeneratorsComplete"];
+    families := [];
+    for i in [1 .. 40] do
+        entry := catalogue[i]; check := audit.rows[i]; original := extracted[i];
+        canonical := data.catalogue[entry.sourceFourfoldNumber];
+        if entry.sourceKey <> canonical.sourceKey
+           or entry.familyDimension <> canonical.familyDimension
+           or entry.sourceFullIndex <> canonical.fullIndex
+           or entry.symplecticPart <> canonical.symplecticPart
+           or entry.fullGroupVerified <> true
+           or entry.familyDimensionVerified <> true
+           or entry.invariantDimension-entry.centralizerDimension
+                <> entry.familyDimension
+           or Length(entry.matrixGenerators) = 0
+           or ForAny(entry.matrixGenerators,
+                g -> Length(g) <> 5 or not ForAll(g,r->Length(r)=5))
+           or entry.linearGroupId[1] <> entry.strictOrder
+           or entry.projectiveGroupId[1] <> entry.projectiveOrder then
+            Error("Threefold/canonical metadata mismatch at source ",
+                entry.sourceFourfoldNumber);
+        fi;
+        metadata := ShallowCopy(original);
+        for name in ["matrixGenerators","coefficientBasis",
+            "fourfoldToAdaptedBasis","fixedSpaceBasis"] do
+            metadata.(name) := entry.(name);
+        od;
+        if metadata<>entry then
+            Error("Extracted/final threefold metadata differ at ",i);
+        fi;
+        if original.sourceFourfoldNumber<>entry.sourceFourfoldNumber
+           or original.sourceKey<>entry.sourceKey
+           or original.familyDimension<>entry.familyDimension
+           or original.strictOrder<>entry.strictOrder
+           or original.projectiveOrder<>entry.projectiveOrder
+           or original.linearGroupId<>entry.linearGroupId
+           or original.projectiveGroupId<>entry.projectiveGroupId
+           or original.invariantDimension<>entry.invariantDimension
+           or original.centralizerDimension<>entry.centralizerDimension
+           or check.extractedToAdaptedBasis<>original.fourfoldToAdaptedBasis
+           or check.extractedToPresentationMatrix<>check.savedToPrintedMatrix
+           or Length(check.extractedToPresentationMatrix)<>5
+           or not ForAll(check.extractedToPresentationMatrix,r->Length(r)=5)
+           or IsZero(DeterminantMat(check.extractedToPresentationMatrix))
+           or original.fourfoldToAdaptedBasis
+                *CF_TC_BlockLift(check.extractedToPresentationMatrix)
+                    <> entry.fourfoldToAdaptedBasis
+           or TransposedMat(original.fourfoldToAdaptedBasis){[1 .. 5]}
+                <> original.fixedSpaceBasis
+           or Length(original.coefficientBasis)<>entry.invariantDimension
+           or RankMat(original.coefficientBasis)<>entry.invariantDimension then
+            Error("The extracted and final threefold records differ at ",i);
+        fi;
+        if entry.strictOrder <> entry.projectiveOrder * 3 then
+            Error("Threefold strict order mismatch at source ",
+                entry.sourceFourfoldNumber);
+        fi;
+        lifts := List(entry.matrixGenerators, g -> entry.fourfoldToAdaptedBasis
+            * CF_TC_BlockLift(g) * entry.fourfoldToAdaptedBasis^-1);
+        basis := check.projectedCubicBasis;
+        if check.number <> i or check.sourceFourfoldNumber <> entry.sourceFourfoldNumber
+           or check.sourceKey <> entry.sourceKey or check.passed <> true
+           or not ForAll(requiredChecks,
+                name->IsBound(check.checks.(name)) and check.checks.(name)=true)
+           or not ForAll(RecNames(check.checks),name->check.checks.(name)=true)
+           or check.fermatElement <> entry.fermatElement
+           or check.fourfoldToAdaptedBasis <> entry.fourfoldToAdaptedBasis
+           or check.centralizerGenerators <> Concatenation(lifts,[entry.fermatElement])
+           or check.centralizerOrder <> 3*entry.strictOrder
+           or check.restrictionKernelOrder <> 3
+           or Length(entry.coefficientBasis) <> entry.invariantDimension
+           or RankMat(entry.coefficientBasis) <> entry.invariantDimension
+           or RankMat(basis) <> entry.invariantDimension
+           or RankMat(Concatenation(basis,entry.coefficientBasis))
+                <> entry.invariantDimension then
+            Error("The exact threefold coordinate certificate differs at row ", i);
+        fi;
+        Add(families, rec(number := i,
+            sourceFourfoldNumber := entry.sourceFourfoldNumber,
+            sourceKey := entry.sourceKey,
+            familyDimension := entry.familyDimension,
+            symplecticPart := canonical.symplecticPart,
+            sourceFullIndex := canonical.fullIndex,
+            strictOrder := entry.strictOrder,
+            projectiveOrder := entry.projectiveOrder,
+            linearGroupId := entry.linearGroupId,
+            projectiveGroupId := entry.projectiveGroupId,
+            invariantDimension := entry.invariantDimension,
+            centralizerDimension := entry.centralizerDimension,
+            threefoldFermatRank := entry.threefoldFermatRank,
+            fourfoldFermatRank := entry.fourfoldFermatRank,
+            coordinateCertificateReused := true));
+        CF_FP_Log(log, Concatenation("Prepared threefold ", String(i),
+            " from fourfold ", String(entry.sourceFourfoldNumber)));
+    od;
+
+    direct := CF_TC_AuditDirectPairs(catalogue,directPairs,manifest,log);
+    directPoset := CF_FP_Poset([1 .. 40],direct.positivePairs);
+    induced := [];
+    for pair in data.positivePairs do
+        i := Position(sourceNumbers, pair[1]);
+        j := Position(sourceNumbers, pair[2]);
+        if i <> fail and j <> fail then Add(induced, [i,j]); fi;
+    od;
+    if Set(induced)<>directPoset.positivePairs then
+        Error("The direct five-dimensional relation differs from the fourfold comparison.");
+    fi;
+    if Length(directPoset.positivePairs) <> 260
+       or Length(directPoset.coverPairs) <> 83
+       or directPoset.maximalNumbers <> [1,2,3,5,24,39,40] then
+        Error("Unexpected direct threefold-poset counts.");
+    fi;
+    CF_FP_Log(log,"Direct five-dimensional relation agrees with the complete fourfold comparison");
+
+    for i in [1 .. 40] do
+        targetInfo := directPoset.familyTargets[i];
+        if catalogue[i].isActionMaximal <> targetInfo.isMaximal then
+            Error("An action-maximal catalogue flag differs at threefold ", i);
+        fi;
+        families[i].isActionMaximal := targetInfo.isMaximal;
+        families[i].actionMaximalTargets := targetInfo.maximalTargets;
+        families[i].actionMaximalFourfoldTargets := List(
+            targetInfo.maximalTargets, number -> families[number].sourceFourfoldNumber);
+        families[i].pathsToActionMaximal := targetInfo.pathsToMaximal;
+    od;
+    output := rec(schemaVersion := 4, status := "completed",
+        gapVersion := GAPInfo.Version,
+        meaning := "threefold action containment from direct five-dimensional pair decisions",
+        mathematicalInterface := "gap_threefold_script.md",
+        numbering := "increasing source fourfold number",
+        inputCatalogue := "result/gap_threefold_families.g",
+        inputCoordinateAudit := "result/gap_threefold_coordinate_audit.out",
+        inputExtractedCatalogue := "result/gap_threefold_extracted_families.g",
+        inputDirectPairs := "result/gap_threefold_cross_dimension_all_pairs.g",
+        inputDirectManifest := "result/gap_threefold_cross_dimension_manifest.g",
+        inputFourfoldRelation :=
+          "../gap_fourfold_cross_dimension/result/gap_fourfold_cross_dimension_all_pairs.g",
+        sourceCatalogueMatched := true, coordinateMetadataVerified := true,
+        coordinateCertificatesReused := true,
+        familyCount := 40, families := families,
+        orderedDistinctPairCount := Length(directPairs),
+        eligiblePairCount := direct.eligiblePairCount,
+        negativePairCount := direct.negativePairCount,
+        orientationExcludedCount := direct.orientationExcludedCount,
+        orderExcludedCount := direct.orderExcludedCount,
+        excludedPairCount := direct.orientationExcludedCount+direct.orderExcludedCount,
+        undecidedPairCount := 0,
+        pairResults := directPairs,
+        positivePairs := directPoset.positivePairs,
+        positivePairCount := Length(directPoset.positivePairs),
+        verifiedPositiveMatrixCount := direct.verifiedWitnessCount,
+        pairCoverageVerified := true, allPositiveMatricesVerified := true,
+        catalogueGenerators := List(catalogue,r->r.matrixGenerators),
+        coverPairs := directPoset.coverPairs,
+        coverCount := Length(directPoset.coverPairs),
+        actionMaximalNumbers := directPoset.maximalNumbers,
+        actionMaximalFourfoldNumbers := List(directPoset.maximalNumbers,
+            number -> families[number].sourceFourfoldNumber),
+        actionMaximalCount := Length(directPoset.maximalNumbers),
+        transitiveClosureVerified := directPoset.transitiveClosureVerified,
+        coverClosureVerified := directPoset.coverClosureVerified,
+        relationObtainedByDirectFiveDimensionalSearch := true,
+        fourfoldInducedRelation := Set(induced),
+        fourfoldComparisonVerified := true,
+        newEmbeddingSearchPerformedByReport := false,
+        runtimeMilliseconds := Runtime() - log.started);
+    CF_FP_Write(Concatenation(CF_TC_PathRecord.selfDirectory,
+        "result/gap_threefold_containment.out"),
+        "ThreefoldContainmentAudit", output);
+
+    CF_TC_WriteMarkdown(output,directPoset);
+    CF_FP_Log(log, Concatenation("Completed: maximal actions = ",
+        String(output.actionMaximalCount)));
+    AppendTo(log.stream, "THREEFOLD_CONTAINMENT_COMPLETED\n");
+    Print("THREEFOLD_CONTAINMENT_COMPLETED\n");
+    CloseStream(log.stream);
+    return output;
+end;
+
+if not IsBound(CF_TC_DEFINE_ONLY) or CF_TC_DEFINE_ONLY<>true then
+    ThreefoldContainmentAudit := CF_TC_Run();
+fi;
+
+RECORDED RESULT
+
+There are 63 fourfold sources whose index is divisible by three.  Forty have a Fermat summand and give cubic-threefold families; the other 23 do not.  The coordinate comparison identifies the extracted actions with the 40 displayed representatives in increasing order of the source fourfold number.
+
+All 40 families are saturated.  The direct five-dimensional calculation decides every admissible ordered pair.  It gives 83 cover relations, whose transitive closure contains 260 proper containment relations.  There are seven strict lifts maximal under linear-conjugacy containment.  The complete relation agrees with the restriction of the fourfold containment relation.
+
+All 40 projective actions are liftable and F-liftable, since the cubic degree is coprime to the number of variables.
+

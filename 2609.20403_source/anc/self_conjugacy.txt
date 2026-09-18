@@ -1,0 +1,2291 @@
+SELF-CONJUGACY AND LIFTABILITY
+
+This file records the exact self-conjugacy and liftability tests for the final cubic-fourfold families.  It contains the main GAP functions and drivers.  Individual conjugating matrices, inverse-image records, and saved certificates are omitted.
+
+For a finite matrix group H, self-conjugacy means that H is linearly conjugate to its coefficientwise conjugate.  When the two groups are not equal in the stored coordinates, the calculation considers the relevant abstract automorphisms, compares exact characters on conjugacy classes, constructs an invertible intertwiner, and checks the induced invertible map between the two invariant cubic spaces.  This identifies a family with its conjugate; it does not assert that every member is isomorphic to its own conjugate.
+
+Liftability is tested from the strict inverse images of the subgroups C3^2 and, for F-liftability, the elements of order three.  The calculation also records the inverse images of C9 subgroups.  Smoothness, saturation, and fullness are inputs to this test.
+
+GAP CODE: SELF-CONJUGACY FUNCTIONS
+
+#############################################################################
+## Exact helpers for complex self-conjugacy of finite linear groups.
+##
+## A fully verified positive result contains an exact matrix P satisfying
+##
+##     P^-1 * H * P = conjugate(H).
+##
+## The optional cubic-space check verifies that F(x P^-1) carries the
+## supplied H-invariant cubic space to its coefficientwise conjugate.
+## This identifies the families, not each member with its own conjugate.
+#############################################################################
+
+if not IsBound(FindInvertibleIntertwiner)
+   or not IsBound(CF_MonomialImageVector) then
+    if IsExistingFile("../gap_functions.g") then
+        Read("../gap_functions.g");
+    elif IsExistingFile("gap_functions.g") then
+        Read("gap_functions.g");
+    elif IsExistingFile("gap_classification/gap_functions.g") then
+        Read("gap_classification/gap_functions.g");
+    else
+        Error("Cannot find gap_functions.g.");
+    fi;
+fi;
+
+
+CF_SC_ComplexConjugateScalar := function(value)
+    if not IsCyc(value) then
+        Error("Complex-conjugacy input must have cyclotomic entries.");
+    fi;
+    return GaloisCyc(value, -1);
+end;
+
+
+CF_SC_ComplexConjugateMatrix := function(matrix)
+    if not IsMatrix(matrix) then
+        Error("A matrix is required.");
+    fi;
+    return List(
+        matrix,
+        row -> List(row, CF_SC_ComplexConjugateScalar)
+    );
+end;
+
+
+CF_SC_ComplexConjugateMatrices := function(matrices)
+    if not IsList(matrices) then
+        Error("A list of matrices is required.");
+    fi;
+    return List(matrices, CF_SC_ComplexConjugateMatrix);
+end;
+
+
+CF_SC_IsScalarMatrix := function(matrix)
+    local n, scalar, i, j;
+    if not IsMatrix(matrix) then
+        return false;
+    fi;
+    n := Length(matrix);
+    if n = 0 or ForAny(matrix, row -> Length(row) <> n) then
+        return false;
+    fi;
+    scalar := matrix[1][1];
+    for i in [1 .. n] do
+        for j in [1 .. n] do
+            if (i = j and matrix[i][j] <> scalar)
+               or (i <> j and matrix[i][j] <> 0) then
+                return false;
+            fi;
+        od;
+    od;
+    return true;
+end;
+
+
+CF_SC_VerifyLinearWitness := function(
+    sourceGenerators,
+    targetGenerators,
+    conjugatingMatrix
+)
+    local sourceGroup, targetGroup, imageGroup, inverse, images;
+
+    if Length(sourceGenerators) = 0 or Length(targetGenerators) = 0 then
+        return rec(verified := false, reason := "empty_generators");
+    fi;
+    if IsZero(DeterminantMat(conjugatingMatrix)) then
+        return rec(verified := false, reason := "singular_matrix");
+    fi;
+
+    sourceGroup := Group(sourceGenerators);
+    targetGroup := Group(targetGenerators);
+    inverse := conjugatingMatrix^-1;
+    images := List(
+        sourceGenerators,
+        generator -> inverse * generator * conjugatingMatrix
+    );
+    if not ForAll(images, image -> image in targetGroup) then
+        return rec(
+            verified := false,
+            reason := "generator_image_outside_target",
+            generatorImages := images
+        );
+    fi;
+
+    imageGroup := Group(images);
+    if Size(sourceGroup) <> Size(targetGroup)
+       or Size(imageGroup) <> Size(targetGroup) then
+        return rec(
+            verified := false,
+            reason := "group_order_mismatch",
+            generatorImages := images
+        );
+    fi;
+
+    return rec(
+        verified := true,
+        reason := "exact_generator_and_order_check",
+        generatorImages := images,
+        sourceOrder := Size(sourceGroup),
+        targetOrder := Size(targetGroup)
+    );
+end;
+
+
+CF_SC_DefaultOptions := function()
+    return rec(
+        trySetwiseEqualityFirst := true,
+        maximumAutomorphisms := infinity,
+        progressInterval := 0,
+        printProgress := false
+    );
+end;
+
+
+CF_SC_MergeOptions := function(options)
+    local merged, name;
+    if not IsRecord(options) then
+        Error("Self-conjugacy options must be a record.");
+    fi;
+    merged := CF_SC_DefaultOptions();
+    for name in RecNames(options) do
+        if not name in RecNames(merged) then
+            Error("Unknown self-conjugacy option: ", name, ".");
+        fi;
+        merged.(name) := options.(name);
+    od;
+    if merged.trySetwiseEqualityFirst <> true
+       and merged.trySetwiseEqualityFirst <> false then
+        Error("trySetwiseEqualityFirst must be boolean.");
+    fi;
+    if merged.printProgress <> true and merged.printProgress <> false then
+        Error("printProgress must be boolean.");
+    fi;
+    if merged.maximumAutomorphisms <> infinity
+       and (not IsInt(merged.maximumAutomorphisms)
+            or merged.maximumAutomorphisms < 1) then
+        Error("maximumAutomorphisms must be positive or infinity.");
+    fi;
+    if not IsInt(merged.progressInterval)
+       or merged.progressInterval < 0 then
+        Error("progressInterval must be a nonnegative integer.");
+    fi;
+    return merged;
+end;
+
+
+CF_SC_ScalarConstraintData := function(
+    generators,
+    permutationIsomorphism
+)
+    local constraints, generator, conjugate;
+    constraints := [];
+    for generator in generators do
+        if CF_SC_IsScalarMatrix(generator) then
+            conjugate := CF_SC_ComplexConjugateMatrix(generator);
+            if not conjugate in Group(generators) then
+                Error("The conjugate scalar is not in the source group.");
+            fi;
+            Add(
+                constraints,
+                rec(
+                    source := Image(permutationIsomorphism, generator),
+                    requiredImage := Image(
+                        permutationIsomorphism,
+                        conjugate
+                    )
+                )
+            );
+        fi;
+    od;
+    return constraints;
+end;
+
+
+CF_SC_AutomorphismPassesScalarConstraints := function(
+    automorphism,
+    constraints
+)
+    return ForAll(
+        constraints,
+        constraint -> Image(automorphism, constraint.source)
+                      = constraint.requiredImage
+    );
+end;
+
+
+CF_SC_CharacterMatchesAutomorphism := function(
+    automorphism,
+    classRepresentatives,
+    sourceClassTraces,
+    permutationIsomorphism
+)
+    local position, element, targetTrace;
+    for position in [1 .. Length(classRepresentatives)] do
+        element := PreImagesRepresentative(
+            permutationIsomorphism,
+            Image(automorphism, classRepresentatives[position])
+        );
+        targetTrace := CF_SC_ComplexConjugateScalar(TraceMat(element));
+        if sourceClassTraces[position] <> targetTrace then
+            return false;
+        fi;
+    od;
+    return true;
+end;
+
+
+CF_SC_AutomorphismGeneratorImages := function(
+    automorphism,
+    sourceGenerators,
+    permutationIsomorphism
+)
+    return List(
+        sourceGenerators,
+        generator -> CF_SC_ComplexConjugateMatrix(
+            PreImagesRepresentative(
+                permutationIsomorphism,
+                Image(
+                    automorphism,
+                    Image(permutationIsomorphism, generator)
+                )
+            )
+        )
+    );
+end;
+
+
+## The search is exhaustive unless maximumAutomorphisms imposes a cap.
+## A negative result is returned only after all automorphisms have failed the
+## exact character test.  A character match without a recovered matrix is
+## recorded separately and is not promoted to a matrix certificate.
+CF_SC_TestLinearGroupSelfConjugacy := function(arg)
+    local sourceGenerators, options, sourceGroup, conjugateGenerators,
+          conjugateGroup, n, identity, directVerification,
+          permutationIsomorphism, permutationGroup,
+          classRepresentatives, sourceClassTraces, constraints,
+          automorphismGroup, automorphism, tested, scalarCompatible,
+          characterCompatible, matchingAutomorphisms, images, matrix,
+          verification, capped;
+
+    if Length(arg) < 1 or Length(arg) > 2 then
+        Error("Use CF_SC_TestLinearGroupSelfConjugacy(generators[, options]).");
+    fi;
+    sourceGenerators := arg[1];
+    if Length(arg) = 2 then
+        options := CF_SC_MergeOptions(arg[2]);
+    else
+        options := CF_SC_DefaultOptions();
+    fi;
+    if not IsList(sourceGenerators) or Length(sourceGenerators) = 0 then
+        Error("A nonempty matrix-generator list is required.");
+    fi;
+    n := CF_MatrixListDimension(sourceGenerators);
+    if n = fail
+       or not ForAll(
+           sourceGenerators,
+           matrixEntry -> not IsZero(DeterminantMat(matrixEntry))
+       ) then
+        Error("The generators must be invertible matrices of one dimension.");
+    fi;
+
+    sourceGroup := Group(sourceGenerators);
+    if not IsFinite(sourceGroup) then
+        Error("The linear group must be finite.");
+    fi;
+    conjugateGenerators := CF_SC_ComplexConjugateMatrices(sourceGenerators);
+    conjugateGroup := Group(conjugateGenerators);
+    if Size(sourceGroup) <> Size(conjugateGroup) then
+        Error("Complex conjugation changed the computed group order.");
+    fi;
+
+    identity := IdentityMat(n);
+    if options.trySetwiseEqualityFirst and sourceGroup = conjugateGroup then
+        directVerification := CF_SC_VerifyLinearWitness(
+            sourceGenerators,
+            conjugateGenerators,
+            identity
+        );
+        if not directVerification.verified then
+            Error("The setwise-equality self-conjugacy check failed.");
+        fi;
+        return rec(
+            status := "self_conjugate",
+            proofType := "source group equals its conjugate in the stored coordinates",
+            conjugatingMatrix := identity,
+            generatorImages := directVerification.generatorImages,
+            groupOrder := Size(sourceGroup),
+            automorphismsTested := 0,
+            scalarCompatibleAutomorphisms := 0,
+            characterCompatibleAutomorphisms := 0,
+            witnessVerified := true
+        );
+    fi;
+
+    permutationIsomorphism := IsomorphismPermGroup(sourceGroup);
+    if permutationIsomorphism = fail then
+        return rec(
+            status := "unknown",
+            proofType := "no faithful permutation model was constructed",
+            groupOrder := Size(sourceGroup),
+            witnessVerified := false
+        );
+    fi;
+    permutationGroup := Image(permutationIsomorphism);
+    classRepresentatives := List(
+        ConjugacyClasses(permutationGroup),
+        Representative
+    );
+    sourceClassTraces := List(
+        classRepresentatives,
+        representative -> TraceMat(
+            PreImagesRepresentative(
+                permutationIsomorphism,
+                representative
+            )
+        )
+    );
+    constraints := CF_SC_ScalarConstraintData(
+        sourceGenerators,
+        permutationIsomorphism
+    );
+    automorphismGroup := AutomorphismGroup(permutationGroup);
+
+    tested := 0;
+    scalarCompatible := 0;
+    characterCompatible := 0;
+    matchingAutomorphisms := 0;
+    capped := false;
+    for automorphism in automorphismGroup do
+        if options.maximumAutomorphisms <> infinity
+           and tested >= options.maximumAutomorphisms then
+            capped := true;
+            break;
+        fi;
+        tested := tested + 1;
+        if options.printProgress
+           and options.progressInterval > 0
+           and tested mod options.progressInterval = 0 then
+            Print("   self-conjugacy automorphisms tested: ", tested, "\n");
+        fi;
+        if not CF_SC_AutomorphismPassesScalarConstraints(
+            automorphism,
+            constraints
+        ) then
+            continue;
+        fi;
+        scalarCompatible := scalarCompatible + 1;
+        if not CF_SC_CharacterMatchesAutomorphism(
+            automorphism,
+            classRepresentatives,
+            sourceClassTraces,
+            permutationIsomorphism
+        ) then
+            continue;
+        fi;
+        characterCompatible := characterCompatible + 1;
+        images := CF_SC_AutomorphismGeneratorImages(
+            automorphism,
+            sourceGenerators,
+            permutationIsomorphism
+        );
+        matrix := FindInvertibleIntertwiner(sourceGenerators, images, n);
+        if matrix = fail then
+            matchingAutomorphisms := matchingAutomorphisms + 1;
+            continue;
+        fi;
+        verification := CF_SC_VerifyLinearWitness(
+            sourceGenerators,
+            conjugateGenerators,
+            matrix
+        );
+        if not verification.verified then
+            Error("An alleged self-conjugacy matrix failed exact verification.");
+        fi;
+        return rec(
+            status := "self_conjugate",
+            proofType := "complete abstract-automorphism character match with exact intertwiner",
+            conjugatingMatrix := matrix,
+            generatorImages := verification.generatorImages,
+            groupOrder := Size(sourceGroup),
+            automorphismsTested := tested,
+            scalarCompatibleAutomorphisms := scalarCompatible,
+            characterCompatibleAutomorphisms := characterCompatible,
+            witnessVerified := true
+        );
+    od;
+
+    if matchingAutomorphisms > 0 then
+        return rec(
+            status := "character_certified_no_matrix",
+            proofType := "a complete character match was found but no explicit invertible intertwiner was recovered",
+            groupOrder := Size(sourceGroup),
+            automorphismsTested := tested,
+            scalarCompatibleAutomorphisms := scalarCompatible,
+            characterCompatibleAutomorphisms := characterCompatible,
+            witnessVerified := false,
+            searchCapped := capped
+        );
+    fi;
+    if capped then
+        return rec(
+            status := "unknown",
+            proofType := "the automorphism search reached its user-supplied cap",
+            groupOrder := Size(sourceGroup),
+            automorphismsTested := tested,
+            scalarCompatibleAutomorphisms := scalarCompatible,
+            characterCompatibleAutomorphisms := characterCompatible,
+            witnessVerified := false,
+            searchCapped := true
+        );
+    fi;
+    return rec(
+        status := "not_self_conjugate",
+        proofType := "all abstract automorphisms fail the exact natural-character comparison",
+        groupOrder := Size(sourceGroup),
+        automorphismsTested := tested,
+        scalarCompatibleAutomorphisms := scalarCompatible,
+        characterCompatibleAutomorphisms := characterCompatible,
+        witnessVerified := false,
+        searchCapped := false
+    );
+end;
+
+
+CF_SC_TransformCubicCoefficientVector := function(
+    vector,
+    matrix,
+    exponentBasis
+)
+    local monomialImages, answer, sourcePosition, targetPosition;
+    if Length(vector) <> Length(exponentBasis) then
+        Error("The cubic vector and monomial basis have different lengths.");
+    fi;
+    monomialImages := List(
+        exponentBasis,
+        exponent -> CF_MonomialImageVector(
+            exponent,
+            matrix,
+            exponentBasis
+        )
+    );
+    answer := List([1 .. Length(exponentBasis)], position -> 0);
+    for sourcePosition in [1 .. Length(vector)] do
+        if vector[sourcePosition] <> 0 then
+            for targetPosition in [1 .. Length(answer)] do
+                answer[targetPosition] := answer[targetPosition]
+                    + vector[sourcePosition]
+                      * monomialImages[sourcePosition][targetPosition];
+            od;
+        fi;
+    od;
+    return answer;
+end;
+
+
+## If P^-1 H P = conjugate(H), then F(x P^-1) carries W^H to
+## conjugate(W^H).  The returned basisMap expresses those transformed source
+## basis vectors in the coefficientwise conjugate target basis.
+CF_SC_VerifyCubicSpaceWitness := function(
+    sourceBasis,
+    exponentBasis,
+    conjugatingMatrix
+)
+    local targetBasis, transformedBasis, basisMap, vector, coordinates;
+    if Length(sourceBasis) = 0 then
+        return rec(verified := false, reason := "empty_cubic_space");
+    fi;
+    targetBasis := List(
+        sourceBasis,
+        row -> List(row, CF_SC_ComplexConjugateScalar)
+    );
+    transformedBasis := List(
+        sourceBasis,
+        row -> CF_SC_TransformCubicCoefficientVector(
+            row,
+            conjugatingMatrix^-1,
+            exponentBasis
+        )
+    );
+    if RankMat(targetBasis) <> Length(targetBasis)
+       or RankMat(transformedBasis) <> Length(sourceBasis) then
+        return rec(
+            verified := false,
+            reason := "basis_rank_failure",
+            transformedBasis := transformedBasis
+        );
+    fi;
+    basisMap := [];
+    for vector in transformedBasis do
+        coordinates := SolutionMat(targetBasis, vector);
+        if coordinates = fail
+           or coordinates * targetBasis <> vector then
+            return rec(
+                verified := false,
+                reason := "transformed_cubic_outside_conjugate_space",
+                transformedBasis := transformedBasis
+            );
+        fi;
+        Add(basisMap, coordinates);
+    od;
+    if IsZero(DeterminantMat(basisMap)) then
+        return rec(
+            verified := false,
+            reason := "singular_induced_basis_map",
+            transformedBasis := transformedBasis,
+            basisMap := basisMap
+        );
+    fi;
+    return rec(
+        verified := true,
+        reason := "exact_cubic_basis_identification",
+        basisMap := basisMap
+    );
+end;
+
+
+CF_SC_TestFamilySelfConjugacy := function(arg)
+    local generators, cubicBasis, exponentBasis, options, linearResult,
+          cubicResult;
+    if Length(arg) < 3 or Length(arg) > 4 then
+        Error(
+            "Use CF_SC_TestFamilySelfConjugacy(generators, cubicBasis, ",
+            "exponentBasis[, options])."
+        );
+    fi;
+    generators := arg[1];
+    cubicBasis := arg[2];
+    exponentBasis := arg[3];
+    if Length(arg) = 4 then
+        options := arg[4];
+    else
+        options := rec();
+    fi;
+    linearResult := CF_SC_TestLinearGroupSelfConjugacy(
+        generators,
+        options
+    );
+    if linearResult.status <> "self_conjugate"
+       or not linearResult.witnessVerified then
+        linearResult.cubicSpaceVerified := false;
+        linearResult.cubicSpaceCertificate := rec(status := "not_run");
+        return linearResult;
+    fi;
+    cubicResult := CF_SC_VerifyCubicSpaceWitness(
+        cubicBasis,
+        exponentBasis,
+        linearResult.conjugatingMatrix
+    );
+    linearResult.cubicSpaceVerified := cubicResult.verified;
+    linearResult.cubicSpaceCertificate := cubicResult;
+    if not cubicResult.verified then
+        linearResult.status := "linear_only_family_check_failed";
+    fi;
+    return linearResult;
+end;
+
+GAP CODE: SELF-CONJUGACY DRIVER
+
+#############################################################################
+## Exact self-conjugacy audit for the final 156 cubic-fourfold families.
+##
+## The final catalogue is recovered from the survivor keys in the completed
+## equal-dimensional saturation audit.  The following families are recorded
+## as theoretical exemptions and are not recomputed here:
+##
+##   * connected symplectic families;
+##   * families with rank(S) at least 19;
+##   * families whose projective group order is divisible by 7;
+##   * families with symplectic part 3^{1+4}:2.
+##
+## Every other family is checked by an exact linear conjugacy certificate and
+## an exact identification of its invariant cubic space with its
+## coefficientwise complex conjugate.
+#############################################################################
+
+CF_SCB_Paths := function()
+    if IsExistingFile("gap_self_conjugacy.g") then
+        return rec(
+            selfDirectory := "",
+            saturationDirectory := "../gap_saturation/"
+        );
+    fi;
+    if IsExistingFile(
+        "gap_classification/gap_self_conjugacy/gap_self_conjugacy.g"
+    ) then
+        return rec(
+            selfDirectory := "gap_classification/gap_self_conjugacy/",
+            saturationDirectory := "gap_classification/gap_saturation/"
+        );
+    fi;
+    if IsExistingFile("gap_self_conjugacy/gap_self_conjugacy.g") then
+        return rec(
+            selfDirectory := "gap_self_conjugacy/",
+            saturationDirectory := "gap_saturation/"
+        );
+    fi;
+    Error(
+        "Run from the repository root, gap_classification, or ",
+        "gap_classification/gap_self_conjugacy."
+    );
+end;
+
+
+CF_SCB_PathRecord := CF_SCB_Paths();
+
+if not IsBound(CF_SC_TestFamilySelfConjugacy) then
+    Read(Concatenation(
+        CF_SCB_PathRecord.selfDirectory,
+        "gap_self_conjugacy_functions.g"
+    ));
+fi;
+if not IsBound(SaturationInputCandidates) then
+    Read(Concatenation(
+        CF_SCB_PathRecord.saturationDirectory,
+        "gap_saturation_input.g"
+    ));
+fi;
+if not IsBound(EqualDimensionSaturationAudit) then
+    Read(Concatenation(
+        CF_SCB_PathRecord.saturationDirectory,
+        "gap_equal_dimension_saturation.out"
+    ));
+fi;
+
+
+if not IsBound(CF_SCB_PRINT_PROGRESS) then
+    CF_SCB_PRINT_PROGRESS := true;
+fi;
+if not IsBound(CF_SCB_LOG_FILE) then
+    CF_SCB_LOG_FILE := Concatenation(
+        CF_SCB_PathRecord.selfDirectory,
+        "gap_self_conjugacy.log"
+    );
+fi;
+if not IsBound(CF_SCB_OUTPUT_FILE) then
+    CF_SCB_OUTPUT_FILE := Concatenation(
+        CF_SCB_PathRecord.selfDirectory,
+        "gap_self_conjugacy.out"
+    );
+fi;
+if not IsBound(CF_SCB_MARKDOWN_FILE) then
+    CF_SCB_MARKDOWN_FILE := Concatenation(
+        CF_SCB_PathRecord.selfDirectory,
+        "gap_self_conjugacy.md"
+    );
+fi;
+
+
+CF_SCB_Log := function(arg)
+    local item;
+    for item in arg do
+        if CF_SCB_PRINT_PROGRESS then
+            Print(item);
+        fi;
+        AppendTo(CF_SCB_LOG_FILE, item);
+    od;
+end;
+
+
+CF_SCB_RecordValue := function(record, name, default)
+    if name in RecNames(record) then
+        return record.(name);
+    fi;
+    return default;
+end;
+
+
+CF_SCB_FinalCandidates := function()
+    local keys, candidates, key, candidate;
+
+    if EqualDimensionSaturationAudit.status <> "completed"
+       or EqualDimensionSaturationAudit.survivorCount <> 156 then
+        Error("A completed 156-family saturation audit is required.");
+    fi;
+
+    keys := EqualDimensionSaturationAudit.survivorKeys;
+    if Length(keys) <> 156 or Length(Set(keys)) <> 156 then
+        Error("The final survivor-key list is not a set of size 156.");
+    fi;
+
+    candidates := [];
+    for key in keys do
+        candidate := First(
+            SaturationInputCandidates,
+            record -> record.sourceKey = key
+        );
+        if candidate = fail then
+            Error("Cannot recover final family: ", key, ".");
+        fi;
+        Add(candidates, candidate);
+    od;
+    return candidates;
+end;
+
+
+CF_SCB_ExemptionData := function(candidate)
+    local reasons, symplectic, highRank, sevenDivisible,
+          threePowerFamily;
+
+    symplectic := candidate.isSymplecticFamily = true;
+    highRank := IsInt(candidate.rankS) and candidate.rankS >= 19;
+    sevenDivisible :=
+        IsList(candidate.projectiveGroupId)
+        and Length(candidate.projectiveGroupId) >= 1
+        and IsInt(candidate.projectiveGroupId[1])
+        and candidate.projectiveGroupId[1] mod 7 = 0;
+    threePowerFamily := candidate.symplecticPart = "3^{1+4}:2";
+
+    reasons := [];
+    if symplectic then
+        Add(reasons, "connected symplectic family");
+    fi;
+    if highRank then
+        Add(reasons, "rank(S) at least 19");
+    fi;
+    if sevenDivisible then
+        Add(reasons, "projective group order divisible by 7");
+    fi;
+    if threePowerFamily then
+        Add(reasons, "symplectic part 3^{1+4}:2");
+    fi;
+
+    return rec(
+        exempt := Length(reasons) > 0,
+        reasons := reasons,
+        isSymplecticFamily := symplectic,
+        isHighRank := highRank,
+        isSevenDivisible := sevenDivisible,
+        isThreePowerFamily := threePowerFamily
+    );
+end;
+
+
+CF_SCB_StoredInvariantDimension := function(candidate)
+    if IsBound(candidate.cubicInvariantBasisStrings)
+       and IsList(candidate.cubicInvariantBasisStrings) then
+        return Length(candidate.cubicInvariantBasisStrings);
+    fi;
+    return fail;
+end;
+
+
+CF_SCB_ExemptResult := function(position, candidate, exemption)
+    return rec(
+        cataloguePosition := position,
+        sourceKey := candidate.sourceKey,
+        sourceCategory := candidate.sourceCategory,
+        symplecticPart := candidate.symplecticPart,
+        rankS := candidate.rankS,
+        projectiveGroupId := candidate.projectiveGroupId,
+        linearGroupId := candidate.linearGroupId,
+        fullIndex := candidate.fullIndex,
+        familyDimension := candidate.familyDimension,
+        status := "self_conjugate_by_theory",
+        verificationKind := "theoretical_exemption",
+        exemptionReasons := exemption.reasons,
+        invariantDimension := CF_SCB_StoredInvariantDimension(candidate),
+        invariantDimensionVerified := fail,
+        groupOrder := candidate.linearGroupId[1],
+        proofType := "theoretical exemption requested for this catalogue",
+        witnessVerified := fail,
+        cubicSpaceVerified := fail,
+        conjugatingMatrix := fail,
+        generatorImages := fail,
+        cubicBasisMap := fail,
+        runtimeMilliseconds := 0
+    );
+end;
+
+
+CF_SCB_CheckedResult := function(position, candidate)
+    local startTime, cubic, storedInvariantDimension, dimensionVerified,
+          certificate, successful;
+
+    startTime := Runtime();
+    cubic := CF_CubicInvariantBasis(
+        candidate.matrixGenerators,
+        rec(
+            buildPolynomialObjects := false,
+            buildStrings := false
+        )
+    );
+    storedInvariantDimension := CF_SCB_StoredInvariantDimension(candidate);
+    dimensionVerified :=
+        storedInvariantDimension <> fail
+        and storedInvariantDimension = cubic.invariantDimension;
+    if not dimensionVerified then
+        return rec(
+            cataloguePosition := position,
+            sourceKey := candidate.sourceKey,
+            sourceCategory := candidate.sourceCategory,
+            symplecticPart := candidate.symplecticPart,
+            rankS := candidate.rankS,
+            projectiveGroupId := candidate.projectiveGroupId,
+            linearGroupId := candidate.linearGroupId,
+            fullIndex := candidate.fullIndex,
+            familyDimension := candidate.familyDimension,
+            status := "invariant_dimension_mismatch",
+            verificationKind := "exact_computation",
+            exemptionReasons := [],
+            invariantDimension := cubic.invariantDimension,
+            storedInvariantDimension := storedInvariantDimension,
+            invariantDimensionVerified := false,
+            groupOrder := fail,
+            proofType := "stored and recomputed invariant dimensions disagree",
+            witnessVerified := false,
+            cubicSpaceVerified := false,
+            conjugatingMatrix := fail,
+            generatorImages := fail,
+            cubicBasisMap := fail,
+            runtimeMilliseconds := Runtime() - startTime
+        );
+    fi;
+
+    certificate := CF_SC_TestFamilySelfConjugacy(
+        candidate.matrixGenerators,
+        cubic.coefficientBasis,
+        cubic.monomialExponents,
+        rec(
+            trySetwiseEqualityFirst := true,
+            maximumAutomorphisms := infinity,
+            progressInterval := 0,
+            printProgress := false
+        )
+    );
+    successful :=
+        certificate.status = "self_conjugate"
+        and certificate.witnessVerified = true
+        and certificate.cubicSpaceVerified = true
+        and certificate.groupOrder = candidate.linearGroupId[1];
+
+    return rec(
+        cataloguePosition := position,
+        sourceKey := candidate.sourceKey,
+        sourceCategory := candidate.sourceCategory,
+        symplecticPart := candidate.symplecticPart,
+        rankS := candidate.rankS,
+        projectiveGroupId := candidate.projectiveGroupId,
+        linearGroupId := candidate.linearGroupId,
+        fullIndex := candidate.fullIndex,
+        familyDimension := candidate.familyDimension,
+        status := certificate.status,
+        verificationKind := "exact_matrix_and_cubic_space",
+        exemptionReasons := [],
+        invariantDimension := cubic.invariantDimension,
+        storedInvariantDimension := storedInvariantDimension,
+        invariantDimensionVerified := dimensionVerified,
+        groupOrder := certificate.groupOrder,
+        groupOrderVerified :=
+            certificate.groupOrder = candidate.linearGroupId[1],
+        proofType := certificate.proofType,
+        witnessVerified := certificate.witnessVerified,
+        cubicSpaceVerified := certificate.cubicSpaceVerified,
+        exactVerificationPassed := successful,
+        automorphismsTested := CF_SCB_RecordValue(
+            certificate,
+            "automorphismsTested",
+            fail
+        ),
+        scalarCompatibleAutomorphisms := CF_SCB_RecordValue(
+            certificate,
+            "scalarCompatibleAutomorphisms",
+            fail
+        ),
+        characterCompatibleAutomorphisms := CF_SCB_RecordValue(
+            certificate,
+            "characterCompatibleAutomorphisms",
+            fail
+        ),
+        conjugatingMatrix := CF_SCB_RecordValue(
+            certificate,
+            "conjugatingMatrix",
+            fail
+        ),
+        generatorImages := CF_SCB_RecordValue(
+            certificate,
+            "generatorImages",
+            fail
+        ),
+        cubicBasisMap := CF_SCB_RecordValue(
+            certificate.cubicSpaceCertificate,
+            "basisMap",
+            fail
+        ),
+        runtimeMilliseconds := Runtime() - startTime
+    );
+end;
+
+
+CF_SCB_IsAccepted := function(result)
+    return result.status = "self_conjugate_by_theory"
+           or (result.status = "self_conjugate"
+               and result.witnessVerified = true
+               and result.cubicSpaceVerified = true
+               and result.invariantDimensionVerified = true
+               and result.groupOrderVerified = true);
+end;
+
+
+CF_SCB_WriteMarkdown := function(audit)
+    local stream, result, reason;
+
+    stream := OutputTextFile(CF_SCB_MARKDOWN_FILE, false);
+    SetPrintFormattingStatus(stream, false);
+    AppendTo(
+        stream,
+        "# Self-conjugacy of the final families\n\n",
+        "The input is the set of 156 survivors in the completed equal-",
+        "dimensional saturation audit. Connected symplectic families, rank-",
+        "at-least-19 families, families of projective order divisible by 7, ",
+        "and families with symplectic part `3^{1+4}:2` are recorded as ",
+        "theoretical exemptions. Every other family is verified with exact ",
+        "cyclotomic arithmetic, an explicit linear conjugating matrix, and ",
+        "the induced invertible map on the invariant cubic space.\n\n",
+        "## Summary\n\n",
+        "- final families: **", String(audit.totalCount), "**\n",
+        "- theoretical exemptions: **", String(audit.exemptCount), "**\n",
+        "- exact computations: **", String(audit.checkedCount), "**\n",
+        "- exact computations passed: **", String(audit.exactPassedCount),
+        "**\n",
+        "- accepted as self-conjugate: **", String(audit.acceptedCount),
+        "**\n",
+        "- overall result: **", String(audit.allSelfConjugate), "**\n\n",
+        "The four exemption counts below overlap.\n\n",
+        "| exemption | count |\n",
+        "|---|---:|\n",
+        "| connected symplectic family | ",
+        String(audit.symplecticExemptCount), " |\n",
+        "| rank(S) at least 19 | ",
+        String(audit.highRankExemptCount), " |\n",
+        "| projective order divisible by 7 | ",
+        String(audit.sevenDivisibleExemptCount), " |\n",
+        "| symplectic part `3^{1+4}:2` | ",
+        String(audit.threePowerFamilyExemptCount), " |\n\n",
+        "## Family audit\n\n",
+        "| run no. | source key | PGL ID | dimension | status | method |\n",
+        "|---:|---|---|---:|---|---|\n"
+    );
+
+    for result in audit.familyResults do
+        if result.verificationKind = "theoretical_exemption" then
+            reason := CF_JoinStrings(result.exemptionReasons, "; ");
+        else
+            reason := result.proofType;
+        fi;
+        AppendTo(
+            stream,
+            "| ", String(result.cataloguePosition),
+            " | `", result.sourceKey,
+            "` | `", String(result.projectiveGroupId),
+            "` | ", String(result.familyDimension),
+            " | `", result.status,
+            "` | ", reason, " |\n"
+        );
+    od;
+    CloseStream(stream);
+end;
+
+
+CF_SCB_Run := function()
+    local candidates, results, startTime, position, candidate,
+          exemption, result, audit, failures;
+
+    candidates := CF_SCB_FinalCandidates();
+    results := [];
+    startTime := Runtime();
+
+    PrintTo(CF_SCB_LOG_FILE, "");
+    PrintTo(
+        CF_SCB_OUTPUT_FILE,
+        "SelfConjugacyAudit := rec(status := \"running\", ",
+        "inputCount := 156);\n"
+    );
+    CF_SCB_Log(
+        "============================================================\n",
+        "Self-conjugacy audit for the final 156 families\n",
+        "============================================================\n"
+    );
+
+    for position in [1 .. Length(candidates)] do
+        candidate := candidates[position];
+        exemption := CF_SCB_ExemptionData(candidate);
+        CF_SCB_Log(
+            String(position), "/", String(Length(candidates)), " ",
+            candidate.sourceKey, ": started\n"
+        );
+        if exemption.exempt then
+            result := CF_SCB_ExemptResult(
+                position,
+                candidate,
+                exemption
+            );
+            CF_SCB_Log(
+                "    theoretical exemption: ",
+                CF_JoinStrings(exemption.reasons, "; "), "\n"
+            );
+        else
+            result := CF_SCB_CheckedResult(position, candidate);
+            CF_SCB_Log(
+                "    status=", result.status,
+                "; proof=", result.proofType,
+                "; runtime=", String(result.runtimeMilliseconds), " ms\n"
+            );
+        fi;
+        Add(results, result);
+    od;
+
+    audit := rec(
+        schemaVersion := 1,
+        status := "completed",
+        scope := "the 156 survivors of equal-dimensional saturation",
+        totalCount := Length(results),
+        exemptCount := Number(
+            results,
+            item -> item.verificationKind = "theoretical_exemption"
+        ),
+        checkedCount := Number(
+            results,
+            item -> item.verificationKind =
+                "exact_matrix_and_cubic_space"
+        ),
+        exactPassedCount := Number(
+            results,
+            item -> item.verificationKind =
+                    "exact_matrix_and_cubic_space"
+                    and CF_SCB_IsAccepted(item)
+        ),
+        acceptedCount := Number(results, CF_SCB_IsAccepted),
+        symplecticExemptCount := Number(
+            candidates,
+            item -> CF_SCB_ExemptionData(item).isSymplecticFamily
+        ),
+        highRankExemptCount := Number(
+            candidates,
+            item -> CF_SCB_ExemptionData(item).isHighRank
+        ),
+        sevenDivisibleExemptCount := Number(
+            candidates,
+            item -> CF_SCB_ExemptionData(item).isSevenDivisible
+        ),
+        threePowerFamilyExemptCount := Number(
+            candidates,
+            item -> CF_SCB_ExemptionData(item).isThreePowerFamily
+        ),
+        allSelfConjugate := ForAll(results, CF_SCB_IsAccepted),
+        runtimeMilliseconds := Runtime() - startTime,
+        familyResults := results
+    );
+    failures := Filtered(results, item -> not CF_SCB_IsAccepted(item));
+
+    if audit.totalCount <> 156
+       or audit.exemptCount + audit.checkedCount <> 156 then
+        Error("The self-conjugacy coverage audit failed.");
+    fi;
+    if Length(failures) > 0 then
+        audit.status := "completed_with_failures";
+    fi;
+
+    PrintTo(
+        CF_SCB_OUTPUT_FILE,
+        "SelfConjugacyAudit := ", audit, ";\n"
+    );
+    CF_SCB_WriteMarkdown(audit);
+    CF_SCB_Log(
+        "\n============================================================\n",
+        "Self-conjugacy audit completed\n",
+        "============================================================\n",
+        "Theoretical exemptions: ", String(audit.exemptCount), "\n",
+        "Exact computations: ", String(audit.checkedCount), "\n",
+        "Exact computations passed: ",
+        String(audit.exactPassedCount), "\n",
+        "Accepted total: ", String(audit.acceptedCount), "/156\n",
+        "Runtime: ", String(audit.runtimeMilliseconds), " ms\n",
+        "Output: ", CF_SCB_OUTPUT_FILE, "\n",
+        "Markdown: ", CF_SCB_MARKDOWN_FILE, "\n"
+    );
+
+    if Length(failures) > 0 then
+        Error(
+            "Self-conjugacy failed or remained unknown for ",
+            Length(failures), " final families."
+        );
+    fi;
+    return audit;
+end;
+
+
+SelfConjugacyAudit := CF_SCB_Run();
+
+GAP CODE: LIFTABILITY FUNCTIONS
+
+#############################################################################
+## Liftability tests for full automorphism groups of smooth cubic fourfolds.
+##
+## Input: a finite strict linear group
+##
+##     H = Aut(F) < GL(6,C),    Z = <zeta_3 I_6>.
+##
+## The projective group is G = H/Z.  The full-group criterion tests ordinary
+## liftability on the C3 x C3 subgroups, and F-liftability on those ordinary
+## tests together with the order-three elements.  We also inspect C9 inverse
+## images, which gives a uniform record for all subgroups of order at most 9.
+##
+## No GL(6)-conjugacy search is needed.  The small-3-group lemma
+## exhausts the possible obstruction models.  For the inverse images, their
+## commutator subgroup and exponent distinguish exactly the required cases.
+## See gap_liftability_script.md for the public Sylow and small-subgroup
+## criteria.  Fullness and smoothness are hypotheses supplied by the
+## classification, not established by these functions.
+##
+## This file only defines functions.  It does not read the family catalogue
+## and does not start a batch computation.
+#############################################################################
+
+
+CF_LI_ScalarSubgroup := function(strictGroup)
+    local identity, dimension, scalarMatrix, scalarGroup, centralScalars;
+
+    if not IsGroup(strictGroup) then
+        Error("A finite matrix group is required.");
+    fi;
+    identity := One(strictGroup);
+    if not IsMatrix(identity) then
+        Error("The strict group must be given as a matrix group.");
+    fi;
+    dimension := Length(identity);
+    if dimension <> 6 then
+        Error("The cubic-fourfold liftability test expects 6 by 6 matrices.");
+    fi;
+
+    scalarMatrix := E(3) * IdentityMat(dimension);
+    if not scalarMatrix in strictGroup then
+        Error("The strict group does not contain zeta_3 I_6.");
+    fi;
+    scalarGroup := Group([scalarMatrix]);
+    if Size(scalarGroup) <> 3 or not IsCentral(strictGroup, scalarGroup) then
+        Error("The expected central scalar subgroup has not been found.");
+    fi;
+    centralScalars := Filtered(Elements(Center(strictGroup)), matrix ->
+        matrix = matrix[1][1] * identity);
+    if Set(centralScalars) <> Set(Elements(scalarGroup)) then
+        Error("The full scalar subgroup must be exactly <zeta_3 I_6>.");
+    fi;
+    return scalarGroup;
+end;
+
+
+## These two tests use the distinguished scalar kernel, not merely the
+## abstract isomorphism type of H.  They apply to any strict subgroup action.
+CF_LI_TestStrictExtension := function(strictGroup)
+    local scalarGroup, derived, derivedCubes, scalarDerivedOrder,
+          scalarDerivedCubesOrder;
+
+    scalarGroup := CF_LI_ScalarSubgroup(strictGroup);
+    derived := DerivedSubgroup(strictGroup);
+    ## Modulo [H,H], the cubes of a generating set generate 3 H_ab.
+    derivedCubes := Subgroup(strictGroup, Concatenation(
+        GeneratorsOfGroup(derived),
+        List(GeneratorsOfGroup(strictGroup), generator -> generator^3)
+    ));
+    if not IsNormal(strictGroup, derivedCubes) then
+        Error("The derived-and-cubes subgroup is not normal.");
+    fi;
+    scalarDerivedOrder := Size(Intersection(scalarGroup, derived));
+    scalarDerivedCubesOrder := Size(Intersection(scalarGroup, derivedCubes));
+    return rec(
+        strictGroupOrder := Size(strictGroup),
+        projectiveGroupOrder := Size(strictGroup) / 3,
+        scalarSubgroupOrder := Size(scalarGroup),
+        scalarDerivedIntersectionOrder := scalarDerivedOrder,
+        scalarDerivedCubesIntersectionOrder := scalarDerivedCubesOrder,
+        isLiftable := scalarDerivedOrder = 1,
+        isFLiftable := scalarDerivedCubesOrder = 1,
+        criterion := "distinguished scalar kernel in H_ab and H_ab/3H_ab"
+    );
+end;
+
+
+CF_LI_PrepareStrictGroup := function(strictGroup)
+    local scalarGroup, quotientMap, projectiveGroup,
+          permutationIsomorphism, permutationGroup;
+
+    scalarGroup := CF_LI_ScalarSubgroup(strictGroup);
+    quotientMap := NaturalHomomorphismByNormalSubgroup(
+        strictGroup,
+        scalarGroup
+    );
+    projectiveGroup := Image(quotientMap);
+    if Size(strictGroup) <> 3 * Size(projectiveGroup) then
+        Error("The strict/projective group orders are inconsistent.");
+    fi;
+
+    ## Subgroup enumeration is normally more reliable on a permutation model.
+    permutationIsomorphism := IsomorphismPermGroup(projectiveGroup);
+    if permutationIsomorphism = fail then
+        Error("Could not construct a permutation model of the quotient.");
+    fi;
+    permutationGroup := Image(permutationIsomorphism);
+
+    return rec(
+        strictGroup := strictGroup,
+        scalarGroup := scalarGroup,
+        quotientMap := quotientMap,
+        projectiveGroup := projectiveGroup,
+        permutationIsomorphism := permutationIsomorphism,
+        permutationGroup := permutationGroup
+    );
+end;
+
+
+CF_LI_IsomorphicSubgroupRepresentatives := function(context, model, label)
+    local embeddings;
+
+    ## IsomorphicSubgroups returns representatives of the target-conjugacy
+    ## classes of image subgroups.  Different embeddings with the same image
+    ## are therefore not retained as separate cases.
+    embeddings := IsomorphicSubgroups(context.permutationGroup, model);
+    return List(
+        embeddings,
+        embedding -> rec(
+            label := label,
+            permutationSubgroup := Image(embedding),
+            projectiveSubgroup := PreImage(
+                context.permutationIsomorphism,
+                Image(embedding)
+            )
+        )
+    );
+end;
+
+
+CF_LI_RelevantSubgroupRepresentatives := function(context)
+    local representatives;
+
+    representatives := [];
+    Append(
+        representatives,
+        CF_LI_IsomorphicSubgroupRepresentatives(
+            context,
+            CyclicGroup(3),
+            "C3"
+        )
+    );
+    Append(
+        representatives,
+        CF_LI_IsomorphicSubgroupRepresentatives(
+            context,
+            CyclicGroup(9),
+            "C9"
+        )
+    );
+    Append(
+        representatives,
+        CF_LI_IsomorphicSubgroupRepresentatives(
+            context,
+            AbelianGroup([3, 3]),
+            "C3xC3"
+        )
+    );
+    return representatives;
+end;
+
+
+CF_LI_ClassifyRepresentative := function(context, representative)
+    local projectiveSubgroup, strictPreimage, projectiveOrder,
+          strictOrder, strictExponent, derivedIntersectionOrder,
+          isLiftable, isFLiftable, obstruction, reason,
+          compatibleWithSmoothC9Lemma;
+
+    projectiveSubgroup := representative.projectiveSubgroup;
+    strictPreimage := PreImage(context.quotientMap, projectiveSubgroup);
+    projectiveOrder := Size(projectiveSubgroup);
+    strictOrder := Size(strictPreimage);
+
+    if strictOrder <> 3 * projectiveOrder then
+        Error("A strict inverse image has the wrong order.");
+    fi;
+
+    strictExponent := Exponent(strictPreimage);
+    derivedIntersectionOrder := Size(
+        Intersection(
+            context.scalarGroup,
+            DerivedSubgroup(strictPreimage)
+        )
+    );
+    obstruction := "none";
+    compatibleWithSmoothC9Lemma := true;
+
+    if representative.label = "C3" then
+        if projectiveOrder <> 3 or not IsCyclic(projectiveSubgroup) then
+            Error("The labelled C3 representative is inconsistent.");
+        fi;
+
+        ## Every projective C3 is liftable.  Its strict inverse image has
+        ## order 9.  It is C3 x C3 precisely in the split (F-liftable) case,
+        ## and C9 precisely for the obstruction
+        ## <1/9(1,1,4,4,7,7)>.
+        isLiftable := true;
+        isFLiftable := strictExponent = 3;
+        if isFLiftable then
+            reason := "strict preimage is elementary abelian of order 9";
+        elif strictExponent = 9 then
+            obstruction := "C3_non_F_liftable";
+            reason := "strict preimage is cyclic of order 9";
+        else
+            Error("Unexpected strict inverse image of a projective C3.");
+        fi;
+
+    elif representative.label = "C9" then
+        if projectiveOrder <> 9 or not IsCyclic(projectiveSubgroup) then
+            Error("The labelled C9 representative is inconsistent.");
+        fi;
+
+        ## The inverse image is abelian of order 27.  It splits over Z if
+        ## and only if its exponent is 9.  The small-3-group lemma proves
+        ## that the exponent-27 alternative cannot occur for a smooth cubic.
+        isLiftable := true;
+        isFLiftable := strictExponent = 9;
+        if isFLiftable then
+            reason := "strict preimage has exponent 9";
+        elif strictExponent = 27 then
+            obstruction := "C9_exponent_27_forbidden_for_smooth_cubic";
+            reason := "strict preimage is cyclic of order 27";
+            compatibleWithSmoothC9Lemma := false;
+        else
+            Error("Unexpected strict inverse image of a projective C9.");
+        fi;
+
+    elif representative.label = "C3xC3" then
+        if projectiveOrder <> 9
+           or not IsAbelian(projectiveSubgroup)
+           or IsCyclic(projectiveSubgroup) then
+            Error("The labelled C3 x C3 representative is inconsistent.");
+        fi;
+
+        ## Since the quotient is abelian, the derived subgroup of the strict
+        ## inverse image lies in Z.  A nontrivial intersection with Z is
+        ## exactly the ordinary-liftability obstruction.  If it is trivial,
+        ## F-liftability is equivalent to the inverse image being C3^3,
+        ## equivalently to exponent 3.
+        isLiftable := derivedIntersectionOrder = 1;
+        isFLiftable := isLiftable and strictExponent = 3;
+
+        if not isLiftable then
+            if strictExponent = 3 then
+                obstruction := "C3xC3_non_liftable_exponent_3";
+                reason := "Heisenberg strict preimage of exponent 3";
+            elif strictExponent = 9 then
+                obstruction := "C3xC3_non_liftable_exponent_9";
+                reason := "nonabelian strict preimage of exponent 9";
+            else
+                Error("Unexpected non-liftable C3 x C3 inverse image.");
+            fi;
+        elif not isFLiftable then
+            if strictExponent <> 9 then
+                Error("Unexpected liftable non-F-liftable inverse image.");
+            fi;
+            obstruction := "C3xC3_liftable_non_F_liftable";
+            reason := "strict preimage is C9 x C3 with scalar kernel in its C9 part";
+        else
+            reason := "strict preimage is elementary abelian of order 27";
+        fi;
+
+    else
+        Error("Unknown small 3-subgroup label: ", representative.label, ".");
+    fi;
+
+    return rec(
+        label := representative.label,
+        projectiveSubgroup := projectiveSubgroup,
+        projectiveOrder := projectiveOrder,
+        strictPreimage := strictPreimage,
+        strictPreimageOrder := strictOrder,
+        strictPreimageId := IdGroup(strictPreimage),
+        strictPreimageStructure := StructureDescription(strictPreimage),
+        strictPreimageExponent := strictExponent,
+        scalarDerivedIntersectionOrder := derivedIntersectionOrder,
+        isLiftable := isLiftable,
+        isFLiftable := isFLiftable,
+        obstruction := obstruction,
+        reason := reason,
+        compatibleWithSmoothC9Lemma := compatibleWithSmoothC9Lemma
+    );
+end;
+
+
+CF_LI_TestFullAutomorphismGroup := function(strictGroup)
+    local context, representatives, tests;
+
+    context := CF_LI_PrepareStrictGroup(strictGroup);
+    representatives := CF_LI_RelevantSubgroupRepresentatives(context);
+    tests := List(
+        representatives,
+        representative -> CF_LI_ClassifyRepresentative(
+            context,
+            representative
+        )
+    );
+
+    return rec(
+        strictGroupOrder := Size(strictGroup),
+        projectiveGroupOrder := Size(context.projectiveGroup),
+        numberOfC3Classes := Number(tests, test -> test.label = "C3"),
+        numberOfC9Classes := Number(tests, test -> test.label = "C9"),
+        numberOfC3xC3Classes := Number(
+            tests,
+            test -> test.label = "C3xC3"
+        ),
+        localTests := tests,
+        isLiftable := ForAll(tests, test -> test.isLiftable),
+        isFLiftable := ForAll(tests, test -> test.isFLiftable),
+        compatibleWithSmoothC9Lemma := ForAll(
+            tests,
+            test -> test.compatibleWithSmoothC9Lemma
+        ),
+        criterion := "all conjugacy classes of C3, C9, and C3xC3 subgroups"
+    );
+end;
+
+
+CF_LI_PrintSummary := function(result)
+    local test, counter;
+
+    Print("strict group order = ", result.strictGroupOrder, "\n");
+    Print("projective group order = ", result.projectiveGroupOrder, "\n");
+    Print(
+        "conjugacy classes: C3 = ", result.numberOfC3Classes,
+        ", C9 = ", result.numberOfC9Classes,
+        ", C3xC3 = ", result.numberOfC3xC3Classes,
+        "\n"
+    );
+    counter := 0;
+    for test in result.localTests do
+        counter := counter + 1;
+        Print(
+            counter, ". ", test.label,
+            ": liftable = ", test.isLiftable,
+            ", F-liftable = ", test.isFLiftable,
+            ", preimage = ", test.strictPreimageStructure,
+            ", obstruction = ", test.obstruction,
+            "\n"
+        );
+    od;
+    Print("liftable = ", result.isLiftable, "\n");
+    Print("F-liftable = ", result.isFLiftable, "\n");
+    Print(
+        "compatible with the smooth-C9 lemma = ",
+        result.compatibleWithSmoothC9Lemma,
+        "\n"
+    );
+end;
+
+
+#############################################################################
+## Canonical obstruction models from the small-3-group lemma.
+##
+## These are supplied for documentation and later self-tests.  The decision
+## functions above do not perform a GL(6)-conjugacy search against them.
+#############################################################################
+
+CF_LI_DiagonalRootMatrix := function(order, exponents)
+    return DiagonalMat(List(exponents, exponent -> E(order)^exponent));
+end;
+
+
+CF_LI_ObstructionModels := function()
+    local permutationMatrix, c3NonF, c3xC3NonLiftableExponent3,
+          c3xC3NonLiftableExponent9, c3xC3LiftableNonF;
+
+    permutationMatrix := PermutationMat(
+        (1, 2, 3)(4, 5, 6),
+        6,
+        Cyclotomics
+    );
+    c3NonF := Group([
+        CF_LI_DiagonalRootMatrix(9, [1, 1, 4, 4, 7, 7])
+    ]);
+    c3xC3NonLiftableExponent3 := Group([
+        permutationMatrix,
+        CF_LI_DiagonalRootMatrix(3, [0, 1, 2, 0, 1, 2])
+    ]);
+    c3xC3NonLiftableExponent9 := Group([
+        permutationMatrix,
+        CF_LI_DiagonalRootMatrix(9, [1, 4, 7, 1, 4, 7])
+    ]);
+    c3xC3LiftableNonF := Group([
+        CF_LI_DiagonalRootMatrix(9, [1, 1, 4, 4, 7, 7]),
+        CF_LI_DiagonalRootMatrix(3, [0, 1, 0, 1, 0, 1])
+    ]);
+
+    return rec(
+        C3NonFLiftable := c3NonF,
+        C3xC3NonLiftableExponent3 := c3xC3NonLiftableExponent3,
+        C3xC3NonLiftableExponent9 := c3xC3NonLiftableExponent9,
+        C3xC3LiftableNonFLiftable := c3xC3LiftableNonF
+    );
+end;
+
+
+Print("Loaded cubic-fourfold liftability functions.\n");
+
+GAP CODE: LIFTABILITY DRIVER
+
+#############################################################################
+## Liftability audit for the final 156 cubic-fourfold families.
+##
+## The matrix input is the complete ordered family catalogue
+##
+##     gap_manuscript_validation/gap_family_catalogue.g.
+##
+## The 48 connected symplectic families are read from the reference table.
+## For these families, F-liftability is equivalent to liftability.  If that
+## reference result is negative, every special family in the same connected
+## symplectic family is negative as well.  The remaining special families
+## are tested by the small-3-subgroup criterion in gap_liftability.g.  The
+## completed batch writes the GAP-readable result, progress log, and Markdown
+## table documented in README.md.
+#############################################################################
+
+
+CF_LIB_Paths := function()
+    if IsExistingFile("gap_liftability_all.g") then
+        return rec(
+            selfDirectory := "",
+            catalogueDirectory := "../gap_manuscript_validation/"
+        );
+    fi;
+    if IsExistingFile(
+        "gap_classification/gap_liftability/gap_liftability_all.g"
+    ) then
+        return rec(
+            selfDirectory := "gap_classification/gap_liftability/",
+            catalogueDirectory := "gap_classification/gap_manuscript_validation/"
+        );
+    fi;
+    if IsExistingFile("gap_liftability/gap_liftability_all.g") then
+        return rec(
+            selfDirectory := "gap_liftability/",
+            catalogueDirectory := "gap_manuscript_validation/"
+        );
+    fi;
+    Error(
+        "Run from the repository root, gap_classification, or ",
+        "gap_classification/gap_liftability."
+    );
+end;
+
+
+CF_LIB_PathRecord := CF_LIB_Paths();
+
+if not IsBound(CF_LI_TestFullAutomorphismGroup) then
+    Read(Concatenation(
+        CF_LIB_PathRecord.selfDirectory,
+        "gap_liftability.g"
+    ));
+fi;
+if not IsBound(CubicFourfoldFamilyCatalogue) then
+    Read(Concatenation(
+        CF_LIB_PathRecord.catalogueDirectory,
+        "gap_family_catalogue.g"
+    ));
+fi;
+Read(Concatenation(CF_LIB_PathRecord.catalogueDirectory,
+    "gap_family_correspondence.out"));
+
+
+if not IsBound(CF_LIB_PRINT_PROGRESS) then
+    CF_LIB_PRINT_PROGRESS := true;
+fi;
+if not IsBound(CF_LIB_LOG_FILE) then
+    CF_LIB_LOG_FILE := Concatenation(
+        CF_LIB_PathRecord.selfDirectory,
+        "gap_liftability.log"
+    );
+fi;
+if not IsBound(CF_LIB_OUTPUT_FILE) then
+    CF_LIB_OUTPUT_FILE := Concatenation(
+        CF_LIB_PathRecord.selfDirectory,
+        "gap_liftability.out"
+    );
+fi;
+if not IsBound(CF_LIB_MARKDOWN_FILE) then
+    CF_LIB_MARKDOWN_FILE := Concatenation(
+        CF_LIB_PathRecord.selfDirectory,
+        "gap_liftability_result.md"
+    );
+fi;
+
+
+CF_LIB_Log := function(arg)
+    local item;
+    for item in arg do
+        if CF_LIB_PRINT_PROGRESS then
+            Print(item);
+        fi;
+        AppendTo(CF_LIB_LOG_FILE, item);
+    od;
+end;
+
+
+#############################################################################
+## Reference values for the 48 connected symplectic families.
+##
+## The order is the 48 connected symplectic components in Koike order.
+## These reference values are not used as substitutes for the independent
+## distinguished-kernel test performed on every final matrix group.
+#############################################################################
+
+CF_LIB_StandardFamilyNumbers := [
+    1,2,3,4,5,6,7,8,9,10,11,12,15,16,17,19,20,21,25,27,29,31,33,34,
+    35,37,39,42,43,45,47,48,52,55,58,63,65,68,70,73,77,83,88,97,
+    106,115,119,132
+];
+
+CF_LIB_SymplecticReference := [
+    rec(name := "3^4:A_6",           liftable := false),
+    rec(name := "A_7",               liftable := false),
+    rec(name := "A_7",               liftable := true),
+    rec(name := "3^{1+4}:2.2^2",     liftable := false),
+    rec(name := "M_10",              liftable := false),
+    rec(name := "M_10",              liftable := false),
+    rec(name := "L_2(11)",           liftable := true),
+    rec(name := "A_3,5",             liftable := true),
+    rec(name := "3^{1+4}:2.2",       liftable := false),
+    rec(name := "A_6",               liftable := false),
+    rec(name := "A_6",               liftable := true),
+    rec(name := "PSL(2,7)",          liftable := true),
+    rec(name := "S_5",               liftable := true),
+    rec(name := "S_5",               liftable := true),
+    rec(name := "M_9",               liftable := false),
+    rec(name := "N_72",              liftable := true),
+    rec(name := "T_48",              liftable := true),
+    rec(name := "3^{1+4}:2",         liftable := false),
+    rec(name := "A_4,3",             liftable := false),
+    rec(name := "A_4,3",             liftable := true),
+    rec(name := "A_5",               liftable := true),
+    rec(name := "A_5",               liftable := true),
+    rec(name := "3^2.4",             liftable := false),
+    rec(name := "3^2.4",             liftable := true),
+    rec(name := "S_3,3",             liftable := true),
+    rec(name := "S_3,3",             liftable := true),
+    rec(name := "F_21",              liftable := true),
+    rec(name := "Hol_5",             liftable := true),
+    rec(name := "QD_16",             liftable := true),
+    rec(name := "S_4",               liftable := true),
+    rec(name := "S_4",               liftable := true),
+    rec(name := "Q_8",               liftable := true),
+    rec(name := "A_3,3",             liftable := false),
+    rec(name := "A_3,3",             liftable := true),
+    rec(name := "D_12",              liftable := true),
+    rec(name := "D_12",              liftable := true),
+    rec(name := "A_4",               liftable := true),
+    rec(name := "A_4",               liftable := true),
+    rec(name := "D_10",              liftable := true),
+    rec(name := "D_8",               liftable := true),
+    rec(name := "C4",                liftable := true),
+    rec(name := "S3",                liftable := true),
+    rec(name := "S3",                liftable := true),
+    rec(name := "C2^2",              liftable := true),
+    rec(name := "C3",                liftable := true),
+    rec(name := "C3",                liftable := true),
+    rec(name := "C2",                liftable := true),
+    rec(name := "1",                 liftable := true)
+];
+
+
+CF_LIB_ValidateInput := function()
+    local position, standard, reference, familyNumbers;
+
+    if Length(CubicFourfoldFamilyCatalogue) <> 156 then
+        Error("The final family catalogue must have length 156.");
+    fi;
+    if Length(CF_LIB_SymplecticReference) <> 48 then
+        Error("The symplectic reference list must have length 48.");
+    fi;
+
+    for position in [1 .. 48] do
+        standard := CubicFourfoldFamilyCatalogue[
+            CF_LIB_StandardFamilyNumbers[position]];
+        reference := CF_LIB_SymplecticReference[position];
+        if standard.standardPosition <> position then
+            Error("Unexpected standard-family position ", position, ".");
+        fi;
+        if standard.symplecticPart <> reference.name then
+            Error(
+                "Reference-name mismatch at standard position ",
+                position,
+                "."
+            );
+        fi;
+        if standard.fullIndex <> standard.genericIndex
+            or standard.familyDimension <> 20 - standard.rankS then
+            Error("The reference row is not the generic symplectic family.");
+        fi;
+    od;
+
+    familyNumbers := List(CubicFourfoldFamilyCatalogue, item -> item.number);
+    if familyNumbers <> [1 .. 156] then
+        Error("The final catalogue is not numbered consecutively 1..156.");
+    fi;
+    if not ForAll(
+        CubicFourfoldFamilyCatalogue,
+        family -> family.fullGroupVerified = true
+            and family.determinantKernelVerified = true
+    ) then
+        Error("The canonical catalogue contains an unverified matrix group.");
+    fi;
+    if FamilyCoordinateAudit.status <> "completed"
+        or FamilyCoordinateAudit.verifiedCount <> 156
+        or Length(FamilyCoordinateAudit.rows) <> 156
+        or not ForAll(FamilyCoordinateAudit.rows, row -> row.passed) then
+        Error("The saved family correspondence is incomplete.");
+    fi;
+    for position in [1..156] do
+        if FamilyCoordinateAudit.rows[position].number <> position
+            or FamilyCoordinateAudit.rows[position].sourceKey <>
+                CubicFourfoldFamilyCatalogue[position].sourceKey then
+            Error("The saved correspondence and catalogue are not aligned.");
+        fi;
+    od;
+end;
+
+
+CF_LIB_IsStandardFamily := function(family, standard)
+    return family.number = standard.number;
+end;
+
+
+CF_LIB_StrictGroup := function(family, standard)
+    return Group(family.matrixGenerators);
+end;
+
+
+CF_LIB_LightLocalTest := function(test)
+    return rec(
+        label := test.label,
+        projectiveOrder := test.projectiveOrder,
+        strictPreimageOrder := test.strictPreimageOrder,
+        strictPreimageId := test.strictPreimageId,
+        strictPreimageStructure := test.strictPreimageStructure,
+        strictPreimageExponent := test.strictPreimageExponent,
+        scalarDerivedIntersectionOrder :=
+            test.scalarDerivedIntersectionOrder,
+        isLiftable := test.isLiftable,
+        isFLiftable := test.isFLiftable,
+        obstruction := test.obstruction,
+        reason := test.reason
+    );
+end;
+
+
+CF_LIB_ReferenceResult := function(family, standard, reference)
+    return rec(
+        number := family.number,
+        standardPosition := family.standardPosition,
+        standardFamilyNumber := family.standardFamilyNumber,
+        symplecticPart := family.symplecticPart,
+        rankS := family.rankS,
+        familyDimension := family.familyDimension,
+        genericIndex := family.genericIndex,
+        fullIndex := family.fullIndex,
+        projectiveGroupId := family.projectiveGroupId,
+        linearGroupId := family.linearGroupId,
+        isStandardFamily := true,
+        symplecticReferenceLiftable := reference.liftable,
+        method := "symplectic_reference",
+        isLiftable := reference.liftable,
+        isFLiftable := reference.liftable,
+        numberOfC3Classes := fail,
+        numberOfC9Classes := fail,
+        numberOfC3xC3Classes := fail,
+        localTests := [],
+        criterion :=
+            "48 connected symplectic components; verified by the scalar-kernel test"
+    );
+end;
+
+
+CF_LIB_InheritedNegativeResult := function(family, standard, reference)
+    return rec(
+        number := family.number,
+        standardPosition := family.standardPosition,
+        standardFamilyNumber := family.standardFamilyNumber,
+        symplecticPart := family.symplecticPart,
+        rankS := family.rankS,
+        familyDimension := family.familyDimension,
+        genericIndex := family.genericIndex,
+        fullIndex := family.fullIndex,
+        projectiveGroupId := family.projectiveGroupId,
+        linearGroupId := family.linearGroupId,
+        isStandardFamily := false,
+        symplecticReferenceLiftable := reference.liftable,
+        method := "nonliftable_symplectic_subgroup",
+        isLiftable := false,
+        isFLiftable := false,
+        numberOfC3Classes := fail,
+        numberOfC9Classes := fail,
+        numberOfC3xC3Classes := fail,
+        localTests := [],
+        criterion :=
+            "a non-liftable symplectic subgroup is already an obstruction"
+    );
+end;
+
+
+CF_LIB_ComputedResult := function(family, standard, reference, strictGroup)
+    local test;
+
+    if Size(strictGroup) <> family.linearGroupId[1] then
+        Error("Strict group order mismatch for family ", family.number, ".");
+    fi;
+
+    test := CF_LI_TestFullAutomorphismGroup(strictGroup);
+    if test.projectiveGroupOrder <> family.projectiveGroupId[1] then
+        Error(
+            "Projective group order mismatch for family ",
+            family.number,
+            "."
+        );
+    fi;
+    if not test.compatibleWithSmoothC9Lemma then
+        Error(
+            "Family ", family.number,
+            " conflicts with the smooth-C9 lemma."
+        );
+    fi;
+
+    return rec(
+        number := family.number,
+        standardPosition := family.standardPosition,
+        standardFamilyNumber := family.standardFamilyNumber,
+        symplecticPart := family.symplecticPart,
+        rankS := family.rankS,
+        familyDimension := family.familyDimension,
+        genericIndex := family.genericIndex,
+        fullIndex := family.fullIndex,
+        projectiveGroupId := family.projectiveGroupId,
+        linearGroupId := family.linearGroupId,
+        isStandardFamily := false,
+        symplecticReferenceLiftable := reference.liftable,
+        method := "small_3_subgroup_test",
+        isLiftable := test.isLiftable,
+        isFLiftable := test.isFLiftable,
+        numberOfC3Classes := test.numberOfC3Classes,
+        numberOfC9Classes := test.numberOfC9Classes,
+        numberOfC3xC3Classes := test.numberOfC3xC3Classes,
+        localTests := List(test.localTests, CF_LIB_LightLocalTest),
+        criterion := test.criterion
+    );
+end;
+
+
+CF_LIB_MethodLabel := function(method)
+    if method = "symplectic_reference" then
+        return "reference";
+    elif method = "nonliftable_symplectic_subgroup" then
+        return "inherited obstruction";
+    elif method = "small_3_subgroup_test" then
+        return "small 3-subgroups";
+    fi;
+    Error("Unknown liftability method.");
+end;
+
+
+CF_LIB_YesNo := function(value)
+    if value then
+        return "yes";
+    fi;
+    return "no";
+end;
+
+
+CF_LIB_IdString := function(identifier)
+    if identifier[2] = 0 then
+        return Concatenation("[", String(identifier[1]), ", --]");
+    fi;
+    return Concatenation(
+        "[",
+        String(identifier[1]),
+        ", ",
+        String(identifier[2]),
+        "]"
+    );
+end;
+
+
+CF_LIB_ObstructionSummary := function(result)
+    local obstructions;
+
+    obstructions := Set(List(
+        Filtered(
+            result.localTests,
+            test -> test.obstruction <> "none"
+        ),
+        test -> test.obstruction
+    ));
+    if Length(obstructions) = 0 then
+        return "none";
+    fi;
+    return JoinStringsWithSeparator(obstructions, "; ");
+end;
+
+
+CF_LIB_WriteQuoted := function(file, value)
+    AppendTo(file, "\"", value, "\"");
+end;
+
+
+CF_LIB_WriteLocalTests := function(file, tests)
+    local position, test;
+
+    AppendTo(file, "[");
+    for position in [1 .. Length(tests)] do
+        test := tests[position];
+        if position > 1 then
+            AppendTo(file, ", ");
+        fi;
+        AppendTo(file, "rec(label := ");
+        CF_LIB_WriteQuoted(file, test.label);
+        AppendTo(
+            file,
+            ", projectiveOrder := ", test.projectiveOrder,
+            ", strictPreimageOrder := ", test.strictPreimageOrder,
+            ", strictPreimageId := ", test.strictPreimageId,
+            ", strictPreimageStructure := "
+        );
+        CF_LIB_WriteQuoted(file, test.strictPreimageStructure);
+        AppendTo(
+            file,
+            ", strictPreimageExponent := ", test.strictPreimageExponent,
+            ", scalarDerivedIntersectionOrder := ",
+            test.scalarDerivedIntersectionOrder,
+            ", isLiftable := ", test.isLiftable,
+            ", isFLiftable := ", test.isFLiftable,
+            ", obstruction := "
+        );
+        CF_LIB_WriteQuoted(file, test.obstruction);
+        AppendTo(file, ", reason := ");
+        CF_LIB_WriteQuoted(file, test.reason);
+        AppendTo(file, ")");
+    od;
+    AppendTo(file, "]");
+end;
+
+
+CF_LIB_WriteOutput := function(results, runtime)
+    local stream, position, result;
+
+    stream := OutputTextFile(CF_LIB_OUTPUT_FILE, false);
+    if stream = fail then
+        Error("Could not open the GAP output file.");
+    fi;
+    SetPrintFormattingStatus(stream, false);
+    AppendTo(
+        stream,
+        "#############################################################################\n",
+        "## GAP-readable liftability audit for the final 156 families.\n",
+        "#############################################################################\n\n",
+        "CubicFourfoldLiftabilityAudit := rec(\n",
+        "status := \"completed\",\n",
+        "gapVersion := \"", GAPInfo.Version, "\",\n",
+        "catalogue := \"gap_classification/gap_manuscript_validation/gap_family_catalogue.g\",\n",
+        "catalogueGenerators := ", List(CubicFourfoldFamilyCatalogue,
+            family -> family.matrixGenerators), ",\n",
+        "allScalarKernelsVerified := true,\n",
+        "allExtensionTestsAgree := true,\n",
+        "allCatalogueLabelsAgree := true,\n",
+        "allInheritedSubgroupsVerified := true,\n",
+        "familyCount := ", Length(results), ",\n",
+        "runtimeMilliseconds := ", runtime, ",\n",
+        "liftableCount := ", Number(results, item -> item.isLiftable), ",\n",
+        "fLiftableCount := ", Number(results, item -> item.isFLiftable), ",\n",
+        "referenceCount := ", Number(
+            results,
+            item -> item.method = "symplectic_reference"
+        ), ",\n",
+        "inheritedObstructionCount := ", Number(
+            results,
+            item -> item.method = "nonliftable_symplectic_subgroup"
+        ), ",\n",
+        "computedCount := ", Number(
+            results,
+            item -> item.method = "small_3_subgroup_test"
+        ), ",\n",
+        "results := [\n"
+    );
+
+    for position in [1 .. Length(results)] do
+        result := results[position];
+        AppendTo(
+            stream,
+            "rec(number := ", result.number,
+            ", standardPosition := ", result.standardPosition,
+            ", standardFamilyNumber := ", result.standardFamilyNumber,
+            ", symplecticPart := "
+        );
+        CF_LIB_WriteQuoted(stream, result.symplecticPart);
+        AppendTo(
+            stream,
+            ", rankS := ", result.rankS,
+            ", familyDimension := ", result.familyDimension,
+            ", genericIndex := ", result.genericIndex,
+            ", fullIndex := ", result.fullIndex,
+            ", projectiveGroupId := ", result.projectiveGroupId,
+            ", linearGroupId := ", result.linearGroupId,
+            ", isStandardFamily := ", result.isStandardFamily,
+            ", symplecticReferenceLiftable := ",
+            result.symplecticReferenceLiftable,
+            ", method := "
+        );
+        CF_LIB_WriteQuoted(stream, result.method);
+        AppendTo(
+            stream,
+            ", isLiftable := ", result.isLiftable,
+            ", isFLiftable := ", result.isFLiftable,
+            ", numberOfC3Classes := ", result.numberOfC3Classes,
+            ", numberOfC9Classes := ", result.numberOfC9Classes,
+            ", numberOfC3xC3Classes := ", result.numberOfC3xC3Classes,
+            ", localTests := "
+        );
+        CF_LIB_WriteLocalTests(stream, result.localTests);
+        AppendTo(stream, ", sourceKey := ");
+        CF_LIB_WriteQuoted(stream, result.sourceKey);
+        AppendTo(stream, ", extensionTest := ", result.extensionTest,
+            ", inheritedSubgroupVerified := ", result.inheritedSubgroupVerified,
+            ", catalogueLabelsVerified := ", result.catalogueLabelsVerified);
+        AppendTo(stream, ", criterion := ");
+        CF_LIB_WriteQuoted(stream, result.criterion);
+        AppendTo(stream, ")");
+        if position < Length(results) then
+            AppendTo(stream, ",");
+        fi;
+        AppendTo(stream, "\n");
+    od;
+    AppendTo(stream, "]\n);\n");
+    CloseStream(stream);
+end;
+
+
+CF_LIB_WriteMarkdown := function(results, runtime)
+    local stream, result, nonLiftable, liftableNonF,
+          computedExceptions;
+
+    nonLiftable := Filtered(results, item -> not item.isLiftable);
+    liftableNonF := Filtered(
+        results,
+        item -> item.isLiftable and not item.isFLiftable
+    );
+    computedExceptions := Filtered(
+        results,
+        item -> item.method = "small_3_subgroup_test"
+            and not item.isFLiftable
+    );
+
+    stream := OutputTextFile(CF_LIB_MARKDOWN_FILE, false);
+    if stream = fail then
+        Error("Could not open the Markdown output file.");
+    fi;
+    SetPrintFormattingStatus(stream, false);
+    AppendTo(
+        stream,
+        "# Liftability of the 156 cubic-fourfold families\n\n",
+        "The input is the [complete family catalogue](../gap_manuscript_validation/gap_family_catalogue.g), numbered 1--156. ",
+        "The 48 reference families and inherited obstructions are retained; ",
+        "the other 101 rows use all conjugacy classes of projective subgroups ",
+        "`C3`, `C9`, and `C3 x C3`. In addition, every row is independently ",
+        "tested using its distinguished scalar kernel in `H_ab` and `H_ab/3H_ab`. ",
+        "All 156 ordinary and F-liftability decisions agree, and every ",
+        "inherited symplectic subgroup is checked as an actual matrix subgroup. ",
+        "The saved catalogue labels are compared only after the decisions are computed.\n\n",
+        "Definitions and hypotheses are explained in [the script guide](gap_liftability_script.md). ",
+        "The [GAP result](gap_liftability.out) binds each number and source key to its exact input matrices; ",
+        "the [log](gap_liftability.log) ends with `LIFTABILITY_COMPLETED`. ",
+        "The input's smoothness and saturation are mathematical prerequisites, not conclusions of this test.\n\n",
+        "The run used GAP ", GAPInfo.Version, " and took ", runtime,
+        " ms. It processed ", Length(results), " families: ",
+        Number(results, item -> item.isLiftable), " are liftable and ",
+        Number(results, item -> item.isFLiftable), " are F-liftable. ",
+        "The three decision routes account for ",
+        Number(results, item -> item.method = "symplectic_reference"),
+        " reference rows, ",
+        Number(
+            results,
+            item -> item.method = "nonliftable_symplectic_subgroup"
+        ),
+        " inherited obstructions, and ",
+        Number(results, item -> item.method = "small_3_subgroup_test"),
+        " computed rows.\n\n",
+        "## Complete table\n\n",
+        "| No. | Symplectic family | PGL ID | Index | Dimension | ",
+        "Liftable | F-liftable | Decision |\n",
+        "|---:|---|---:|---:|---:|:---:|:---:|---|\n"
+    );
+
+    for result in results do
+        AppendTo(
+            stream,
+            "| ", result.number,
+            " | `", result.symplecticPart,
+            "` | `", CF_LIB_IdString(result.projectiveGroupId),
+            "` | ", result.fullIndex,
+            " | ", result.familyDimension,
+            " | ", CF_LIB_YesNo(result.isLiftable),
+            " | ", CF_LIB_YesNo(result.isFLiftable),
+            " | ", CF_LIB_MethodLabel(result.method),
+            " |\n"
+        );
+    od;
+
+    AppendTo(
+        stream,
+        "\n## Negative and intermediate cases\n\n",
+        "The non-liftable family numbers are `",
+        JoinStringsWithSeparator(
+            List(nonLiftable, item -> String(item.number)),
+            ", "
+        ),
+        "`.\n\n"
+    );
+    if Length(liftableNonF) = 0 then
+        AppendTo(
+            stream,
+            "No family is liftable without being F-liftable.\n"
+        );
+    else
+        AppendTo(
+            stream,
+            "The liftable but non-F-liftable family numbers are `",
+            JoinStringsWithSeparator(
+                List(liftableNonF, item -> String(item.number)),
+                ", "
+            ),
+            "`.\n"
+        );
+    fi;
+
+    AppendTo(
+        stream,
+        "\n### Computed obstructions\n\n",
+        "These are the rows whose negative conclusion is obtained from ",
+        "an explicit strict inverse image, rather than from the reference ",
+        "table or the inheritance shortcut.\n\n",
+        "| No. | PGL ID | Liftable | F-liftable | Detected obstruction |\n",
+        "|---:|---:|:---:|:---:|---|\n"
+    );
+    for result in computedExceptions do
+        AppendTo(
+            stream,
+            "| ", result.number,
+            " | `", CF_LIB_IdString(result.projectiveGroupId),
+            "` | ", CF_LIB_YesNo(result.isLiftable),
+            " | ", CF_LIB_YesNo(result.isFLiftable),
+            " | `", CF_LIB_ObstructionSummary(result),
+            "` |\n"
+        );
+    od;
+    CloseStream(stream);
+end;
+
+
+CF_LIB_Run := function()
+    local startTime, results, family, standard, reference, result,
+          elapsed, runtime, strictGroup, extensionTest, symplecticGroup,
+          inheritedSubgroupVerified, inputFamily;
+
+    CF_LIB_ValidateInput();
+    PrintTo(
+        CF_LIB_LOG_FILE,
+        "Liftability audit for the final 156 families\n",
+        "GAP version: ", GAPInfo.Version, "\n",
+        "Catalogue: gap_classification/gap_manuscript_validation/gap_family_catalogue.g\n",
+        "Started runtime counter: ", Runtime(), " ms\n\n"
+    );
+
+    startTime := Runtime();
+    results := [];
+    for inputFamily in CubicFourfoldFamilyCatalogue do
+        family := ShallowCopy(inputFamily);
+        standard := CubicFourfoldFamilyCatalogue[
+            CF_LIB_StandardFamilyNumbers[family.standardPosition]];
+        family.standardFamilyNumber := standard.number;
+        reference := CF_LIB_SymplecticReference[family.standardPosition];
+        strictGroup := CF_LIB_StrictGroup(family, standard);
+        extensionTest := CF_LI_TestStrictExtension(strictGroup);
+        if extensionTest.strictGroupOrder <> family.linearGroupId[1]
+            or extensionTest.projectiveGroupOrder <> family.projectiveGroupId[1] then
+            Error("Catalogue group order mismatch at family ", family.number, ".");
+        fi;
+        inheritedSubgroupVerified := true;
+
+        if CF_LIB_IsStandardFamily(family, standard) then
+            result := CF_LIB_ReferenceResult(family, standard, reference);
+        elif not reference.liftable then
+            symplecticGroup := Group(standard.symplecticGenerators);
+            inheritedSubgroupVerified := IsSubgroup(strictGroup, symplecticGroup)
+                and not CF_LI_TestStrictExtension(symplecticGroup).isLiftable;
+            if not inheritedSubgroupVerified then
+                Error("The inherited non-liftable subgroup is not verified.");
+            fi;
+            result := CF_LIB_InheritedNegativeResult(
+                family,
+                standard,
+                reference
+            );
+        else
+            result := CF_LIB_ComputedResult(family, standard, reference, strictGroup);
+        fi;
+        if result.isLiftable <> extensionTest.isLiftable
+            or result.isFLiftable <> extensionTest.isFLiftable then
+            Error("Local/reference and global extension tests disagree at family ",
+                family.number, ".");
+        fi;
+        if result.isLiftable <> inputFamily.isLiftable
+            or result.isFLiftable <> inputFamily.isFLiftable then
+            Error("Computed liftability differs from the catalogue labels.");
+        fi;
+        result.sourceKey := family.sourceKey;
+        result.extensionTest := extensionTest;
+        result.inheritedSubgroupVerified := inheritedSubgroupVerified;
+        result.catalogueLabelsVerified := true;
+        Add(results, result);
+
+        elapsed := Runtime() - startTime;
+        CF_LIB_Log(
+            family.number, "/156: ", family.symplecticPart,
+            ", PGL ", family.projectiveGroupId,
+            ", method = ", CF_LIB_MethodLabel(result.method),
+            ", liftable = ", result.isLiftable,
+            ", F-liftable = ", result.isFLiftable,
+            ", elapsed = ", elapsed, " ms\n"
+        );
+    od;
+
+    runtime := Runtime() - startTime;
+    CF_LIB_WriteOutput(results, runtime);
+    CF_LIB_WriteMarkdown(results, runtime);
+    CF_LIB_Log(
+        "\nCompleted.\n",
+        "Families = ", Length(results), "\n",
+        "Liftable = ", Number(results, item -> item.isLiftable), "\n",
+        "F-liftable = ", Number(results, item -> item.isFLiftable), "\n",
+        "Runtime = ", runtime, " ms\n",
+        "Output = ", CF_LIB_OUTPUT_FILE, "\n",
+        "Markdown = ", CF_LIB_MARKDOWN_FILE, "\n"
+    );
+    CF_LIB_Log("LIFTABILITY_COMPLETED\n");
+    return results;
+end;
+
+
+CubicFourfoldLiftabilityResults := CF_LIB_Run();
+
+RECORDED RESULT
+
+The self-conjugacy input consists of the 156 families remaining after the saturation calculation.  Fifty-six are covered by theoretical results.  The remaining 100 were checked with exact cyclotomic arithmetic.  In 89 cases the group equals its conjugate in the stored coordinates; in 11 cases an abstract automorphism and an invertible intertwiner are required.  Every check passed.  Thus all 156 families are self-conjugate.  For an index-2 large family, this identifies the equation families associated with the two conjugate components of the period domain.
+
+The liftability calculation treats the same 156 families.  It gives 134 liftable families and 131 F-liftable families.  The non-liftable family numbers are
+1, 2, 4, 5, 6, 9, 10, 17, 18, 21, 22, 23, 24, 25, 26, 33, 41, 52, 53, 54, 112, 114.
+The liftable but non-F-liftable family numbers are
+105, 140, 143.
+

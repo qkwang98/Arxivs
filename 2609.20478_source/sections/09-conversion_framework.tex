@@ -1,0 +1,217 @@
+\section{Cross-notation equivalence and conversion}\label{sec:conversion-framework}
+
+The forward maps of Sections~\ref{sec:petri-nets}--\ref{sec:bpmn} are model-to-model
+transformations that carry each notation into a common framework. Equality of the
+resulting signatures is then a model-equivalence check that can validate such a
+transformation, confirming that two models agree as processes.
+
+Sections~\ref{sec:petri-nets}--\ref{sec:bpmn} establish one direction, each notation mapping
+canonically to a signature $\Sigma$, and hence to $\mathbf{F}(\Sigma)$, by one engine at different instance maps
+(Remark~\ref{rem:ptree-recovers-pn}). Two questions follow, when two models, possibly in
+different notations, produce equal signatures and what that equality certifies, and whether a
+model can be recovered from a signature. We settle the first in
+Section~\ref{subsec:equiv-certificate}. The second, and any full round-trip faithfulness, is
+developed only as far as stating what each reconstruction requires
+(Sections~\ref{subsec:reverse-map}--\ref{subsec:open-problems}) and is left as future work.
+
+\begin{remark}[Notation-independence of the construction]
+  \label{rem:ptree-recovers-pn}
+  The notation constructions of Sections~\ref{sec:petri-nets}--\ref{sec:bpmn} are one engine at
+  different instance maps. Each instance map reads typed wires $(x,w,t)$, treats silent leaves or
+  transitions as transparent mediators with no elimination step, and composes along typed wires. A
+  given object-centric behaviour therefore receives the same minimal signature whether presented as
+  an OCPN, an OC causal net, or an OC process tree. The presentations differ only in how contexts
+  are derived, from Petri place flow, from causal binding sets, or from operator contexts filtered
+  by $D_{PT}$. A process tree also reaches its signature indirectly, by van Detten's OCPT-to-OCPN
+  translation~\cite{vandettenDiscoveringCompactLive2024} composed with the OCPN construction.
+  Provided that translation preserves behaviour, the indirect route and the direct construction of
+  Section~\ref{sec:process_trees} yield the same signature, a commuting triangle that reads the
+  notation-independence as a consistency check.
+\end{remark}
+
+\subsection{Signature equality as an equivalence certificate}\label{subsec:equiv-certificate}
+
+Fix a process-mining notation $\mathcal{N}$ with the forward compilation $m\mapsto\Sigma(m)$ of
+Definition~\ref{def:generator-cospan-general}, which consults no modelling convention. Write $C(m)$ for
+the \emph{context structure} of $m$. The context structure is the family, indexed by activities, of the contexts
+$c=(P,S)\in\mathrm{Contexts}(a)$ that the instance map reads off $m$'s compiled AND/OR graph
+(Definition~\ref{def:contexts-general}), each carrying its constraint system $\Lambda_{a,c}$
+(Definition~\ref{def:multiplicity-decoration}), compared by its solutions. All
+four instance maps emit contexts in this one format, over the shared activity set and object types,
+so $C(m)$ is defined in a notation-independent space (Remark~\ref{rem:ptree-recovers-pn}).
+
+Fix a selection $\mathcal{S}$ in the sense of Section~\ref{subsec:theorem}, by default the
+connected process diagrams, and call $L_{\mathcal{S}}(\Sigma)$, the union of the trace sets
+$\Gamma(f)$ of Definition~\ref{def:trace-map} over $f\in\mathcal{S}(\Sigma)$, the trace language
+of the model.
+
+\begin{definition}[Structural and trace equivalence]\label{def:str-tr-equiv}
+  Two models $m_1,m_2$, possibly in different notations, are \emph{structurally equivalent},
+  $m_1\equiv_{\mathrm{str}}m_2$, if they induce the same context structure, $C(m_1)=C(m_2)$. They
+  are \emph{trace-equivalent}, $m_1\equiv_{\mathrm{tr}}m_2$, if their trace languages coincide,
+  $L_{\mathcal{S}}(\Sigma(m_1))=L_{\mathcal{S}}(\Sigma(m_2))$.
+\end{definition}
+
+\begin{lemma}[The signature is a complete invariant of the context structure]\label{lem:sig-complete}
+  For models in any of the notations of Sections~\ref{sec:petri-nets}--\ref{sec:bpmn},
+  \[
+    \Sigma(m_1)=\Sigma(m_2) \quad\Longleftrightarrow\quad m_1\equiv_{\mathrm{str}}m_2,
+  \]
+  up to canonical generator relabelling. Structural equivalence is therefore decidable by direct
+  comparison of the finite generator sets, across notations.
+\end{lemma}
+
+\begin{proof}
+  The generate step (Definition~\ref{def:generator-cospan-general}) sends each context
+  $c=(P,S)\in\mathrm{Contexts}(a)$ to the generator $g_{a,c}$ with label $\ell(a)$, input legs the
+  typed wires $(x,w,a)\in P$, output legs the typed wires $(a,w,y)\in S$, and constraint system
+  $\Lambda_{a,c}$. Because every typed wire names both endpoints and its set of types
+  (Definition~\ref{def:contexts-general}), distinct contexts give distinct generators, so this map is injective. Reading each generator's boundary
+  recovers its context, so it is a bijection between context structures and canonically-labelled
+  signatures. Equal signatures therefore correspond exactly to equal context structures.
+\end{proof}
+
+\begin{lemma}[Soundness]\label{lem:equiv-soundness}
+  $m_1 \equiv_{\mathrm{str}} m_2$ implies $m_1 \equiv_{\mathrm{tr}} m_2$.
+\end{lemma}
+
+\begin{proof}
+  By Lemma~\ref{lem:sig-complete}, $\equiv_{\mathrm{str}}$ gives $\Sigma(m_1)=\Sigma(m_2)$, and Theorem~\ref{thm:canonical-presentation} gives
+  $L_{\mathcal{S}}(\Sigma(m_1))=L_{\mathcal{S}}(\Sigma(m_2))$.
+\end{proof}
+
+\begin{lemma}[Strictness]\label{lem:equiv-strictness}
+  $\equiv_{\mathrm{str}}$ is strictly finer than $\equiv_{\mathrm{tr}}$. Trace equivalence does not
+  imply structural equivalence.
+\end{lemma}
+
+\begin{proof}
+  Take one object type and weight $1$ throughout. Let $m_1$ be the sequence $a$ then $b$, and let
+  $m_2$ offer three exclusive alternatives, $a$ then $b$, $a$ alone and $b$ alone, its occurrences
+  of each activity being distinct nodes with the same label. Writing $(x,y)$ for the typed wire
+  $(x,\{\ast\},y)$, $\Sigma(m_1)$ has the generators $a:(\bot,a)\to(a,b)$ and $b:(a,b)\to(b,\top)$.
+  $\Sigma(m_2)$ has these two and also $a:(\bot,a)\to(a,\top)$ and $b:(\bot,b)\to(b,\top)$. The
+  connected process diagrams of both signatures give the language $\{a,b,ab\}$, so
+  $m_1\equiv_{\mathrm{tr}}m_2$, yet $C(m_1)\ne C(m_2)$ and $m_1\not\equiv_{\mathrm{str}}m_2$. The
+  context structure records which occurrences can be joined to which, and the language loses
+  that information.
+\end{proof}
+
+\begin{theorem}[Cross-notation equivalence certificate]\label{thm:signature-equivalence}
+  Let $\mathcal{N}$ be any of the notations of Sections~\ref{sec:petri-nets}--\ref{sec:bpmn}.
+  Then three statements hold.
+  (i)~$\Sigma(m)$ is determined by $m$ alone, silent $\tau$-mediators contributing no generator and
+  multiplicities carried in the constraint systems $\Lambda_{a,c}$, so no elimination step or routing convention is
+  consulted. (ii)~$\Sigma(m_1)=\Sigma(m_2)$ decides $m_1\equiv_{\mathrm{str}}m_2$, cross-notation, by
+  finite generator comparison (Lemma~\ref{lem:sig-complete}). The comparison is equality
+  of $\Sigma\setminus\Sigma_\gamma$. The start and end generators of $\Sigma_\gamma$ state an
+  assumption of the analysis (Section~\ref{subsec:analysis}) and take no part, so two models written
+  in notations that open and close a system differently are compared without either being
+  rewritten. (iii)~$\equiv_{\mathrm{str}}$ certifies $\equiv_{\mathrm{tr}}$ for every selection
+  $\mathcal{S}$, by Theorem~\ref{thm:canonical-presentation}, and the converse fails
+  (Lemmas~\ref{lem:equiv-soundness} and~\ref{lem:equiv-strictness}). In particular, since $\Sigma$ is convention-free,
+  $\Sigma(m_1)\ne\Sigma(m_2)$ witnesses a structural difference that no encoding choice
+  can produce, even when $m_1\equiv_{\mathrm{tr}}m_2$.
+\end{theorem}
+
+\begin{proof}
+  Point (i) is the instance-map classification of silent transitions as mediators, which the walk
+  passes through, with multiplicities kept as the constraint systems $\Lambda_{a,c}$
+  (Section~\ref{subsec:firing-graphs}, Definitions~\ref{def:contexts-general}
+  and~\ref{def:multiplicity-decoration}). Point (ii) is
+  Lemma~\ref{lem:sig-complete}, and point (iii) is Lemmas~\ref{lem:equiv-soundness}
+  and~\ref{lem:equiv-strictness}, whose contrapositive gives the negative certificate.
+\end{proof}
+
+For a practitioner the certificate answers whether two discovered models have the same structure,
+and equal signatures then certify that they have the same trace language. It is strictly finer
+than trace equivalence, as the sequence against choice case of
+Lemma~\ref{lem:equiv-strictness} shows, so a pair the trace languages identify may still be
+separated on structure. Inclusion gives the ordered form of the same check. When
+$\Sigma(m_1)\subseteq\Sigma(m_2)$, every trace $m_1$ gives under a monotone selection is a trace of
+$m_2$ (Corollary~\ref{cor:signature-inclusion}), and the generators of $\Sigma(m_2)$ outside
+$\Sigma(m_1)$ name where $m_2$ allows more. Section~\ref{sec:validation} finds exactly this for two
+discovered models, whose signatures nest with the causal net's inside the Petri net's.
+
+\paragraph{Granularity.}
+Structural equivalence is equality of context structures, which is coarser than isomorphism of the
+AND/OR graphs. An OR gateway and its XOR/AND expansion are identified, as are two silent-mediator arrangements
+with the same activity neighbourhoods. $\Sigma$ records the behavioural space, not the
+syntax. Read as a model-equivalence relation, this coarseness compares discovered models over
+their behavioural space rather than their surface syntax. Matching
+$\equiv_{\mathrm{str}}$ to each notation's \emph{native}
+equivalence is the reverse-map question of Section~\ref{subsec:reverse-map}, which is partly open.
+
+\begin{corollary}[Internal routing is quotiented]\label{cor:internal-routing-quotient}
+Let $m_1$ and $m_2$ differ only in internal places or in silent $\tau$ routing, so that they present the same observable contexts $C(m_1)=C(m_2)$. Then $\Sigma(m_1)=\Sigma(m_2)$.
+\end{corollary}
+
+\begin{proof}
+Silent transitions contribute no generator, and internal places are XOR mediators that the walk of Definition~\ref{def:contexts-general} passes through. By Theorem~\ref{thm:signature-equivalence}(i) they leave the context structure $C(m)$ unchanged, so Lemma~\ref{lem:sig-complete} gives $\Sigma(m_1)=\Sigma(m_2)$.
+\end{proof}
+
+\subsection{Reverse maps and faithfulness}\label{subsec:reverse-map}
+
+The converse direction, recovering a model from a signature, we develop only as far as stating what
+each reconstruction requires. The target is a single schema parameterised by the notation
+$\mathcal{N}$ and its native behavioural equivalence $\sim_{\mathcal{N}}$. For a forward map
+$\Phi_{\mathcal{N}}$ and a proposed reverse map $\Psi_{\mathcal{N}}$, we want $\Phi_{\mathcal{N}}
+\circ \Psi_{\mathcal{N}}$ the identity on signatures and $\Psi_{\mathcal{N}} \circ
+\Phi_{\mathcal{N}}$ the identity on models up to $\sim_{\mathcal{N}}$. Where each instance is
+canonical, and where it weakens to a normal form, is summarised in Table~\ref{tab:faithfulness}.
+
+\begin{table*}[t]
+  \centering
+  \caption{Reverse maps and the canonicity of each round trip, by notation. SP abbreviates series--parallel throughout.}
+  \label{tab:faithfulness}
+  \small\begin{tabularx}{\linewidth}{@{}llX@{}}
+    \hline
+    Notation & Reverse map & Canonicity \\
+    \hline
+    Causal nets   & read boundaries back as bindings & identity up to isomorphism \\
+    Petri nets    & apex hyperedge $+$ glued ports    & up to silent ($\tau$) saturation \\
+    Process trees & SP decomposition tree ($\to,+$)   & canonical on $\to,+$; open with XOR/loop \\
+    BPMN          & XOR/AND normal form               & normal form, not original gateways \\
+    \hline
+  \end{tabularx}
+\end{table*}
+
+For causal nets the boundary data of the generator cospans are exactly the binding sets
+(Section~\ref{sec:causal-nets}), so the round trip is the identity up to isomorphism. For Petri nets
+each generator reads back as a transition (apex label, glued ports as its places), the identity up
+to $\tau$-saturation. Silent transitions produce no generators, so the reverse map recovers the
+$\tau$-free representative. For process trees the $\to,+$ fragment is canonical and constructive
+(Corollary~\ref{cor:pt-sp-iff}), while recovering XOR and loop structure from a set of SP posets is
+open (Section~\ref{subsec:open-problems}). For BPMN the OR explosion is many-to-one, so a signature
+fixes a canonical XOR/AND normal form, not the OR-gateway syntax that may have produced it,
+consistent with the denotational reading of Section~\ref{sec:bpmn}.
+These four reverse maps are the model-to-model transformations that would slot into
+existing modelling toolchains, generalising the BPMN, Petri net, causal net, and process tree
+conversions of \citet{kalenkovaProcessMiningUsing2017}.
+Synthesis of Petri nets from partial-order languages has been studied in general through
+token-flow regions~\cite{bergenthumSynthesisPetriNets2008}. The nets produced by synthesis are
+typically hard for an analyst to read~\cite{leemansPartialorderbasedProcessMining2023}, which
+motivates recovering the structured notations above instead.
+
+\subsection{Open problems}\label{subsec:open-problems}
+
+\begin{enumerate}
+  \item \emph{Process-tree definability.} Characterise which SP-poset languages are of the form
+    $\mathrm{sem}_{\mathrm{pt}}(T)$ for some process tree $T$. Process-tree languages are a strict
+    subclass of SP-poset languages. The relevant setting is that of series-parallel
+    languages~\cite{lodayaSeriesParallelLanguages2000}.
+  \item \emph{Canonical process trees.} Even for definable languages, process trees admit no
+    canonical form without a normal-form theorem. Define a congruence (building on the equational
+    theory of pomsets~\cite{gischerEquationalTheoryPomsets1988}) and prove a minimisation result, in
+    particular for the loop operator.
+  \item \emph{BPMN faithfulness.} Make precise the sense in which the recovered XOR/AND normal form
+    is behaviourally equivalent to the original OR-gateway model.
+  \item \emph{POWL as a fifth instance.} The partially ordered workflow language (POWL) composes submodels along arbitrary partial
+    orders together with choice and loop operators~\cite{kouraniPOWLPartiallyOrdered2023}. Its
+    poset-plus-operators syntax suggests an AND/OR graph in the sense of
+    Definition~\ref{def:lm-graph} and hence a signature
+    (Definition~\ref{def:generator-cospan-general}). Carrying this out would add a
+    partial-order-native notation to the four treated here and relate the certificate of
+    Theorem~\ref{thm:signature-equivalence} to POWL's language-preserving workflow-net
+    translation~\cite{kouraniTranslatingWorkflowNets2025}.
+\end{enumerate}

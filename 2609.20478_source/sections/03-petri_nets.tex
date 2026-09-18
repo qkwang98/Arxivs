@@ -1,0 +1,250 @@
+\subsection{Petri nets}\label{sec:petri-nets}
+
+Petri nets are a standard formalism for concurrency and process mining. We treat both classical Petri nets and object-centric Petri nets in a single typed framework. The common structural core is a finite place-transition incidence structure. The difference lies in the interpretation of tokens and markings. In the classical case, tokens are indistinguishable and markings count token multiplicity. In the object-centric case, places carry types and markings record finite collections of object identities of the appropriate type. In both settings, transitions will be interpreted as generator cospans of a cospan-algebra signature, and the flow between them as typed wires of its free symmetric monoidal category.
+
+\begin{definition}[Object-centric Petri net~\cite{vandettenDiscoveringCompactLive2024}]
+  An object-centric Petri net (OCPN) is a tuple $N=(P,T,F,\mathcal{O},\mathrm{type},\ell,M_0)$ of places $P$, transitions $T$, a flow relation $F\subseteq(P\times T)\cup(T\times P)$, a finite set of object types $\mathcal{O}$, a typing $\mathrm{type}:P\to\mathcal{O}$, a labelling $\ell:T\to\mathcal{L}\cup\{\tau\}$ over an activity alphabet $\mathcal{L}$ with silent symbol $\tau$, and an initial marking $M_0\in\mathbb{N}^{P}$. Write $T_\tau=\ell^{-1}(\tau)$ for the silent transitions and $\mathrm{src}(t),\mathrm{tgt}(t)$ for the input and output places of a transition $t$. Several transitions may share a label, the firing modes of one activity (Remark~\ref{rem:mode-refinement}).
+\end{definition}
+
+\begin{definition}[Petri net]
+  A Petri net is an object-centric Petri net where $\mathrm{type}(p)=*$ for all $p\in{}P$.
+\end{definition}
+
+Both classes share this incidence structure and differ only in how tokens are read.
+The classical case has indistinguishable counts, the object-centric case typed object
+identities. One construction serves both. Before reading object types off the
+net we record the structural condition that keeps them unambiguous across silent
+transitions.
+
+\begin{definition}[Type-consistent OCPN]\label{def:type-consistent}
+  Let $(P\cup T_\tau,\,F)$ be the silent-flow subgraph of an OCPN,
+  obtained by deleting the observable transitions $T\setminus T_\tau$ together
+  with their incident arcs. The net is type-consistent when, along every
+  directed path of the silent-flow subgraph between two places, the
+  concretely-typed places carry one common object type. Untyped routing places
+  and the artificial source and sink are exempt and inherit the type of the
+  path on which they lie. Equivalently, no directed chain of silent transitions
+  joins two places of different concrete object type. Exclusive routing is
+  unaffected. A single untyped place may still fan out to alternatives of
+  different type, since these lie on distinct directed paths.
+\end{definition}
+
+We assume throughout that object-centric nets are type-consistent. The
+condition holds automatically for nets produced by object-centric discovery,
+where each object type flows in its own coloured sub-net, and is the Petri-net
+form of the prohibition, due to \citet{lissObjectCentricCausalNets2025} and reflected in the causal-net
+boundary convention of Section~\ref{sec:causal-nets}, against a transition
+that converts one object type into another. Remark~\ref{rem:ocpn-silent-typing}
+records how the construction relies on it.
+
+This construction instantiates the general framework of Section~\ref{sec:general-framework}.
+Its content is the way we read a net as an AND/OR graph $(V,E)$. We build the mediators the
+framework needs instead of reusing $P\cup T$ verbatim. Each place becomes an XOR mediator, since a
+token in it is left by one of its producing transitions and taken by one of its consumers, a
+choice. Each transition's firing becomes an AND synchronisation, consuming its whole pre-set and
+yielding its whole post-set at once, so its input places are joined by an AND mediator and its
+output places split from one. An observable transition is in addition the activity it labels,
+sitting between its pre-set and post-set AND mediators. The activity does no combining of its own,
+exactly as in Definition~\ref{def:lm-graph}, with all concurrency in the AND mediators
+and all choice in the XOR places. A silent transition contributes only its transparent AND mediator
+and no generator. These choices determine the instance map.
+\medskip
+\begin{center}
+  \small\begin{tabularx}{\linewidth}{@{}lX@{}}
+    \hline
+    General framework & OCPN \\
+    \hline
+    Activities $\mathcal{A}$ & observable transitions $T\setminus T_\tau$ \\
+    AND mediators & each transition's pre-set join and post-set split; silent transitions $T_\tau$ (transparent, no generator) \\
+    XOR mediators & places $P$ \\
+    Edges $E$ & the flow $F$, threaded through these mediators \\
+    \hline
+  \end{tabularx}
+\end{center}
+\medskip
+The walk of Definition~\ref{def:contexts-general} runs on this graph unchanged. From the pre-set
+AND mediator of an observable transition it passes through each input place, an XOR mediator that
+keeps the reached sets of its producers separate, and through any silent transition, and it stops
+at the first observable transitions. The post-set is read in the same way. The backward and
+forward families hold one reached set per joint choice of observable neighbour, each endpoint read
+through the labelling $\ell$, so transitions sharing an activity label contribute the same labelled
+typed wire and are identified at composition. Each transition--context pair yields one generator
+cospan (Definition~\ref{def:generator-cospan-general}), and no context is discarded.
+
+\begin{theorem}[Canonical cospan-algebra presentation of typed Petri nets]
+  \label{thm:petri-to-cospan-signature}
+  Let \(N=(P,T,F,\mathcal{O},\mathrm{type},\ell,M_0)\) be an object-centric Petri net. Then \(N\) canonically determines a cospan-algebra signature \(\Sigma\), and hence the free symmetric monoidal category \(\mathbf{F}(\Sigma)\).
+\end{theorem}
+
+\begin{proof}
+  The schema of Section~\ref{sec:notation-by-notation} applies at the instance map above,
+  finiteness of $P$ and $T$ giving the conditions of Definition~\ref{def:lm-graph} and finite
+  reach families (Definition~\ref{def:contexts-general}). The delta is typing across the silent fabric. The
+  object-centric case runs over $\mathcal{O}$ with each edge typed by $\mathrm{type}$, and the
+  type of each $\tau$-mediated thread is well defined precisely because $N$ is type-consistent
+  (Definition~\ref{def:type-consistent}, Remark~\ref{rem:ocpn-silent-typing}).
+\end{proof}
+
+\begin{remark}[Relation to prior categorical presentations]\label{rem:smc-positioning}
+  The result that Petri nets present free symmetric monoidal categories (SMCs) is due to
+  \citet{meseguerPetriNetsAre1990}. The open-net cospan
+  framework appears in \citet{baezOpenPetriNets2020}.
+  Theorem~\ref{thm:petri-to-cospan-signature} refines these by constructing
+  explicit context-indexed generator cospans. Each transition--context pair $(t,c)$
+  yields a decorated cospan whose boundary data is read directly from the local
+  incidence structure, equipping the SMC presentation with the generator-level
+  information required by the cospan-algebra framework of
+  Section~\ref{sec:hypergraphs}.
+  In these terms the refinement makes the Meseguer and Montanari SMC
+  presentation into an explicit generator-level transformation, positioned
+  alongside the connector-algebra tradition in the related work of
+  Section~\ref{sec:related-work}.
+\end{remark}
+
+\begin{corollary}[Untyped Petri nets as a special case]\label{cor:petri-untyped}
+  Setting $\mathcal{O}=\{\ast\}$ and $\mathrm{type}(p)=\ast$ for all $p\in P$ in
+  Theorem~\ref{thm:petri-to-cospan-signature} recovers the classical Petri-net
+  presentation (Corollary~\ref{cor:untyped-general}), in which transitions induce generators,
+  every typed wire carries the trivial type, and composites are the morphisms of the free
+  symmetric monoidal category $\mathbf{F}(\Sigma)$ (Definition~\ref{def:free-category}), joined
+  port to port along matching typed wires.
+\end{corollary}
+
+\begin{remark}[Silent transitions and type consistency]\label{rem:ocpn-silent-typing}
+  The object-centric Petri-net literature attaches no typing of its own to a
+  silent transition. None is needed here, because a silent transition reads its
+  object types from the colours of its adjacent places,
+  exactly as an observable transition does. Since silent transitions are
+  transparent mediators (instance map above), a $\tau$-mediated typed wire
+  $(x,w,y)$ carries the set $w$ of types on the thread it traces through
+  the silent fabric, and type consistency (Definition~\ref{def:type-consistent})
+  is precisely the condition that makes $w$ a single type. Under it the
+  harvested boundary stays in bijection with the typed dependency arcs
+  $D\subseteq T\times\mathcal{O}\times T$ of the object-centric causal net
+  (Section~\ref{sec:causal-nets}). Transparent crossing introduces no new boundary
+  types, and in particular no spurious duplication of a typed wire across the whole of
+  $\mathcal{O}$.
+
+  Dropping type consistency readmits exactly the wild behaviour it is there to
+  tame. A type-converting silent transition would make a single thread enter as
+  one concrete type and leave as another. The walk records both types in the set $w$
+  of the typed wire through it, and the analysis reports a wire whose path carries more than one
+  type (Section~\ref{subsec:analysis}). The construction therefore exposes the conversion
+  instead of hiding it behind an artificial typed boundary. The
+  only escape is the deliberately lossy projection to $\mathcal{O}=\{\ast\}$
+  (Corollary~\ref{cor:petri-untyped}), which recovers the connectivity of $D$ but
+  discards all typing. This is the Petri-net counterpart of the routing-only
+  gateway discipline of Remark~\ref{rem:bpmn-typed-gateways}.
+\end{remark}
+
+\begin{remark}[Silent routing leaves the signature fixed]\label{rem:ab-place-vs-tau}
+The sequence $a\,;\,b$ presented as one place $a\to p\to b$, and the same sequence with $p$ split by a silent transition into $a\to p_1$, $\tau$, $p_2\to b$, yield the identical signature. In both presentations activity $a$ has successor $b$ and activity $b$ has predecessor $a$. The silent transition passes transparently and contributes no generator, so the split place introduces no structural difference. The same argument absorbs an implicit place, a place duplicating a causal constraint that the net already carries. It contributes an endpoint the port set already holds, and ports are identified by producing activity, object type, and consuming activity, so the duplicate leaves the generator unchanged. This is the invariance the two Petri nets of Figure~\ref{fig:routing-collapse} exhibit. Note the scope. A redundant place carrying another object type is not absorbed, because it contributes a genuinely new typed port.
+\end{remark}
+
+\begin{remark}[Firing modes]\label{rem:mode-refinement}
+  A single transition fires on its whole pre-set and yields its whole post-set, so it cannot itself
+  choose among exclusive typed inputs or outputs. Such a choice is encoded the standard Petri-net
+  way, by several transitions sharing one activity label, one per admissible firing mode, which the
+  labelling $\ell$ re-identifies so that a downstream activity sees one labelled port rather than one
+  per mode. This is the Petri-net analogue of the object-centric causal net's binding sets
+  (Section~\ref{sec:causal-nets}). The same activity acquires one generator per mode, a larger
+  signature that induces the same language (Section~\ref{sec:conversion-framework}).
+\end{remark}
+
+\begin{figure*}[tp]
+  \centering
+  \resizebox{\textwidth}{!}{\input{tikz/running_example/re_pn_example}\unskip}
+  \caption{A small object-centric Petri net. An order (blue) is registered by $b$,
+    optionally after a check $a$ that may be skipped through the silent transition
+    $\tau$ (drawn filled). The registered order and an item (red) are then shipped
+    together by $s$.}
+  \label{fig:re-ocpn}
+\end{figure*}
+
+\begin{figure*}[tp]
+  \centering
+  \input{tikz/running_example/re_pn_cospans}\unskip
+  \caption{The generators $g_s$, $g_{b,\mathrm{chk}}$ and $g_{b,\mathrm{skip}}$ of Fig.~\ref{fig:re-ocpn}, each as a decorated cospan
+    (left, boundary $\to$ apex $\leftarrow$ boundary) and as the string diagram it denotes (right).
+    $g_s$ is the object-centric sync. Two object types meet on the left boundary
+    and leave on the right, joined by the apex hyperedge $s$. The silent $\tau$
+    contributes no generator and gives $b$ two contexts, $g_{b,\mathrm{chk}}$
+    (predecessor $a$) and $g_{b,\mathrm{skip}}$ (the open end $\bot$, traced
+    through $\tau$), differing only in their left boundary port.}
+  \label{fig:re-ocpn-cospans}
+\end{figure*}
+
+\begin{exmp}[A small OCPN and its generator cospans]
+  \label{ex:running-pn-cospan}
+  Take the object-centric Petri net of Fig.~\ref{fig:re-ocpn}, over the object
+  types $\mathrm{order}$ and $\mathrm{item}$. Its observable transitions are
+  $a,b,s$, with one silent transition $\tau$. The boundary nodes $\bot$ and $\top$ are not
+  transitions of the net. They mark where objects enter and leave, and the walk ends there at the
+  open ends of Definition~\ref{def:contexts-general}. Instantiating
+  Theorem~\ref{thm:petri-to-cospan-signature} reads a generator cospan off
+  each transition--context pair (Fig.~\ref{fig:re-ocpn-cospans}). Every edge has weight $1$,
+  so each constraint system $\Lambda_{a,c}$ fixes $n_p=1$ on every leg and each wire carries a
+  single object. Write $(x,\mathrm{o},y)$ for $(x,\{\mathrm{o}\},y)$.
+
+  \emph{The check $a$.} The check has one observable predecessor route and one
+  observable successor, so it has a single context and a single generator,
+  \[
+    g_a = \Bigl(\{(\bot,\mathrm{o},a)\}
+      \xrightarrow{\iota} A \xleftarrow{\iota}
+      \{(a,\mathrm{o},b)\},\; d_a\Bigr),
+  \]
+  with one order wire on each boundary.
+
+  \emph{The sync $s$.} The transition $s$ consumes the registered order together
+  with the item and emits both onward, so its generator
+  \begin{gather*}
+    g_s = \Bigl(\{(b,\mathrm{o},s),(\bot,\mathrm{it},s)\}
+      \xrightarrow{\iota} A \xleftarrow{\iota}\twocolbreak 
+      \{(s,\mathrm{o},\top),(s,\mathrm{it},\top)\},\; d_s\Bigr)
+  \end{gather*}
+  carries two typed wires on each boundary and the single apex hyperedge labelled
+  $s$.
+
+  \emph{The silent skip.} The check $a$ may be skipped through $\tau$. A silent
+  transition is a transparent mediator (Remark~\ref{rem:ocpn-silent-typing}) and
+  produces no generator. It gives $b$ a second context instead. Tracing the order
+  thread back from $b$ reaches either $a$ (the checked route) or, through $\tau$,
+  directly the open end $\bot$ (the skip route), so $b$ has two generator cospans,
+  \begin{gather*}
+    g_{b,\mathrm{chk}} : \{(a,\mathrm{o},b)\}\to\{(b,\mathrm{o},s)\},\qquad\twocolbreak
+    g_{b,\mathrm{skip}} : \{(\bot,\mathrm{o},b)\}\to\{(b,\mathrm{o},s)\},
+  \end{gather*}
+  differing only in their left boundary port. This is the Petri-net form of an
+  exclusive choice. The two contexts give one generator per route, re-identified at the shared
+  label $b$ by the construction above.
+\end{exmp}
+
+The example shows that the split place and its silent $\tau$
+introduce no structural difference in the signature, as
+Remark~\ref{rem:ab-place-vs-tau} records and the internal-routing quotient of
+Corollary~\ref{cor:internal-routing-quotient} makes precise in the conversion
+certificate.
+
+\begin{figure*}[tp]
+  \centering
+  \input{tikz/running_example/re_pn_slice}\unskip
+  \caption{Markings as cuts. A vertical cut through the connected string diagram of
+    the net of Fig.~\ref{fig:re-ocpn} fixes a marking. Each wire it crosses is one
+    token of that wire's type. The cuts $M_1$ (after $a$) and $M_2$ (after $b$) each
+    hold one order and one item token, the contents of the intervening places.
+    The diagram is closed by a start generator $\gamma_1$ and an end generator $\gamma_2$, a
+    choice of the analysis (Section~\ref{subsec:analysis}), and sweeping the cut from $\gamma_1$
+    to $\gamma_2$ replays the net.}
+  \label{fig:re-pn-slice}
+\end{figure*}
+
+\begin{remark}[Markings as cuts]\label{rem:pn-marking-cut}
+  A marking of the net corresponds to a vertical cut through its connected string
+  diagram. The wires the cut crosses are exactly the tokens present, one per wire and
+  typed by the wire (Fig.~\ref{fig:re-pn-slice}). Sweeping the cut from $\gamma_1$ to
+  $\gamma_2$ reads off one execution as a sequence of markings, and the number of
+  crossings of a given colour is the token count of that object type, recovering the
+  marking semantics of Section~\ref{sec:hypergraphs} on this example. This is the
+  Petri-net counterpart of the causal-net slicing of Section~\ref{sec:causal-nets}.
+\end{remark}
+

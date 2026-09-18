@@ -1,0 +1,240 @@
+
+\subsection{Process trees}\label{sec:process_trees}
+
+Process trees are a block-structured process-mining formalism widely used in discovery algorithms and model-quality evaluation~\cite{leemansDiscoveringBlockStructuredProcess2013,buijsQualityDimensionsProcess2014}. Each internal node carries one of four control-flow operators (sequence, XOR-choice, AND-parallel, redo) and the compositional structure guarantees soundness of the resulting workflow-net translation. We translate OC process trees (OCPTs) into decorated cospans by reading interface sets directly from the operator structure, following the same cospan-algebra construction as for OCPNs and OC causal nets.
+
+\begin{definition}[Object-centric process tree]
+  \label{def:process-tree}
+  An object-centric (OC) process tree~\cite{leemansDiscoveringBlockStructuredProcess2013,vandettenDiscoveringCompactLive2024}
+  over a finite set of object types $\mathcal{O}$ is a finite rooted tree of the following form.
+  \begin{itemize}
+    \item Each internal node is a control-flow operator, applied to its child subtrees, one of
+      sequence $\to$, exclusive choice $\times$, concurrency $+$, or redo $\circlearrowleft$.
+    \item Each leaf is an object-centric activity $(a,\mathrm{rel})$ with an activity name $a$ and
+      the object types $\mathrm{rel}\subseteq\mathcal{O}$ it involves.
+  \end{itemize}
+  The open ends $\bot$ and $\top$ of Definition~\ref{def:contexts-general} bound the root, and the
+  analysis may attach a start generator $\gamma_1$ and an end generator $\gamma_2$ there
+  (Section~\ref{subsec:analysis}). Each object type runs
+  through the operators on its own, independently of the others.
+\end{definition}
+
+\begin{figure}[tb]
+  \centering
+  \input{tikz/running_example/re_pt_tree}\unskip
+  \caption{The OCPT example $\to(a,+(b,c),s)$, with tree connectors coloured by object type (order
+    blue, item red). A connector carrying both types is two parallel coloured wires, a single type
+    one coloured wire.}
+  \label{fig:re-ocpt}
+\end{figure}
+
+The operators apply per object. $\to(S_1,\ldots,S_n)$ runs its subtrees in order.
+$\times(S_1,\ldots,S_n)$ runs exactly one of them. Under $+(S_1,\ldots,S_n)$ they all run
+concurrently. Finally, $\circlearrowleft(S,B_1,\ldots,B_m)$ runs $S$ once, then any number of times
+takes some redo $B_j$ and runs $S$ again. Each object type follows its own path, so one type may
+take a $\times$-branch another does not, and a type outside a leaf's $\mathrm{rel}$ skips that
+leaf. Leaf labels may repeat, each occurrence firing independently. We write $T$ for the leaf
+activities and $T_\tau\subseteq T$ for the silent leaves. A silent leaf carries a type but no
+observable label and models a skip, the XOR alternative $\times(a,\tau)$ to the activity it
+bypasses. The induced typed directly-follows arcs are $D_{PT}\subseteq T\times\mathcal{O}\times T$,
+with $(x,\omega,t)\in D_{PT}$ when type $\omega$ flows from leaf $x$ to leaf $t$. When a leaf
+relates to a single type $\mathrm{type}(t)$, the arcs $D_{PT}$ are forced by the tree. The source
+formalism also marks a leaf's types as divergent, convergent or deficient. Those marks are
+existential statements over an event log~\cite{vandettenDiscoveringCompactLive2024}, properties of
+the flattened object-centric data a tree is discovered from, and the cospan language needs none of
+them. A count constraint on a leaf's legs is written in $\Lambda$, as for every notation
+(Definition~\ref{def:multiplicity-decoration}).
+
+This construction instantiates the general framework of Section~\ref{sec:general-framework}, and
+the two mapping choices are simple. An observable leaf is an activity. Each control-flow operator
+becomes a mediator, the choice $\times$ an XOR and the parallel $+$ an AND. Sequence $\to$ and redo
+$\circlearrowleft$ need no mediator of their own. They are built from these two, and a
+degree-$(1,1)$ mediator, where AND, XOR and a SEQ pass-through all coincide, simply forwards its one
+branch. A silent leaf is a transparent mediator and contributes no generator, as for the silent
+transitions of Section~\ref{sec:petri-nets}. Compiling the operator tree this way gives an AND/OR
+graph, the compiled flow graph $\mathcal{G}_{PT}$ (Definition~\ref{def:pt-flow-graph}), over which
+the construction is the walk of Definition~\ref{def:contexts-general}. This is the instance where
+the walk is not immediate. Where the object-centric causal net pre-compiles its routing into binding
+sets and the walk ends at once, the process tree spreads its routing across operator structure that
+the walk must cross. The instance map is as follows.
+\medskip
+\begin{center}
+  \small\begin{tabularx}{\linewidth}{@{}lX@{}}
+    \hline
+    General framework & Process tree \\
+    \hline
+    AND/OR graph $(V,E)$ & the compiled flow graph $\mathcal{G}_{PT}$ (Definition~\ref{def:pt-flow-graph}) \\
+    Activities $\mathcal{A}$ & observable leaves $T\setminus T_\tau$ \\
+    AND mediators & the parallel operator $+$ (split and join) \\
+    XOR mediators & the choice operator $\times$, and a loop's redo-or-exit \\
+    SEQ pass-throughs & the sequence operator $\to$ and the silent leaves $T_\tau$ (transparent); the degree-$(1,1)$ case where AND, XOR and SEQ coincide \\
+    \hline
+  \end{tabularx}
+\end{center}
+\medskip
+\begin{definition}[Compiled flow graph]
+  \label{def:pt-flow-graph}
+  The compiled flow graph $\mathcal{G}_{PT}=\mathcal{G}(\Omega)$, for $\Omega$ the operator tree of $PT$, is built bottom-up from the
+  operator tree, the map $\mathcal{G}(\cdot)$ sending each subtree to a directed graph with one
+  entry and one exit. It is the AND/OR graph $(V,E)$ of the instance map, not the raw
+  parent-to-child tree. The cases are as follows.
+  \begin{itemize}
+    \item An observable leaf $t\in T\setminus T_\tau$ gives the single activity node $t$.
+    \item A silent leaf $\tau\in T_\tau$ gives a degree-$(1,1)$ SEQ pass-through carrying type
+      $\mathrm{type}(\tau)$, transparent to the walk.
+    \item For $\to(S_1,\ldots,S_n)$, chain the children through $n{-}1$ fresh SEQ pass-throughs,
+      $\mathcal{G}(S_1)\to s_1\to\cdots\to s_{n-1}\to\mathcal{G}(S_n)$. The ordering is carried by the
+      chain, not by any one node.
+    \item For $+(S_1,\ldots,S_n)$, a fresh AND-split $p^+$ fans into each $\mathcal{G}(S_i)$ and a
+      fresh AND-join $q^+$ collects them.
+    \item For $\times(S_1,\ldots,S_n)$, take a fresh XOR-split $x^\times$ and XOR-join $y^\times$, each
+      branch $\mathcal{G}(S_i)$ running between them. The walk keeps the reached sets of the branches separate at $x^\times$.
+    \item For $\circlearrowleft(S,B_1,\ldots,B_m)$, take a mandatory $\mathcal{G}(S)$, then an XOR mediator
+      that either exits to the next block or takes a back-edge through some $\mathcal{G}(B_j)$ and
+      repeats $S$. A repeated pass of the loop is a composite of generators and adds no signature
+      element.
+  \end{itemize}
+\end{definition}
+
+\begin{figure*}[tp]
+  \centering
+  \input{tikz/running_example/re_pt_flow}\unskip
+  \caption{The compiled flow graph $\mathcal{G}_{PT}$ of the example tree $\to(a,+(b,c),s)$
+    (Fig.~\ref{fig:re-ocpt}). The $+$ node becomes an AND-split and AND-join ($+$) around the
+    two concurrent typed lifecycles, $b$ on the order and $c$ on the item. The sequence links are
+    degree-$(1,1)$ pass-throughs and collapse onto the edges.}
+  \label{fig:re-pt-flow}
+\end{figure*}
+
+A silent leaf is needed exactly where a typed token crosses a span of the operator tree with
+no observable activity on it. Where an observable leaf already lies on that span, none is
+needed. The engine of Section~\ref{sec:general-framework} then runs unchanged, with one
+instance-specific fact. The walk traverses the compiled flow graph $\mathcal{G}_{PT}$ rather
+than the raw tree, keeping the branches of each XOR-split separate, crossing silent leaves
+transparently, and stopping at the first activity on each side of a $\circlearrowleft$ back-edge,
+so no unrolling is needed. Branches that leave the root end at the open ends $\bot$ and $\top$, and
+start and end generators there are a choice of the analysis (Section~\ref{subsec:analysis}). Each context $(P,S)$ of a leaf $t$
+yields a generator on the typed wires of $D_{PT}$. Each leg carries a count, by default pinned to
+$n_p=1$ (one object per firing), and any other constraint on the leaf's own legs enters its
+constraint system $\Lambda$ as a per-leg interval or a linear equality or inequality among its counts.
+Generators sharing a typed wire compose along it in $\mathbf{F}(\Sigma)$ (Definition~\ref{def:free-category}).
+
+\begin{theorem}[Canonical cospan-algebra presentation of OC process trees]
+  \label{thm:ptree-to-cospan-signature}
+  Let $PT$ be an OC process tree (Definition~\ref{def:process-tree}). Then $PT$ canonically determines a cospan-algebra signature $\Sigma$ in which each typed wire $(x,w,t)$ carries the set $w$ of object types $\omega$ with $(x,\omega,t)\in D_{PT}$ on its path, and hence the free symmetric monoidal category $\mathbf{F}(\Sigma)$.
+\end{theorem}
+
+\begin{proof}
+  The schema of Section~\ref{sec:notation-by-notation} applies at the instance map above,
+  finiteness of $T$ and of the operator tree $\Omega$ giving the conditions of Definition~\ref{def:lm-graph}, with
+  each edge typed by the arc types in~$D_{PT}$. The delta concerns the loops. The walk runs on the
+  compiled flow graph $\mathcal{G}_{PT}$ (Definition~\ref{def:pt-flow-graph}), which is finite, and a
+  branch stops at any node already on its path, so every reach family and every set of contexts is
+  finite (Definition~\ref{def:contexts-general}). A further pass of a $\circlearrowleft$ is a
+  composite of generators already present and adds none, and the firing rule is self-dual across
+  all four operators.
+\end{proof}
+
+\begin{figure*}[tp]
+  \centering
+  \input{tikz/running_example/re_pt_cospans}\unskip
+  \caption{The generator cospans of Fig.~\ref{fig:re-ocpt}, each as a decorated cospan and the
+    string diagram it denotes. $g_a$ takes the order and item threads from the open end $\bot$, $g_b,g_c$ carry them, and
+    $g_s$ synchronises both.}
+  \label{fig:re-ocpt-cospans}
+\end{figure*}
+
+\begin{exmp}[A small OCPT and its generator cospans]
+  \label{ex:running-ptree-cospan}
+  Consider the OC process tree $\to(a, +(b,c), s)$ of Fig.~\ref{fig:re-ocpt}, compiled to the
+  flow graph of Fig.~\ref{fig:re-pt-flow}, over the object types $\mathrm{order}$ and
+  $\mathrm{item}$, with typed dependency arcs
+  \[
+    D_{PT} = \{(a,\mathrm{o},b),\,(a,\mathrm{it},c),\,
+      (b,\mathrm{o},s),\,(c,\mathrm{it},s)\}.
+  \]
+  The $+$ node carries the object-centricity. It runs two concurrent typed
+  object lifecycles, the order through $b$ and the item through $c$. Reading a
+  generator off each leaf context (Fig.~\ref{fig:re-ocpt-cospans}) gives the first activity
+  $g_a:\{(\bot,\mathrm{o},a),(\bot,\mathrm{it},a)\}\to\{(a,\mathrm{o},b),(a,\mathrm{it},c)\}$, the two lifecycle
+  threads $g_b:\{(a,\mathrm{o},b)\}\to\{(b,\mathrm{o},s)\}$ and
+  $g_c:\{(a,\mathrm{it},c)\}\to\{(c,\mathrm{it},s)\}$, and the synchronisation
+  \begin{gather*}
+    g_s = \Bigl(\{(b,\mathrm{o},s),(c,\mathrm{it},s)\}
+      \xrightarrow{\iota} A \xleftarrow{\iota}\twocolbreak  \{(s,\mathrm{o},\top),(s,\mathrm{it},\top)\},\; d_s\Bigr),
+  \end{gather*}
+  whose left boundary carries both object types. Each typed wire here carries a single type,
+  the order thread staying order-typed and the item thread item-typed, with $a$ and $s$ the only
+  generators touching both. The two lifecycles are independent until $s$, which is exactly the
+  concurrency the $+$ node expresses. Every leg here carries the default count of one.
+  This concurrency is exactly what the certificate separates from exclusive choice (Lemma~\ref{lem:sig-complete}).
+\end{exmp}
+
+\begin{figure}[tb]
+  \centering
+  \input{tikz/running_example/re_loop_tree}\unskip
+  \caption{The redo tree $\circlearrowleft(a,b,c)$, a mandatory body $a$ (solid ``do'' edge) and two
+    redo bodies $b,c$ (dashed ``redo'' edges). Every leaf relates to both object types, order (blue) and
+    item (red), one of each per firing, so each connector is two parallel coloured wires.}
+  \label{fig:re-loop-tree}
+\end{figure}
+
+\begin{figure}[tb]
+  \centering
+  \input{tikz/running_example/re_loop}\unskip
+  \caption{The compiled flow graph of $\circlearrowleft(a,b,c)$. After $a$, one XOR redo mediator
+    either exits to the block after the loop or takes one of two back-edges, through redo body $b$ or
+    through redo body $c$, and repeats $a$. Each connector carries both types as parallel coloured
+    wires.}
+  \label{fig:re-loop}
+\end{figure}
+
+\begin{figure*}[tp]
+  \centering
+  \input{tikz/running_example/re_pt_unroll}\unskip
+  \caption{The redo $\circlearrowleft(a,b,c)$ unrolled to depths $0$, $1$, and $2$, both types
+    threaded per pass, one order and one item. The depth-$2$ unroll takes
+    both redo bodies once, $a\to b\to a\to c\to a$. The middle $a$ then sits between two distinct
+    redo bodies, one of its contexts, and deeper unrolling composes only generators already present.}
+  \label{fig:re-pt-unroll}
+\end{figure*}
+
+\begin{exmp}[A redo, unrolled to its cospans]
+  \label{ex:running-ptree-loop}
+  The examples above are loop-free. This one shows the construction on a cycle. Take the redo tree $\circlearrowleft(a,b,c)$ over two object types,
+  $\mathrm{order}$ (blue) and $\mathrm{item}$ (red) (Fig.~\ref{fig:re-loop-tree}). The mandatory body
+  $a$ runs once, then the redo either exits or takes one of the two redo bodies $b,c$ and runs $a$
+  again, any number of times. Every leaf relates to both types, one order and one item per firing, the default
+  multiplicity. The compiled flow graph
+  (Definition~\ref{def:pt-flow-graph}, Fig.~\ref{fig:re-loop}) joins $a,b,c$ by one XOR redo mediator
+  with two back-edges, through $b$ and through $c$.
+
+  Unrolling the redo makes the finite generator set visible (Fig.~\ref{fig:re-pt-unroll}). The
+  depth-$2$ unroll takes both redo bodies once, $a\to b\to a\to c\to a$. The middle $a$ then sits
+  between two distinct redo bodies, a redo body on the input side and one on the output for each
+  type, which is one of its contexts. Deeper unrolling only composes generators already present, so
+  the loop reduces to finitely many generators, $g_b$, $g_c$ and one $g_a$ per pairing of a predecessor ($\bot$, $b$ or $c$) with a successor ($b$, $c$ or $\top$), which the walk from $a$ finds by
+  stopping at the first activity past the redo mediator on each side.
+
+  Reading a generator off each leaf context (Fig.~\ref{fig:re-loop-cospans}) gives the loop-entry
+  $g_a$ and the two redo-body generators $g_b,g_c$, each threading one order and
+  one item. Repeating the loop composes $g_a$ with the redo blocks
+  $g_b\,g_a$ and $g_c\,g_a$ in any order and adds no signature element. The loop language is
+  recovered at the composition level, and the typed redo needs no new machinery.
+\end{exmp}
+
+\begin{figure*}[tp]
+  \centering
+  \resizebox{\textwidth}{!}{\input{tikz/running_example/re_loop_cospans}\unskip}
+  \caption{The generator cospans of $\circlearrowleft(a,b,c)$, each as a decorated cospan (left) and
+    the string diagram it denotes (right), and the labels beside each boundary name its typed ports.
+    Both legs, order (blue) and item
+    (red), carry the default count of one, so no constraint system is drawn. $g_a$ is shown in its $b$-redo context, the
+    $c$-context is analogous, and the entry and exit contexts pair $a$ with the open ends $\bot,\top$.}
+  \label{fig:re-loop-cospans}
+\end{figure*}
+
+The sequence and parallel operators of Definition~\ref{def:process-tree} have an exact
+characterisation in terms of series-parallel partial orders, developed in
+Appendix~\ref{subsec:pt-sp-appendix} (Theorem~\ref{thm:pt-as-sp-language},
+Corollary~\ref{cor:pt-sp-iff}).
