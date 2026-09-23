@@ -1,0 +1,188 @@
+with(LinearAlgebra):
+
+
+
+
+ConstantOneSequence := proc(n)
+		    local i;
+		    [seq(1,i=0..n)];
+end;
+
+ConstantOneColumn := proc(n) 
+		  Transpose(Matrix(ConstantOneSequence(n)));
+end;
+
+GenericSequence := proc(n,c) 
+		local i;
+		[seq(c[i],i=0..n)];
+end;
+
+GenericColumn := proc(n,c)
+	      Transpose(Matrix(GenericSequence(n,c)));
+end;
+
+BinomialSequence := proc(n)
+		 local i;
+		 [seq(binomial(n,i),i=0..n)];
+end;
+
+BinomialColumn := proc(n)
+	       Transpose(Matrix(BinomialSequence(n)));
+end;
+
+
+TruncateSequence := proc(k,S)
+		 local n,i;
+		 n := nops(S);
+		 [seq(S[i+1],i=0..k),seq(0,i=k+1..n-1)];
+end;
+
+TruncateColumn := proc(k,S)
+	       Transpose(Matrix(TruncateSequence(k,s)));
+end;
+
+
+ShiftSequence := proc(d,S)
+	      local SS,i,n,f,j;
+	      n := nops(S)-1;
+	      f := j -> if (j>= d) then S[1+j-d] else 0 end if;
+	      [seq(f(i) , i=0..n)];
+end;
+
+ShiftColumn := proc(d,S)
+	    Transpose(Matrix(ShiftSequence(d,S)));
+end;
+
+TruncateMatrix := proc(S)
+  local M,i,j,n,f;
+  n := nops(S);
+  f := (i,j) -> if( i <= j) then  S[i] else 0 end if;
+  M := Matrix(n,f);
+end;
+
+ShiftMatrix := proc(n)
+   local M,f,i,j;
+   f := (i,j) -> if( i-j = 1) then 1 else 0 end if;
+   M := Matrix(n+1,f);
+end;
+
+UpperMatrix := proc(n)
+   TruncateMatrix(ConstantOneSequence(n));
+end;
+
+DiagonalSMatrix := proc(S)
+  local M,i,j,n,f;
+  n := nops(S);
+  f := (i,j) -> if( i = j) then  S[i] else 0 end if;
+  M := Matrix(n,f);
+end;
+		
+
+
+ShiftResponse := proc(d,Se)
+	      local A,S,B,n;
+	      n := nops(Se)-1;
+	      A := TruncateMatrix(Se);
+	      S := ShiftMatrix(n);
+	      B := MatrixInverse(A);
+	      B . MatrixPower(S,d) . A;
+end;
+
+
+ 
+Ellen := proc(n,d)
+      local a,k;
+      a := n+d;
+      if (type(a,even)) then k:= a/2 -1;
+      else k:=  floor(a/2);
+      fi;
+      k;
+end;
+
+
+ExteriorEven := proc(n,d)
+	     local S,L,mta,mtb,mydel;
+	     S := BinomialSequence(n);
+	     L := Ellen(n,d);
+	     mta := TruncateSequence(L,S);
+	     mtb := TruncateSequence(L-d,S);
+	     mydel := ShiftSequence(d,mtb);
+	     mta - mydel;
+end;
+
+GenericEven := proc(n,d,c) 
+	     local S,L,mta,mtb,mydel;
+	     S := GenericSequence(n,c);
+	     L := Ellen(n,d);
+	     mta := TruncateSequence(L,S);
+	     mtb := TruncateSequence(L-d,S);
+	     mydel := ShiftSequence(d,mtb);
+	     mta - mydel;
+end;
+
+
+GenericEvenAdd := proc(n,d,c) 
+	     local S,L,mta,mtb,mydel;
+	     S := GenericSequence(n,c);
+	     L := Ellen(n,d);
+	     mta := TruncateSequence(L,S);
+	     mtb := TruncateSequence(L-d,S);
+	     mydel := ShiftSequence(d,mtb);
+	     mydel;
+end;
+
+
+
+ExteriorEvenAdd := proc(n,d)
+	     local S,L,mta,mtb,mydel;
+	     S := BinomialSequence(n);
+	     L := Ellen(n,d);
+	     mta := TruncateSequence(L,S);
+	     mtb := TruncateSequence(L-d,S);
+	     mydel := ShiftSequence(d,mtb);
+	     mydel;
+end;
+
+
+
+
+
+ConvCoordBinom := proc(n,S)
+	  local M,N;
+	  M := TruncateMatrix(BinomialSequence(n));
+	  N := MatrixInverse(M);
+	  evalm(N &* S);
+end;
+
+ConvCoord := proc(n,S,T)
+	  local N;
+	  N := MatrixInverse(T);
+	  N . Transpose(Matrix(S));
+end;
+
+ExteriorEvenCoord := proc(n,d)
+		  local S;
+		  S := ExteriorEven(n,d);
+		  ConvCoordBinom(n,S);
+end;
+
+GenericEvenCoord := proc(n,d,c)
+		  local S,T;
+		  S := GenericEven(n,d,c);
+		  T := TruncateMatrix(GenericSequence(n,c));
+		  ConvCoord(n,S,T);
+end;
+
+GenericEvenAddCoord := proc(n,d,c)
+		  local S,T;
+		  S := GenericEvenAdd(n,d,c);
+		  T := TruncateMatrix(GenericSequence(n,c));
+		  ConvCoord(n,S,T);
+end;
+
+
+ExteriorEvenAddCoord := proc(n,d)
+		  local S;
+		  S := ExteriorEvenAdd(n,d);
+		  ConvCoordBinom(n,S);
+end;

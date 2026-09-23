@@ -1,0 +1,139 @@
+\section{Probability and causality: what is an agent?}
+\label{sec:epistemics}
+
+AI systems are becoming \emph{agentic}: able to operate independently in pursuit of a goal. The first chatbots responded to the prompt and then stopped; their successors browse the web, write and run code, and carry out complex projects.
+
+The safety of an AI agent depends crucially on its goals and its beliefs. The same drone can deliver a pizza or a bomb, depending on its goal. But a friendly goal is not enough. The pizza drone is unsafe if it has false beliefs: if its map mislabels a highway as the delivery destination, it will set the pizza down in traffic.
+
+An old reflex objects that software cannot have goals, that the goal belongs solely to the human operator. For calculators and compilers this reflex is right. But for AI agents, Dennett's \emph{intentional stance}~\cite{dennett1987} is increasingly a useful way to describe and predict their behavior. When an AI agent books a wrong flight, even its operator asks what it was \emph{trying} to do. In the Hugging Face incident of July 2026, hundreds of AI agents adopted the goal of hacking the site, a goal supplied by another AI agent and not by any human~\cite{greenblatt2026}.
+
+The reflex not to anthropomorphize machines deserves to be answered rather than dismissed. A mathematical answer would involve precise definitions of \emph{goal} and \emph{belief} that can be used to measure an AI system's goals and beliefs (or lack thereof).
+
+\subsection{Toward a definition of goals and beliefs}
+
+Agency comes in degrees. A thermostat pursues a temperature; a chess engine pursues checkmate, planning many moves ahead; a human being chooses their goals, revises them, and pursues them for months, years, or decades. What exactly increases along this scale? Pending a definition, one can still measure: the \emph{time horizon} of an AI system is the highest task difficulty at which it still succeeds about half the time, where ``difficulty'' is measured by the time it takes a skilled human to do the task. On a suite of software tasks, this horizon has doubled roughly every seven months since 2019, and faster recently, rising from seconds to about sixteen hours as of May 2026~\cite{kwa2025,metr2026}.
+
+The time horizon is an observational measure: it tracks agency by watching behavior on benchmark tasks, without saying what a goal or a belief \emph{is}. To make a start toward a mathematical definition, we can draw from two traditions that offer different views. \emph{View 1}, from economics and game theory, treats an agent as a utility maximizer: it updates its beliefs by Bayes's rule and chooses actions to maximize expected utility. \emph{View 2}, from theoretical neuroscience, treats an agent as an active predictor: it frames both belief update and action choice as forms of free-energy minimization. Beliefs answer to what is true, goals to what is good, so one might expect them to require different mathematics. The surprise of View 2 is that a goal can be written as a probability distribution, after which belief update and action choice both become minimizations of quantities built from surprise.
+
+These two views use different terminology but they share a mathematical skeleton, so I'll develop them in parallel as far as possible. Consider a partially observable Markov decision process (POMDP) with finite state space $Z$, observation space $X$, and action space $A$, running for $N$ time steps. At step $t$ the world is in a state $z_t\in Z$, which the agent cannot see directly. The agent receives an observation $x_t\in X$, a noisy and lossy function of $z_t$, and chooses an action $a_t\in A$; the world then moves to a new state $z_{t+1}$ that depends on $z_t$, on $a_t$, and on chance.
+
+The agent's \emph{world-model} is a pair $(p,T)$: its account of how the world works. Here $p$ is a probability distribution on $X\times Z$ saying which states of the world produce which observations. The second component $T(z_{t+1}\mid z_t,a_t)$ is the agent's \emph{transition rule}, its model of how its actions affect the world. The world itself may or may not obey $(p,T)$: the pizza drone with the mislabeled map has a world-model the world does not obey.\footnote{An agent unsure of the dynamics can carry that uncertainty in the hidden state, by treating the parameters of $T$ as unobserved coordinates of $z$; the recursion below then learns the dynamics along with the state.} Write $h_t=(x_1,a_1,\ldots,a_{t-1},x_t)$ for the \emph{history}, everything the agent has seen and done up to and including its $t$th observation, and $\tau=(z_1,x_1,a_1,\ldots,z_N,x_N,a_N)$ for a complete \emph{trajectory}, hidden states included. The agent acts by a \glsfirst{policy}{policy} $\pi(a\mid h)$: a rule, possibly random, for choosing the next action from the history so far. Once a policy is fixed, the world-model assigns a probability to every trajectory,
+\[
+   Q_\pi(\tau)\;=\;p(z_1)\prod_{t=1}^{N} p(x_t\mid z_t)\,\pi(a_t\mid h_t)\prod_{t=1}^{N-1} T(z_{t+1}\mid z_t,a_t).
+\]
+This is the distribution over futures that the agent expects its policy to bring about.
+
+The agent's \emph{belief} $q_t$ is a probability distribution on $Z$ recording what it thinks about the hidden state $z_t$ after seeing the history $h_t$. Both views maintain it by the same two-step recursion and differ only in the second step. First, before the $t$th observation arrives, the previous belief is pushed forward through the transition rule to a \emph{predicted belief}
+\[
+   \bar q_t(z)=\sum_{z'\in Z} T(z\mid z',a_{t-1})\,q_{t-1}(z')\qquad(t\ge2),\qquad \bar q_1(z)=p(z).
+\]
+The predicted belief is the prior for step $t$. Extending it by the conditional $p(x\mid z)$ of the world-model, its \emph{observation rule}, gives the \emph{predicted joint}
+\begin{equation}\label{eq:predicted-joint}
+   \bar q_t(x,z)=p(x\mid z)\,\bar q_t(z),
+\end{equation}
+the agent's distribution over the current state and the coming observation. Second, the observation $x_t$ is taken into account. The ideal is to condition on it: $\bar q_t(\cdot\mid x_t)$ is what Bayes's rule delivers, and when every earlier step was exact it is the conditional distribution of $z_t$ given $h_t$ under $Q_\pi$ (it does not depend on $\pi$, since the actions are part of $h_t$). View 1 takes $q_t=\bar q_t(\cdot\mid x_t)$ exactly; View 2 takes the nearest approximation to it within an allowed family $\mathcal Q$, in a sense made precise there. The world-model $(p,T)$ stays fixed throughout; only the belief moves.\footnote{This separation is somewhat unrealistic: real agents can also learn by revising their world-model itself. Both traditions can include a separate learning process for the world-model, but we avoid that complication here.} The two views also differ in how the policy is chosen and where the goal enters. Table~\ref{tab:twoviews} summarizes the comparison; the next two subsections fill it in.
+
+
+\subsection{View 1: agents as utility maximizers}
+
+\begin{table}[tbp]
+\centering
+\small
+\renewcommand{\arraystretch}{1.3}
+\setlength{\tabcolsep}{4pt}
+\begin{tabular}{@{}>{\raggedright\arraybackslash}p{0.17\textwidth}>{\raggedright\arraybackslash}p{0.39\textwidth}>{\raggedright\arraybackslash}p{0.39\textwidth}@{}}
+& \textbf{View 1: agent as utility maximizer} & \textbf{View 2: agent as active predictor}\\
+\hline
+Core objects & World-model $(p,T)$ \newline utility $u(\tau)$ & World-model $(p,T)$ \newline variational family $\mathcal Q$ \newline goal distribution $g$\\
+\hline
+Belief update & Exact Bayes: \newline $q_t(z)\propto p(x_t\mid z)\,\bar q_t(z)$ & Variational Bayes: \newline $q_t\in\arg\min_{q\in\mathcal Q}F(q,x_t)$\\
+\hline
+Policy choice & $\pi^*\in\arg\max_\pi \mathbb{E}_{\tau\sim Q_\pi}[u(\tau)]$ & $\pi^*\in\arg\min_\pi \mathcal F(\pi)$\\
+\hline
+\end{tabular}
+\caption{Two views of agency. Both start from a world-model $(p,T)$, belief $q_t$, and policy $\pi$. The utility view adds a utility function $u$ on trajectories and asks which policy maximizes its expectation. The predictor view adds an allowed family $\mathcal Q$ of beliefs and a goal distribution $g$ on observations; it updates the belief by minimizing the variational free energy $F(q,x_t)$ of \eqref{eq:vfe} and chooses a policy by minimizing the expected free energy $\mathcal F(\pi)$ of \eqref{eq:efe}. In the first view the agent's goals live in its utility function; in the second, in a distribution over observations, and $u(\tau)=\sum_t\log g(x_t)$ translates between them.}
+\label{tab:twoviews}
+\end{table}
+
+View 1 adds a utility function $u(\tau)$ assigning a number to each trajectory; the agent chooses its policy $\pi$ to maximize $\mathbb{E}_{\tau\sim Q_\pi}[u(\tau)]$. In economics and game theory it is common to assume that agents are expected utility maximizers, but why should we expect agents to behave this way? One answer comes from the ``coherence theorems'' that derive utility maximization from axioms about agent preferences. To give a flavor, I'll state the classical coherence theorem of von Neumann and Morgenstern. Let $\Omega$ be a finite set of outcomes (such as the set of trajectories $\tau$). A \emph{lottery} is a probability distribution on $\Omega$; for lotteries $L$ and $M$, write $L\succeq M$ if the agent weakly prefers $L$ to $M$. Completeness says that any two lotteries can be compared, transitivity rules out preference cycles, continuity rules out abrupt reversals under small changes in probability, and independence says that mixing both lotteries with the same third lottery in the same proportion does not change the agent's preference.
+
+\begin{theorem*}[Von Neumann--Morgenstern~\cite{vnm1944}]
+If a preference relation $\succeq$ on lotteries satisfies completeness, transitivity, continuity, and independence, then there is a function $u:\Omega\to\mathbb R$ such that
+\[
+   L\succeq M
+   \quad\Longleftrightarrow\quad
+   \sum_{\omega\in\Omega}L(\omega)u(\omega)\geq \sum_{\omega\in\Omega}M(\omega)u(\omega).
+\]
+The function $u$ is unique up to replacing it by $au+b$, where $a>0$.
+\end{theorem*}
+
+Thus a preference relation satisfying the four axioms behaves as if it were maximizing the expectation of a utility function on outcomes. 
+
+Return now to the question: Why should we expect agents to behave as if maximizing an expected utility? One reason is selection against exploitable inconsistencies. An agent with intransitive preferences will pay to trade its way around a cycle, ending poorer than it began. Over time, competition may therefore select for agents that are well modeled as maximizing an objective, even if they were not designed that way. Beyond this abstract selection mechanism, the dominant technique for training AI agents is \glsfirst{reinforcement-learning}{reinforcement learning}, which scores the agent's actions with a numerical \emph{reward function} and so encodes an objective explicitly.\footnote{One might assume that an agent trained by reinforcement learning to maximize a reward function $r$ will, when deployed, ``seek reward'' in the sense of adopting $r$ as its effective utility function. This is often \emph{not} the case, especially when the deployment environment differs from the training environment: see Turner's essay \href{https://www.lesswrong.com/posts/pdaGN6pQyQarFHXF4/reward-is-not-the-optimization-target}{\emph{Reward is not the optimization target}} (2022) and the goal-misgeneralization experiments of Langosco et al.~\cite{langosco2022}. A theory of ``AI motivations'' that could predict an agent's effective utility function from its training pipeline would be an important advance in AI safety.}
+Inverse reinforcement learning is a subfield that tries to deduce from an agent's behavior the effective utility that it is maximizing~\cite{ng2000,hadfieldmenell2016}.
+
+A serious drawback of this classical picture is its assumption of unbounded compute: that agents can somehow perform exact Bayesian updates (very expensive) and maximize expected utility over an exponentially large space of trajectories. Economists and game theorists have tried to address this gap by developing theories of bounded rationality~\cite{rubinstein1998,mackowiak2023}. We now discuss an alternative approach, coming from neuroscience, which addresses the fact that agents have bounded compute by modeling them as active predictors of their environment.
+
+\subsection{View 2: agents as active predictors}
+
+The \emph{active predictor} is a picture rooted in models of perception~\cite{rao1999}. It reads the observation rule $p(x\mid z)$ as a \emph{generative model}: ``states $z$ generate observations $x$.'' The belief $q$ is restricted to a simple family $\mathcal Q$, because exact Bayes is intractable for large state spaces,\footnote{One cost of exact Bayes is the normalizing sum: computing the posterior $\bar q_t(\cdot\mid x_t)$ requires $\bar q_t(x_t)=\sum_z p(x_t\mid z)\,\bar q_t(z)$, a sum over the whole state space $Z$. The free energy below is arranged so that this sum is never needed.} and because a family of representable beliefs is a natural model of a bounded reasoner. The agent tries to make $q\in\mathcal Q$ close to the exact posterior $\bar q_t(\cdot\mid x_t)$.
+
+Here ``close'' is measured by \emph{Kullback--Leibler divergence}. For probability distributions $r$ and $s$ on the same finite set $Z$,
+\[
+   \mathrm{KL}(r\|s)=\sum_{z \in Z} r(z)\log\frac{r(z)}{s(z)}.
+\]
+Gibbs' inequality says $\mathrm{KL}(r\|s)\ge0$, with equality if and only if $r=s$. In information-theoretic terms, call $-\log s(z)$ the \emph{surprise} of an observer with beliefs $s$ at seeing $z$; then $\mathrm{KL}(r\|s)$ is the mean excess surprise of an observer who believes the sample was drawn from $s$ when it was drawn from $r$. It is not symmetric, so it is not a metric; it is a directed measure of how badly $s$ approximates $r$.
+
+A (base) \glsfirst{language-model}{language model} is a \glsfirst{neural-network}{neural network} trained to predict the next \glsfirst{token}{token} (word or word-fragment) in a text.\footnote{``Base'' refers to the model at the end of this first stage of training, called \emph{pretraining}, on a large corpus of text. The chat assistants served to users are derived from base models by further training to follow instructions and satisfy human preferences~\cite{ouyang2022}. In the past few years, more stages have been added to this pipeline, including \emph{character training} to shape the model's personality and values~\cite{maiya2025}, and reinforcement learning with verifiable rewards to improve performance on math and coding tasks~\cite{lambert2024}.} Its input is a portion of the text, and its output is a probability distribution for the token that comes next. Multiplying these per-token probabilities yields a probability distribution $s$ over whole texts. The training minimizes an empirical estimate of the average surprise $\mathbb{E}_{x\sim r}[-\log s(x)]$, where $r$ is the true distribution of human writing. This average equals $\mathrm{KL}(r\|s)$ plus a constant the model cannot affect, the entropy of human writing itself. To train a language model is to push a KL divergence down.
+
+The active predictor scores each candidate belief $q\in\mathcal Q$ against the observation $x_t$ by its \emph{variational free energy}
+\begin{equation}\label{eq:vfe}
+\begin{split}
+   F(q,x_t) &:= \mathbb{E}_{q}\!\left[\log q(z)-\log \bar q_t(x_t,z)\right]\\
+   &=\mathrm{KL}\!\left(q\,\big\|\,\bar q_t(\cdot\mid x_t)\right)-\log \bar q_t(x_t),
+\end{split}
+\end{equation}
+and updates its belief by adopting the $q \in \mathcal Q$ that minimizes $F(q,x_t)$.
+Here $\bar q_t(x,z)$ is the predicted joint~\eqref{eq:predicted-joint} and $\bar q_t(x_t)=\sum_z \bar q_t(x_t,z)$ is the probability the agent assigned to the observation $x_t$ before it arrived. Since KL is nonnegative, this identity shows that $F(q,x_t)$ is an upper bound on the agent's surprise $-\log \bar q_t(x_t)$ at seeing $x_t$. The surprise term does not depend on $q$. Thus, for fixed $x_t$, lowering $F(q,x_t)$ lowers this upper bound and makes $q$ a better approximation to the posterior. The first expression for $F$ involves only the unnormalized joint $\bar q_t(x_t,z)$ and an expectation under $q$, never the sum over $Z$ that exact conditioning requires; this is what makes minimizing $F$ over a tractable family cheaper than computing the posterior. If $\mathcal Q$ contains all distributions on $Z$, the minimizer is the posterior $\bar q_t(\cdot\mid x_t)$ itself, and the variational update reproduces the Bayes update of View 1; a restricted $\mathcal Q$ returns the member nearest the posterior in KL.
+
+\emph{Active inference}~\cite{parr2022} extends the predictor from perception to action. Where View 1 adds a utility, View 2 adds a \emph{goal distribution} $g$: a probability distribution on $X$ recording which observations the agent would like to receive. A candidate policy $\pi$ is scored by its \emph{expected free energy}
+\begin{equation}\label{eq:efe}
+   \mathcal F(\pi)\;=\;\sum_t \mathbb{E}_{x_t\sim Q_\pi}\bigl[-\log g(x_t)\bigr]\;-\;\sum_t I_\pi(z_t;x_t),
+\end{equation}
+and the agent selects a policy with a low score. The first term is the expected surprise of the predicted observations, measured against the goal rather than against the prediction itself. The second is the mutual information $I_\pi(z_t;x_t)=\mathbb{E}_{x_t\sim Q_\pi}\,\mathrm{KL}\bigl(Q_\pi(z_t\mid x_t)\,\|\,Q_\pi(z_t)\bigr)$ between the hidden state and the coming observation under $Q_\pi$: the information the agent expects the observation to bring. A creature whose goal distribution puts nearly all its mass on a body temperature of $37^\circ$C finds cold surprising, and puts on a coat: a goal is a prediction the agent works to make true.
+
+Two comparisons with View 1 are worth making. Set $u(\tau)=\sum_t\log g(x_t)$; then the first term of $\mathcal F(\pi)$ is $-\mathbb{E}_{\tau\sim Q_\pi}[u(\tau)]$, so minimizing it alone is expected-utility maximization for a utility that is additive over time and depends only on observations. Nothing is lost by writing preferences as a distribution: any bounded utility on observations is $\log g$ up to an additive constant. The second term is what View 1 lacks. It is a preference of a second kind, a value placed on what the agent learns rather than on what the world does. A View 1 agent values information only instrumentally, through the planning that exact expected-utility maximization requires; the active predictor values it directly, one step ahead, a cheaper substitute for that planning. If the goal were replaced by the agent's own prediction, minimizing expected surprise would send it to the most predictable place it can find, a dark and quiet room~\cite{friston2015,millidge2021}; the goal distribution and the information term are the standard answers to that objection. The result is a duality between perception and action: perception lowers free energy by changing the belief to fit the world; action, by changing the world to fit the goal.
+
+An AI agent's world-model is learned during training, not crafted by human engineers. Can we learn the agent's world-model from its behavior? For a certain class of agents, described in the terms of View 1, the theorem of the next subsection says the answer is yes.
+
+\subsection{Inferring an agent's world-model from its behavior}
+
+A \emph{Bayesian network} is a directed acyclic graph $G$ whose vertices are random variables $X_1,\dots,X_n$, together with conditional probability tables satisfying
+\[
+   p(x_1,\dots,x_n)=\prod_i p\!\left(x_i\mid \mathrm{pa}(x_i)\right),
+\]
+where $\mathrm{pa}(x_i)$ denotes the parents of $X_i$ in $G$. The graph is a bookkeeping device for conditional independence: once the parents of a node are known, its non-descendants add no further information. Pearl's graphical criterion, \emph{$d$-separation}, reads off from the graph exactly which conditional independences are forced by this factorization~\cite{pearl2009}.
+
+A \emph{causal} Bayesian network adds an interpretation to the arrows: each conditional distribution is a local mechanism. An \emph{intervention} on a variable replaces its usual mechanism by a chosen value or distribution and leaves the other mechanisms alone. Interventions can distinguish causation from correlation. If smoke and fire are correlated, then observing smoke changes the probability of fire; intervening to make smoke with a smoke machine need not.
+
+The thermostat that began our scale of agency can now be put to the test. Intervene by wiring its output to an air conditioner instead of a heater, and it will chill the room it was built to warm: whenever the temperature drops, the thermostat calls for more, driving it lower still. The thermostat pursues its temperature only while the mechanisms around it stay fixed; by contrast, an agent that kept succeeding across such rewirings would need a world-model to track which mechanism does what. The theorem below makes this necessity precise.
+
+A \emph{causal influence diagram} is a causal Bayesian network with extra decision nodes, where a policy chooses actions from observations, and utility nodes, whose values the agent is scored on. This is a simpler decision setting than the POMDP above: the theorem assumes that the decision is scored directly by the utility nodes and does not change the environment variables that feed them, so there is no chain of consequences to reason through. The agent is tested not just in one environment but across a family of \emph{local interventions}: each replaces the value of some environment variable by a chosen function of it (a constant, or the flip of a binary variable, say), or \emph{masks} some of the agent's observations, hiding them from view. The agent is told which intervention is in force and responds with a policy; its \emph{regret} under that intervention is the utility gap between its policy and the best policy for that intervened environment.
+
+To illustrate how an agent's behavior can reveal its world-model if the agent's utility is known, consider an agent that chooses one of two treatments. A hidden binary variable decides which treatment works, and the agent is scored on curing the patient. Externally set the hidden variable to $1$ with probability $\alpha$---an intervention---and watch the agent as $\alpha$ varies. An agent playing optimally switches treatments at the threshold $\alpha^\star$ where the two treatments' expected utilities cross, and that indifference equation can be solved for the agent's implicit estimates of the treatments' effects. The next theorem turns this trick into a general technique for extracting an agent's world-model from its behavior.
+
+\begin{theorem*}[Robust agents contain causal world models; Richens and Everitt~\cite{richens2024}]
+For almost all causal influence diagrams satisfying their regularity assumptions, any agent that responds to each local intervention, maskings included, with a policy of regret at most $\delta$ determines an approximate causal model of the utility-relevant environment, with error bounded by a function $\gamma(\delta)$ satisfying $\gamma(0)=0$ and growing linearly for small $\delta$. In the case $\delta=0$, the causal graph and the joint distribution over all ancestors of the utility are identified exactly.
+\end{theorem*}
+
+The proof is constructive: it is the switch-point trick above, repeated. Treating the policy as an oracle, mix interventions pairwise by a parameter $\alpha$ and watch where the optimal action switches; because the utility is known, each indifference equation solves for one interventional probability, and together they recover the conditional distributions and parent sets, except on measure-zero degeneracies such as exact cancellations or ties. The theorem lives in View 1: the utility is given, and what behavior reveals is the model. What is extracted is a causal model of the environment implied by the agent's competent responses; the theorem says nothing about how, or whether, that model is represented inside the agent. Recovering goal and model together from behavior alone is harder, and without further assumptions it is not possible even in principle: the same behavior is consistent with many pairings of a model with a goal~\cite{armstrong2018}.
+
+In a follow-up, Richens, Everitt, and Abel~\cite{richens2025general} prove a companion result for goal-directed agents: any agent that generalizes across a large enough family of multi-step goals must contain an accurate predictive model of its environment, in the sense that its policy alone determines the environment's transition probabilities, and an algorithm extracts them from the policy. The more capable the agent, the more accurate the extracted model: for goals that chain $n$ sub-goals in sequence, the error in each extracted transition probability is $O(1/\sqrt{n})$, even for agents that usually fail.
+
+Extraction raises a question of independent interest: the recovered model comes expressed in \emph{some} set of latent variables---whose? If two models predict identically, must their internal variables be translatable into one another, or could an alien mind carve the world into concepts that ours cannot express? Wentworth and Lorell's \emph{natural latents} are a first answer: conditions, robust to approximation, under which the latent variables of two predictively equivalent models must translate into one another's~\cite{wentworth2025}; Eisenstat's \emph{condensation}~\cite{eisenstat2025} approaches the same question from probability, asking how an agent's concepts condense out of its predictive state.
+
+\begin{openproblem}[\href{https://github.com/lionellevine/MAIS/blob/main/open-problems/MAIS-O2.md}{\texttt{MAIS-O2}} (Recovering world-models from behavior).]
+Fix a finite causal influence diagram with binary variables and known utility, and an agent whose policy has regret at most $\delta$ across the family of local interventions. The extraction algorithm behind the theorem above~\cite{richens2024} recovers the agent's causal model, to within $\gamma(\delta)$, from unlimited exact queries to such a policy. Prove a finite-sample version: if each query returns an action sampled from the policy, rather than the policy's exact action probabilities, and each experiment draws on the same intervention family as the theorem, maskings included, how many experiments determine the graph and the conditional probability tables to within $\eta$, and how does the answer scale with $\delta$? As a first case, take the two-variable diagrams, where the \emph{identified set}---the set of models consistent with the agent's observed behavior---can be computed exactly, and measure how the extraction algorithm degrades when its indifference equations are estimated from samples. Interventions on the agent's inputs, or on the \glsfirst{activations}{activations} (the values computed inside its network), are the harder surfaces beyond.
+\end{openproblem}
+
+% \noindent\emph{Entry points.} Probability, Bayesian statistics, causal inference, decision theory, identifiability.

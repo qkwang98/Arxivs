@@ -1,0 +1,629 @@
+\documentclass[a4paper,11pt]{article}
+%%%%
+\usepackage[T1]{fontenc}
+\usepackage{lmodern,amsmath,amsfonts,amssymb,graphicx,float,microtype,underscore,mathtools,xurl,subcaption}
+\usepackage[dvipsnames,svgnames,table]{xcolor}
+\usepackage[labelsep = period, justification = centering]{caption}
+%%%%%%%%%%%%%%%%
+\usepackage[shortlabels]{enumitem}
+\setlist[itemize]{topsep=0ex,itemsep=0ex,parsep=0ex}
+\setlist[enumerate]{topsep=0ex,itemsep=0ex,parsep=0ex}
+%%%%%%%%%%%%%%%%
+\usepackage[unicode=true]{hyperref}
+\hypersetup{
+colorlinks,
+breaklinks=true,
+linkcolor={blue!60!black},
+citecolor={black},
+urlcolor={blue!60!black},
+pdftitle={The Erdős--Sós Theorem}}
+%%%%%%%%%%%%
+\usepackage[capitalise, compress, nameinlink, noabbrev]{cleveref}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\usepackage[longnamesfirst,numbers,sort&compress]{natbib}
+\makeatletter
+\def\NAT@spacechar{~}
+\makeatother
+\setlength{\bibsep}{0.4ex plus 0.2ex minus 0.2ex}
+%%%%%%%%%%%%%%%%%%
+\usepackage[tmargin=30mm,bmargin=30mm,lmargin=30mm,rmargin=30mm]{geometry}
+\renewcommand{\baselinestretch}{1.1}
+\setlength{\footnotesep}{\baselinestretch\footnotesep}
+\setlength{\parindent}{0cm}
+\setlength{\parskip}{1.1ex}
+%\ollowdisplaybreaks
+%%%%%%%%%%
+\newcommand{\half}{\ensuremath{\protect\tfrac{1}{2}}}
+\DeclarePairedDelimiter{\floor}{\lfloor}{\rfloor}
+\DeclarePairedDelimiter{\ceil}{\lceil}{\rceil}
+\DeclarePairedDelimiter{\abs}{\lvert}{\rvert}
+\DeclarePairedDelimiter{\set}{\lbrace}{\rbrace} 
+%%%% Commands
+\renewcommand{\epsilon}{\varepsilon}
+\renewcommand{\emptyset}{\varnothing}
+\renewcommand{\ge}{\geqslant}
+\renewcommand{\le}{\leqslant}
+\renewcommand{\geq}{\geqslant}
+\renewcommand{\leq}{\leqslant}
+%%%
+\DeclareMathOperator{\ind}{index}
+%%%
+%\newcommand{\referee}[1]{{\color{blue} Referee: #1}}
+\newcommand{\david}[1]{{\color{orange} David: #1}}
+%\newcommand{\response}[1]{{\color{blue} Response: #1}}
+%%%%
+\renewcommand{\thefootnote}{\fnsymbol{footnote}}
+%%%
+%%%%% Theorem environments
+\usepackage{amsthm,thmtools}
+
+\declaretheoremstyle[
+spaceabove = .2\baselineskip plus .2\baselineskip minus .2\baselineskip, 
+spacebelow = .5\baselineskip plus .2\baselineskip minus .2\baselineskip,
+headfont = \normalfont\itshape,
+notefont = \mdseries, 
+notebraces = {}{},
+bodyfont = \normalfont,
+postheadspace = .5em,
+headpunct = .,
+qed = \qedsymbol
+]{proofstyle}
+
+\declaretheorem[name = Theorem, style = plain]{thm}
+\declaretheorem[name = Claim, numbered = no, style = plain]{claim}
+\declaretheorem[name = Corollary, numberlike = thm, style = plain]{cor}
+\declaretheorem[name = Conjecture, numberlike = thm, style = plain]{conj}
+\declaretheorem[name = Definition, numberlike = thm, style = definition]{defi}
+\declaretheorem[name = Lemma, numberlike = thm, style = plain]{lem}
+\declaretheorem[name = Observation, numberlike = thm, style = plain]{obs}
+\declaretheorem[name = Proposition, numberlike = thm, style = plain]{prop}
+\declaretheorem[name = Problem, numberlike = thm, style = plain]{prob}
+\declaretheorem[name = Remark, numberlike = thm, style = definition]{rmk}
+\declaretheorem[name = Proof of claim, numbered = no, style = proofstyle, refname = {Proof,Proofs}, Refname = {Proof,Proofs}]{proofclaim}
+\crefname{thm}{Theorem}{Theorems}
+\crefname{lem}{Lemma}{Lemmas}
+\crefname{obs}{Observation}{Observations}
+\crefname{conj}{Conjecture}{Conjectures}
+\crefname{claim}{Claim}{Claims}
+\crefname{prob}{Problem}{Problems}
+\crefname{prop}{Proposition}{Propositions}
+\crefname{cor}{Corollary}{Corollaries}
+\crefname{rmk}{Remark}{Remarks}
+\crefname{appendix}{Appendix}{Appendices}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\begin{document}
+\title{\bfseries\fontsize{18pt}{20pt}\selectfont The Erdős--Sós Theorem}
+
+\author{David~R.~Wood\,\footnotemark[2]}
+
+\maketitle
+
+\begin{abstract}
+We present an exposition of a proof, discovered by GPT-6 Astra, of the Erdős--Sós Conjecture, which states that every graph with average degree greater than $t-2$ contains every tree on $t\geq 2$ vertices.
+\end{abstract}
+
+\footnotetext[2]{School of Mathematics, Monash University, Melbourne, Australia (\textsf{\href{mailto:david.wood@monash.edu}{david.wood@monash.edu}}). Research supported by the Australian Research Council and by NSERC. }
+
+\renewcommand{\thefootnote}{\arabic{footnote}}
+\section{Introduction}
+
+The following result was conjectured by Paul Erdős and Vera Sós at a conference in Smolenice in 1963 \citep{Erdos64} as a natural generalisation of the earlier Erdős--Gallai Theorem for paths~\citep{ErdosGallai59}\footnote{We consider finite undirected graphs $G$ with vertex-set $V(G)$ and edge-set $E(G)$. A graph $G$ \emph{contains} a graph $H$ if a subgraph of $G$ is isomorphic to $H$.}. The conjecture was recently proved by GPT-6 Astra \citep{ErdosSosSolution} as part of the \textsc{FrontierMath Erdős} project \citep{FrontierMathErdos} and 
+formally verified in Lean~\citep{Adamczewski26}.
+
+\begin{thm}
+\label{ErdosSosTheorem}
+For every integer $t\geq 2$, every graph with average degree greater than $t-2$ contains every tree with $t$ vertices. 
+\end{thm}
+
+This paper provides an exposition of the proof of \cref{ErdosSosTheorem} and some background on the conjecture. 
+
+First note that a greedy embedding algorithm shows that for every integer $t\geq 2$, every graph with \emph{minimum} degree at least $t-1$ contains every tree with $t$ vertices.  Every graph with average degree at least $2t-2$ contains a subgraph with minimum degree at least $t-1$.   So every graph with average degree at least $2t-2$ contains every tree with $t$ vertices.  The point of \cref{ErdosSosTheorem} is to improve this average degree bound to $>t-2$, which is best possible, since the complete graph on $t-1$ vertices has average degree $t-2$ and contains no tree on $t$ vertices. 
+
+In the 1990s, Ajtai, Koml\'os, Simonovits and Szemer\'edi announced a proof of the Erdős--Sós Conjecture for all sufficiently large $t$ (see~\citep{AKSS15}). The proof, based on the Szemer\'edi Regularity Lemma, is long and complicated, and has never been written in full (as far as I am aware). The Erd\H{o}s--S\'os Conjecture came to be recognised by the graph theory community as an important and difficult problem. Indeed, \citet[Section~3.5.1]{CG98} described it as ``one of the most tantalizing problems in extremal graph theory''. As a reflection of this importance, many partial results were obtained, including verifications of the conjecture 
+for various families of trees \citep{Pokrovskiy24,Rozhon19,McLennan05,FS07,Sun07,Fan13,Sidorenko89,BPSS21}, 
+for various families of host graphs \citep{ReedStein26b,WLL00,Haxell01a,BD96,SW97,ET10,ET13,YL04}, and
+for various restrictions on the relative sizes of the tree and the host graph~\citep{Zhou84,Tiner10,Wozniak96,ReedStein26a,GZ16,ReedStein25,STY85}. 
+Approximate variants of the Erd\H{o}s--S\'os Conjecture and related degree-condition conjectures have also been widely studied~\citep{DPRS26,DPRS23,BPS20,HRSW20,BPS19,HPSS15,HKPSSS-I,HKPSSS-II,HKPSSS-III,HKPSSS-IV,PiguetStein12}; see \citep{Stein20} for a survey.
+ 
+%{L}oebl--{K}oml{\'o}s--{S}{\'o}s conjecture 1995: Every $n$-vertex graph with at least $n/2$ vertices of degree more than $t-2$ contains every tree on $t$ vertices   \citep{HPSS15,HKPSSS-I,HKPSSS-II,HKPSSS-III,HKPSSS-IV,PiguetStein12}.
+
+% Brown–Erdős–Sós conjecture \citep{BES73}
+
+We finish this introduction with a known \citep{Stein20,ReedStein26a,BPS21} application of the Erdős--Sós Theorem to multicolour Ramsey numbers. For a graph $G$ and integer $k\geq 1$, let $R(G;k)$ be the minimum integer $n$ such that for every edge-$k$-colouring of the complete graph $K_n$ some monochromatic subgraph of $K_n$ is isomorphic to $G$. \citet{ErdosGraham75} showed that $R(T; k) \geq k(t-2) + 2$ for any tree $T$ on $t\geq 2$ vertices and for sufficiently large $k\equiv 1\pmod{t}$. They asked whether $R(T; k) \leq kt + O(1)$. 
+
+\begin{thm}
+For every tree $T$ on $t\geq 2$ vertices, and for every integer $k\geq 1$, 
+\[R(T,k) \leq k(t-2)+2.\]
+\end{thm}
+
+\begin{proof}
+Consider any edge-$k$-colouring of $K_n$ where $n=k(t-2)+2$. 
+If there is no monochromatic copy of $T$, then each colour occurs at most $(t-2)n/2$ times by \cref{ErdosSosTheorem}, 
+implying $\binom{n}{2}\leq k(t-2)n/2$ and $n \leq k(t-2)+1$. Thus there is a monochromatic copy of $T$.
+\end{proof}
+
+ %%%%%%%%%%
+\section{The Proof}
+
+Let $G$ be a graph with $n$ vertices and $m$ edges. 
+Let $L(G)$ be the set of all linear orderings of $V(G)$. 
+Let $M(G)$ be the set of all pairs $(\pi,i)$ where $\pi=(v_1,\dots,v_n) \in L(G)$ and $v_1v_i\in E(G)$ (implying $i\in\{2,\dots,n\}$). 
+For each edge $vw\in E(G)$ there are $2(n-1)!$  pairs $(\pi,i)\in M(G)$ with $\{v,w\}=\{v_1,v_i\}$. 
+So 
+\begin{equation}
+\label{MainEquality}
+|M(G)|= 2m(n-1)!
+\end{equation}
+Let $T$ be a tree with $t\geq 2$ vertices. 
+For  $r\in V(T)$, let $R(T,r)$ be the set of all pairs $(\pi,i)\in M(G)$ such that $G[\{v_1,\dots,v_i\}]$ contains $T$ with $r$ mapped to $v_1$. 
+Below we prove
+\begin{equation}
+\label{MainInequality}
+|M(G)| \leq |R(T,r)| + (t-2)n!.
+\end{equation}
+Together, \eqref{MainEquality} and \eqref{MainInequality} imply $2m(n-1)! \leq |R(T,r)| + (t-2)n!$. If $G$ does not contain $T$, then $R(T,r)=\emptyset$ for any $r\in V(T)$, implying
+$2m \leq (t-2)n$; that is, $G$ has average degree $\frac{2m}{n}\leq t-2$. 
+Equivalently, if $G$ has average degree greater than $t-2$, then $G$ contains $T$. 
+This proves \cref{ErdosSosTheorem}.
+
+It remains to prove \eqref{MainInequality}. We use the next two lemmas. 
+
+\begin{lem}
+\label{Leaf}
+For any graph $G$ with $n$ vertices, for any tree $T$ with at least three vertices, if $r$ is a leaf of $T$ and $r'$ is the neighbour of $r$ in $T$, then 
+\[ |R(T-r,r') | \leq |R(T,r)| + n!.\]
+\end{lem}
+
+\begin{proof}
+Let $X$ be the set of all pairs $(\pi,j)\in R(T-r,r')$ such that $j$ is the minimum integer $i$ (if any exist) such that  $(\pi,i)\in R(T-r,r')$. 
+So $|X|\leq |L(G)|=n!$. 
+
+Consider $(\pi,i)  \in R(T-r,r')\setminus X$, where $\pi = (v_1,\dots,v_n)$. 
+Thus $(\pi,j)\in R(T-r,r')$ for some $j\in\{2,\dots,i-1\}$. 
+Define 
+\[f((\pi,i)) := (( v_i,v_{i-1}\,\dots,v_1,v_{i+1},v_{i+2},\dots,v_n),i).\]
+In this ordering, the first vertex (namely $v_i$) is adjacent to the $i$-th vertex (namely $v_1$), so $f((\pi,i)) \in M(G)$. 
+By construction, $G[\{v_1,\dots,v_j\}]$ contains $T-r$ with $r'$ mapped to $v_1$, and $j\leq i-1$. 
+Thus $G[\{v_1,\dots,v_i\}]$ contains $T$ with $r$ mapped to $v_i$. 
+Hence $f((\pi,i))\in R(T,r)$. 
+
+We have shown that  $f$ is a function from $R(T-r,r')\setminus X$ to $R(T,r)$. 
+We claim that $f$ is injective. 
+Suppose that $f((\pi,i))=f((\pi',i'))$ for some $(\pi,i),(\pi',i')\in R(T-r,r')\setminus X$. 
+Say $\pi=(v_1,\dots,v_n)$ and $\pi'=(w_1,\dots,w_n)$. 
+So $(\pi,j) \in X$ and $ (\pi',j') \in X$ for some $j\in\{2,\dots,i-1\}$ and $j'\in\{2,\dots,i'-1\}$. 
+By construction,
+\begin{align*}
+f((\pi,i)) & = (( v_i,v_{i-1}\,\dots,v_1,v_{i+1},v_{i+2},\dots,v_n),i)\\
+= f((\pi',i')) & = (( w_{i'},w_{i'-1}\,\dots,w_1,w_{i'+1},w_{i'+2},\dots,w_n),i').
+\end{align*}
+Thus $i=i'$ and 
+$v_i,v_{i-1}\,\dots,v_1=w_{i'},w_{i'-1}\,\dots,w_1$, implying
+$v_{i+1},v_{i+2},\dots,v_n=\linebreak w_{i'+1},w_{i'+2},\dots,w_n$.
+Together this shows that $(\pi,i) = (\pi',i')$. 
+Therefore $f$ is an injection from $R(T-r,r')\setminus X$ to $R(T,r)$. 
+
+Thus $|R(T-r,r')| - |X|=|R(T-r,r')\setminus X| \leq |R(T,r)|$. 
+Hence $|R(T-r,r')|  \leq |X| + |R(T,r)| \leq n! + |R(T,r)|$, as desired. 
+\end{proof}
+
+\begin{lem}
+\label{NonLeaf}
+For any graph $G$ with $n$ vertices, for any tree $T$ with at least three vertices, for any non-leaf vertex $r\in V(T)$, for any subtrees $T_1$ and $T_2$ of $T$ such that $T_1\cup T_2=T$ and $V(T_1\cap T_2)=\{r\}$, 
+\[ |R(T_1,r)| + |R(T_2,r)| \leq |M(G)| + |R(T,r)| + n!. \]
+\end{lem}
+
+\begin{proof}
+Let $X$ be the set of all pairs $(\pi,j)\in R(T_1,r) \setminus R(T,r)$ such that $j$ is the minimum integer $i$ (if any exist) such that  $(\pi,i)\in R(T_1,r) \setminus R(T,r)$. 
+For each $\pi\in L(G)$ there is at most one pair $(\pi,j)$ in $X$. 
+So $|X|\leq |L(G)|=n!$. 
+
+Consider $(\pi,i) \in ( R(T_1,r) \setminus R(T,r) ) \setminus X$, where $\pi=(v_1,\dots,v_n)$. 
+Thus $(\pi,j)\in X$ for some $j\in\{2,\dots,i-1\}$. 
+Define
+\[f((\pi,i)) := (( v_1,v_{j+1},\dots,v_i, v_2,\dots,v_j, v_{i+1},\dots,v_n),i-j+1).\] 
+Since $j\leq i-1$ we have $i-j+1\geq 2$. 
+In this ordering, the first vertex (namely $v_1$) is adjacent to the $(i-j+1)$-th vertex (namely $v_i$), so $f((\pi,i)) \in M(G)$. 
+
+Suppose that $f((\pi,i))\in R(T_2,r)$. 
+Then $G[\{v_1,v_{j+1},\dots,v_i\}]$ contains $T_2$ with $r$ mapped to $v_1$. 
+Since $G[\{v_1,v_2,\dots,v_j\}]$ contains $T_1$ with $r$ mapped to $v_1$,  
+this implies that $G[\{v_1,\dots,v_i\}]$ contains $T$ with $r$ mapped to $v_1$. 
+Hence  $(\pi,i)\in R(T,r)$, which is a contradiction. 
+So $f((\pi,i)) \not\in R(T_2,r)$. 
+
+We have shown that  $f$ is a function from $( R(T_1,r) \setminus R(T,r) ) \setminus X$ to $M(G) \setminus R(T_2,r)$. 
+We claim that $f$ is injective. 
+Suppose that $f((\pi,i))=f((\pi',i'))$ for some $(\pi,i),(\pi',i')\in (R(T_1,r) \setminus R(T,r) ) \setminus X$. 
+Say $\pi=(v_1,\dots,v_n)$ and $\pi'=(w_1,\dots,w_n)$. 
+So $(\pi,j) \in X$ and $ (\pi',j') \in X$ for some $j\in\{2,\dots,i-1\}$ and $j'\in\{2,\dots,i'-1\}$. 
+By construction,
+\begin{align*}
+f((\pi,i)) & = (( v_1,v_{j+1},\dots,v_i, v_2,\dots,v_j,v_{i+1},\dots,v_n),i-j+1)\\
+= f((\pi',i')) & = (( w_1,w_{j'+1},\dots,w_{i'}, w_2,\dots,w_{j'}, w_{i'+1},\dots,w_n),i'-j'+1).
+\end{align*}
+Thus $i-j=i'-j'$ and 
+$v_1,v_{j+1},\dots,v_i=w_1,w_{j'+1},\dots,w_{i'}$.
+Without loss of generality, $j \leq j'$. 
+Then $v_1,v_2,\dots,v_j=w_1,w_2,\dots,w_{j}$. 
+Since $(\pi,j)\in X$, we have $(\pi',j)\in X$. 
+By the minimality of $j'$, we have $j=j'$. 
+Thus $i=i'$ and $v_2,\dots,v_j,v_{i+1},\dots,v_n=w_2,\dots,w_{j'}, w_{i'+1},\dots,w_n$. 
+Together this shows that $(\pi,i)=(\pi',i')$. 
+Therefore $f$ is injective. 
+
+Thus $|( R(T_1,r) \setminus R(T,r) ) \setminus X | \leq |M(G) \setminus R(T_2,r)|$. 
+By construction, $R(T,r) \subseteq R(T_1,r)$ and $R(T_2,r) \subseteq M(G)$. 
+Thus
+\[ | R(T_1,r)|  - | R(T,r) |  - |X | = 
+|( R(T_1,r) \setminus R(T,r) ) \setminus X | \leq |M(G) \setminus R(T_2,r)| = |M(G)| - | R(T_2,r)| ,\] 
+and 
+$|R(T_1,r)| +  | R(T_2,r)|  \leq |M(G)| + | R(T,r) |+ |X | \leq |M(G)| +|R(T,r)| + n!$, as desired. 
+\end{proof}
+
+\begin{proof}[Proof of \eqref{MainInequality}]
+We proceed by induction on $t\geq2$. 
+In the base case,  $t=2$, for any $t$-vertex tree $T$ and for any $r\in V(T)$, we have 
+$|M(G)| =  |R(T,r)| =  |R(T,r)| + (t-2)n!$, as desired. 
+Now assume that $t\geq 3$, and $T$ is a $t$-vertex tree and $r\in V(T)$. 
+
+First suppose that $r$ is a leaf of $T$. Let $r'$ be the neighbour of $r$ in $T$. 
+By \cref{Leaf}, 
+$|R(T-r,r')| \leq |R(T,r)| + n!$. 
+By induction, 
+\begin{align*}
+|M(G)| 
+ \leq |R(T-r,r')| + (t-3)n! 
+& \leq |R(T,r)| +n! + (t-3)n! \\
+& = |R(T,r)| + (t-2)n! ,
+\end{align*}
+ as desired. 
+
+Now assume that $r$ is not a leaf of $T$. So there are subtrees $T_1$ and $T_2$ of $T$ such that $T_1\cup T_2=T$ and $V(T_1\cap T_2)=\{r\}$ and $|V(T_1)|\geq 2$ and $|V(T_2)|\geq 2$. 
+By induction, 
+\begin{align*}
+|M(G)| & \leq |R(T_1,r)| + ( |V(T_1)|-2)n! \text{ and}\\
+|M(G)| & \leq |R(T_2,r)| + ( |V(T_2)|-2)n!.
+\end{align*}
+Thus
+\begin{align*}
+2|M(G)| 
+& \leq  |R(T_1,r)| + |R(T_2,r)| + ( |V(T_1)|+|V(T_2)|-4)n! \\
+& =  |R(T_1,r)| + |R(T_2,r)| + ( t-3)n! .
+\end{align*}
+By \cref{NonLeaf},
+\[ |R(T_1,r)| + |R(T_2,r)| \leq |M(G)| + |R(T,r)| + n!. \]
+Hence
+\begin{align*}
+2|M(G)| & \leq |M(G)| + |R(T,r)| + n! + ( t-3)n! .
+\end{align*} 
+Therefore $|M(G)| \leq |R(T,r)|  + ( t-2)n!$, 
+as desired. 
+\end{proof}
+
+%\vspace*{-2ex}
+%\bibliographystyle{../../BibTeX/DavidNatbibStyle}
+%\bibliography{../../BibTeX/myBibliography}
+\def\soft#1{\leavevmode\setbox0=\hbox{h}\dimen7=\ht0\advance \dimen7
+  by-1ex\relax\if t#1\relax\rlap{\raise.6\dimen7
+  \hbox{\kern.3ex\char'47}}#1\relax\else\if T#1\relax
+  \rlap{\raise.5\dimen7\hbox{\kern1.3ex\char'47}}#1\relax \else\if
+  d#1\relax\rlap{\raise.5\dimen7\hbox{\kern.9ex \char'47}}#1\relax\else\if
+  D#1\relax\rlap{\raise.5\dimen7 \hbox{\kern1.4ex\char'47}}#1\relax\else\if
+  l#1\relax \rlap{\raise.5\dimen7\hbox{\kern.4ex\char'47}}#1\relax \else\if
+  L#1\relax\rlap{\raise.5\dimen7\hbox{\kern.7ex
+  \char'47}}#1\relax\else\message{accent \string\soft \space #1 not
+  defined!}#1\relax\fi\fi\fi\fi\fi\fi}
+\begin{thebibliography}{44}
+\providecommand{\natexlab}[1]{#1}
+\providecommand{\msn}[1]{MR:\,\href{http://www.ams.org/mathscinet-getitem?mr=MR{#1}}{#1}}
+\providecommand{\ZBL}[1]{Zbl:\,\href{https://www.zentralblatt-math.org/zmath/en/search/?q=an:#1}{#1}}
+\providecommand{\url}[1]{\texttt{#1}}
+\providecommand{\urlprefix}{}
+\expandafter\ifx\csname urlstyle\endcsname\relax
+  \providecommand{\doi}[1]{doi:\discretionary{}{}{}#1}\else
+  \providecommand{\doi}{doi:\discretionary{}{}{}\begingroup
+  \urlstyle{rm}\Url}\fi
+
+\bibitem[{Adamczewski(2026)}]{Adamczewski26}
+\textsc{Tom Adamczewski}.
+\newblock \href{https://reservoir.lean-lang.org/@tadamcz/Erdos548}{{Erdos548}:
+  A machine-checked proof of the {Erd{\H{o}}s--S{\'o}s} conjecture}.
+\newblock 2026.
+
+\bibitem[{Adamczewski and Bloom(2026)}]{FrontierMathErdos}
+\textsc{Tom Adamczewski and Thomas~F. Bloom}.
+\newblock
+  \href{https://epoch.ai/files/frontiermath-erdos.pdf}{\textsc{FrontierMath
+  Erd\H{o}s}}.
+\newblock 2026.
+
+\bibitem[{Ajtai et~al.(2015)Ajtai, Koml{\'o}s, Simonovits, and
+  Szemer{\'e}di}]{AKSS15}
+\textsc{Mikl{\'o}s Ajtai, J{\'a}nos Koml{\'o}s, Mikl{\'o}s Simonovits, and
+  Endre Szemer{\'e}di}.
+\newblock
+  \href{https://imada.sdu.dk/Research/GT2015/Talks/Slides/simonovits.pdf}{Exact
+  solution of the {Erd{\H{o}}s--S{\'o}s} conjecture}.
+\newblock 2015.
+\newblock Lecture slides.
+
+\bibitem[{Besomi et~al.(2019)Besomi, Pavez-Sign{\'e}, and Stein}]{BPS19}
+\textsc{Guido Besomi, Mat{\'\i}as Pavez-Sign{\'e}, and Maya Stein}.
+\newblock \href{https://doi.org/10.1137/18M1210861}{Degree conditions for
+  embedding trees}.
+\newblock \emph{SIAM J. Discrete Math.}, 33(3):1521--1555, 2019.
+
+\bibitem[{Besomi et~al.(2020)Besomi, Pavez-Sign{\'e}, and Stein}]{BPS20}
+\textsc{Guido Besomi, Mat{\'\i}as Pavez-Sign{\'e}, and Maya Stein}.
+\newblock \href{https://doi.org/10.1137/19M1277667}{Maximum and minimum degree
+  conditions for embedding trees}.
+\newblock \emph{SIAM J. Discrete Math.}, 34(4):2108--2123, 2020.
+
+\bibitem[{Besomi et~al.(2021{\natexlab{a}})Besomi, Pavez-Sign{\'e}, and
+  Stein}]{BPSS21}
+\textsc{Guido Besomi, Mat{\'i}as Pavez-Sign{\'e}, and Maya Stein}.
+\newblock \href{https://arxiv.org/abs/1906.10219}{On the {Erd{\H{o}}s--S{\'o}s}
+  conjecture for trees with bounded degree}.
+\newblock \emph{Combinatorics, Probability and Computing}, 30(5):741--761,
+  2021{\natexlab{a}}.
+\newblock arXiv:1906.10219.
+
+\bibitem[{Besomi et~al.(2021{\natexlab{b}})Besomi, Pavez-Sign\'{e}, and
+  Stein}]{BPS21}
+\textsc{Guido Besomi, Mat\'{\i}as Pavez-Sign\'{e}, and Maya Stein}.
+\newblock \href{https://doi.org/10.1017/s0963548320000528}{On the
+  {Erd\H{o}s}--{S\'{o}s} conjecture for trees with bounded degree}.
+\newblock \emph{Combin. Probab. Comput.}, 30(5):741--761, 2021{\natexlab{b}}.
+
+\bibitem[{Brandt and Dobson(1996)}]{BD96}
+\textsc{Stephan Brandt and Edward Dobson}.
+\newblock \href{https://doi.org/10.1016/0012-365X(95)00207-D}{The
+  {Erd{\H{o}}s}-{S}\'os conjecture for graphs of girth {$5$}}.
+\newblock \emph{Discrete Math.}, 150(1-3):411--414, 1996.
+
+\bibitem[{Chung and Graham(1998)}]{CG98}
+\textsc{Fan R.~K. Chung and Ronald~L. Graham}.
+\newblock Erd{\H{o}}s on graphs: {H}is legacy of unsolved problems.
+\newblock A. K. Peters, 1998.
+
+\bibitem[{Davoodi et~al.(2023)Davoodi, Piguet, {\v{R}}ada, and
+  Sanhueza-Matamala}]{DPRS23}
+\textsc{Akbar Davoodi, Diana Piguet, Hanka {\v{R}}ada, and Nicol{\'a}s
+  Sanhueza-Matamala}.
+\newblock \href{https://doi.org/10.5817/CZ.MUNI.EUROCOMB23-045}{Beyond the
+  {E}rd{\H{o}}s--{S}{\'o}s conjecture}.
+\newblock In \emph{Proc. 12th European Conference on Combinatorics, Graph
+  Theory and Applications \textup{({EUROCOMB'23})}}, pp. 328--335. 2023.
+
+\bibitem[{Davoodi et~al.(2026)Davoodi, Piguet, {\v{R}}ada, and
+  Sanhueza-Matamala}]{DPRS26}
+\textsc{Akbar Davoodi, Diana Piguet, Hanka {\v{R}}ada, and Nicol{\'a}s
+  Sanhueza-Matamala}.
+\newblock \href{https://arxiv.org/abs/2603.17755}{The asymptotic version of the
+  {Erd{\H{o}}s--S{\'o}s} conjecture and beyond}.
+\newblock 2026, arXiv:2603.17755.
+
+\bibitem[{Eaton and Tiner(2010)}]{ET10}
+\textsc{Nancy Eaton and Gary Tiner}.
+\newblock On the {Erd{\H{o}}s}-{S}\'os conjecture and graphs with large minimum
+  degree.
+\newblock \emph{Ars Combin.}, 95:373--382, 2010.
+
+\bibitem[{Eaton and Tiner(2013)}]{ET13}
+\textsc{Nancy Eaton and Gary Tiner}.
+\newblock \href{https://doi.org/10.1016/j.disc.2013.04.024}{On the
+  {Erd{\H{o}}s}-{S}\'os conjecture for graphs having no path with {$k+4$}
+  vertices}.
+\newblock \emph{Discrete Math.}, 313(16):1621--1629, 2013.
+
+\bibitem[{Erd{\H{o}}s(1964)}]{Erdos64}
+\textsc{Paul Erd{\H{o}}s}.
+\newblock \href{http://www.renyi.hu/~p\_erdos/1964-06.pdf}{Extremal problems in
+  graph theory}.
+\newblock In \emph{Theory of {G}raphs and its {A}pplications}, pp. 29--36.
+  Publ. House Czechoslovak Acad. Sci., Prague, 1964.
+
+\bibitem[{Erd{\H{o}}s and Gallai(1959)}]{ErdosGallai59}
+\textsc{Paul Erd{\H{o}}s and Tibor Gallai}.
+\newblock \href{https://doi.org/10.1007/BF02024498}{On maximal paths and
+  circuits of graphs}.
+\newblock \emph{Acta Mathematica Academiae Scientiarum Hungaricae},
+  10:337--356, 1959.
+
+\bibitem[{Erd{\H{o}}s and Graham(1975)}]{ErdosGraham75}
+\textsc{Paul Erd{\H{o}}s and Ronald~L. Graham}.
+\newblock On partition theorems for finite graphs.
+\newblock In \emph{Infinite and Finite Sets}, vol.~10 of \emph{Colloquia
+  Mathematica Societatis J{\'a}nos Bolyai}, pp. 515--527. North-Holland, 1975.
+
+\bibitem[{Fan(2013)}]{Fan13}
+\textsc{Genghua Fan}.
+\newblock \href{https://doi.org/10.1016/j.disc.2013.07.021}{The
+  {Erd{\H{o}}s}-{S}\'os conjecture for spiders of large size}.
+\newblock \emph{Discrete Math.}, 313(22):2513--2517, 2013.
+
+\bibitem[{Fan and Sun(2007)}]{FS07}
+\textsc{Genghua Fan and Lingli Sun}.
+\newblock \href{https://doi.org/10.1016/j.disc.2007.03.018}{The
+  {Erd{\H{o}}s}-{S}\'os conjecture for spiders}.
+\newblock \emph{Discrete Math.}, 307(23):3055--3062, 2007.
+
+\bibitem[{G{\"o}rlich and {\.Z}ak(2016)}]{GZ16}
+\textsc{Agnieszka G{\"o}rlich and Andrzej {\.Z}ak}.
+\newblock \href{https://doi.org/10.37236/5341}{On {Erd{\H{o}}s-S{\'o}s}
+  conjecture for trees of large size}.
+\newblock \emph{Electronic J. Combinatorics}, 23(1):\#P1.52, 2016.
+
+\bibitem[{{GPT-6 Astra}(2026)}]{ErdosSosSolution}
+\textsc{{GPT-6 Astra}}.
+\newblock \href{https://www.erdosproblems.com/static/548copy.pdf}{A counting
+  proof for {Erd\H{o}s} problem 548}.
+\newblock 2026.
+
+\bibitem[{Havet et~al.(2020)Havet, Reed, Stein, and Wood}]{HRSW20}
+\textsc{Fr{\'e}d{\'e}ric Havet, Bruce Reed, Maya Stein, and David~R. Wood}.
+\newblock \href{https://doi.org/10.1002/jgt.22511}{A variant of the
+  {E}rd{\H{o}}s--{S}{\'o}s conjecture}.
+\newblock \emph{J. Graph Theory}, 94(1):131--158, 2020.
+
+\bibitem[{Haxell(2001)}]{Haxell01a}
+\textsc{Penny~E. Haxell}.
+\newblock
+  \href{https://doi.org/10.1002/1097-0118(200103)36:3<121::AID-JGT1000>3.0.CO;2-U}{Tree
+  embeddings}.
+\newblock \emph{J. Graph Theory}, 36(3):121--130, 2001.
+
+\bibitem[{Hladk{\'y} et~al.(2017{\natexlab{a}})Hladk{\'y}, Koml{\'o}s, Piguet,
+  Simonovits, Stein, and Szemer{\'e}di}]{HKPSSS-I}
+\textsc{Jan Hladk{\'y}, J{\'a}nos Koml{\'o}s, Diana Piguet, Mikl{\'o}s
+  Simonovits, Maya Stein, and Endre Szemer{\'e}di}.
+\newblock \href{https://doi.org/10.1137/140982842}{The approximate
+  {L}oebl--{K}oml{\'o}s--{S}{\'o}s conjecture {I}: The sparse decomposition}.
+\newblock \emph{SIAM J. Discrete Math.}, 31(2):945--982, 2017{\natexlab{a}}.
+
+\bibitem[{Hladk{\'y} et~al.(2017{\natexlab{b}})Hladk{\'y}, Koml{\'o}s, Piguet,
+  Simonovits, Stein, and Szemer{\'e}di}]{HKPSSS-II}
+\textsc{Jan Hladk{\'y}, J{\'a}nos Koml{\'o}s, Diana Piguet, Mikl{\'o}s
+  Simonovits, Maya Stein, and Endre Szemer{\'e}di}.
+\newblock \href{https://doi.org/10.1137/140982854}{The approximate
+  {L}oebl--{K}oml{\'o}s--{S}{\'o}s conjecture {II}: The rough structure of
+  {LKS} graphs}.
+\newblock \emph{SIAM J. Discrete Math.}, 31(2):983--1016, 2017{\natexlab{b}}.
+
+\bibitem[{Hladk{\'y} et~al.(2017{\natexlab{c}})Hladk{\'y}, Koml{\'o}s, Piguet,
+  Simonovits, Stein, and Szemer{\'e}di}]{HKPSSS-III}
+\textsc{Jan Hladk{\'y}, J{\'a}nos Koml{\'o}s, Diana Piguet, Mikl{\'o}s
+  Simonovits, Maya Stein, and Endre Szemer{\'e}di}.
+\newblock \href{https://doi.org/10.1137/140982866}{The approximate
+  {L}oebl--{K}oml{\'o}s--{S}{\'o}s conjecture {III}: The finer structure of
+  {LKS} graphs}.
+\newblock \emph{SIAM J. Discrete Math.}, 31(2):1017--1071, 2017{\natexlab{c}}.
+
+\bibitem[{Hladk{\'y} et~al.(2017{\natexlab{d}})Hladk{\'y}, Koml{\'o}s, Piguet,
+  Simonovits, Stein, and Szemer{\'e}di}]{HKPSSS-IV}
+\textsc{Jan Hladk{\'y}, J{\'a}nos Koml{\'o}s, Diana Piguet, Mikl{\'o}s
+  Simonovits, Maya Stein, and Endre Szemer{\'e}di}.
+\newblock \href{https://doi.org/10.1137/140982878}{The approximate
+  {L}oebl--{K}oml{\'o}s--{S}{\'o}s conjecture {IV}: Embedding techniques and
+  the proof of the main result}.
+\newblock \emph{SIAM J. Discrete Math.}, 31(2):1072--1148, 2017{\natexlab{d}}.
+
+\bibitem[{Hladk{\'y} et~al.(2015)Hladk{\'y}, Piguet, Simonovits, Stein, and
+  Szemer{\'e}di}]{HPSS15}
+\textsc{Jan Hladk{\'y}, Diana Piguet, Mikl{\'o}s Simonovits, Maya Stein, and
+  Endre Szemer{\'e}di}.
+\newblock \href{https://doi.org/10.3934/era.2015.22.1}{The approximate
+  {L}oebl--{K}oml{\'o}s--{S}{\'o}s conjecture and embedding trees in sparse
+  graphs}.
+\newblock \emph{Electronic Research Announcements in Mathematical Sciences},
+  22:1--11, 2015.
+
+\bibitem[{McLennan(2005)}]{McLennan05}
+\textsc{Andrew McLennan}.
+\newblock \href{https://doi.org/10.1002/jgt.20083}{The {Erd{\H{o}}s}-{S}\'os
+  conjecture for trees of diameter four}.
+\newblock \emph{J. Graph Theory}, 49(4):291--301, 2005.
+
+\bibitem[{Piguet and Stein(2012)}]{PiguetStein12}
+\textsc{Diana Piguet and Maya~Jakobine Stein}.
+\newblock \href{https://doi.org/10.1016/j.jctb.2011.05.002}{An approximate
+  version of the {L}oebl--{K}oml{\'o}s--{S}{\'o}s conjecture}.
+\newblock \emph{J. Combin. Theory Ser. B}, 102(1):102--125, 2012.
+
+\bibitem[{Pokrovskiy(2024)}]{Pokrovskiy24}
+\textsc{Alexey Pokrovskiy}.
+\newblock \href{https://arxiv.org/abs/2409.15191}{Hyperstability in the
+  {Erd{\H{o}}s--S{\'o}s} conjecture}.
+\newblock 2024, arXiv:2409.15191.
+
+\bibitem[{Reed and Stein(2025)}]{ReedStein25}
+\textsc{Bruce Reed and Maya Stein}.
+\newblock \href{https://doi.org/10.1017/S0963548325100084}{Embedding nearly
+  spanning trees}.
+\newblock \emph{Combinatorics, Probability and Computing}, 34(6):927--931,
+  2025.
+
+\bibitem[{Reed and Stein(2026{\natexlab{a}})}]{ReedStein26a}
+\textsc{Bruce Reed and Maya Stein}.
+\newblock \href{https://arxiv.org/abs/2609.05417}{The {Erd{\H{o}}s--S{\'o}s}
+  conjecture in dense graphs}.
+\newblock 2026{\natexlab{a}}, arXiv:2609.05417.
+
+\bibitem[{Reed and Stein(2026{\natexlab{b}})}]{ReedStein26b}
+\textsc{Bruce Reed and Maya Stein}.
+\newblock \href{https://arxiv.org/abs/2609.05411}{The extremal cases of the
+  {Erd{\H{o}}s--S{\'o}s} conjecture}.
+\newblock 2026{\natexlab{b}}, arXiv:2609.05411.
+
+\bibitem[{Rozho{\v{n}}(2019)}]{Rozhon19}
+\textsc{V{\'a}clav Rozho{\v{n}}}.
+\newblock \href{https://doi.org/10.1137/18M118195X}{A local approach to the
+  {E}rd{\H{o}}s--{S}{\'o}s conjecture}.
+\newblock \emph{SIAM J. Discrete Math.}, 33(2):643--664, 2019.
+
+\bibitem[{Saclé and Woźniak(1997)}]{SW97}
+\textsc{Jean-François Saclé and Mariusz Woźniak}.
+\newblock \href{https://doi.org/10.1006/jctb.1997.1758}{The {Erd\H{o}s-S{\'o}s}
+  conjecture for graphs without {$C_4$}}.
+\newblock \emph{J. Combin. Theory Ser. B}, 70(2):367--372, 1997.
+
+\bibitem[{Sidorenko(1989)}]{Sidorenko89}
+\textsc{Alexander~F. Sidorenko}.
+\newblock \href{https://doi.org/10.1007/BF02124681}{Asymptotic solution for a
+  new class of forbidden {$r$}-graphs}.
+\newblock \emph{Combinatorica}, 9(2):207--215, 1989.
+
+\bibitem[{Slater et~al.(1985)Slater, Teo, and Yap}]{STY85}
+\textsc{P.~J. Slater, S.~K. Teo, and H.~P. Yap}.
+\newblock \href{https://doi.org/10.1002/jgt.3190090203}{Packing a tree with a
+  graph of the same size}.
+\newblock \emph{J. Graph Theory}, 9(2):213--216, 1985.
+
+\bibitem[{Stein(2020)}]{Stein20}
+\textsc{Maya Stein}.
+\newblock \href{https://doi.org/10.1007/978-3-030-55857-4_19}{Tree containment
+  and degree conditions}.
+\newblock In \textsc{Andrei~M. Raigorodskii and Michael~Th. Rassias}, eds.,
+  \emph{Discrete mathematics and applications}, vol. 165 of \emph{Springer
+  Optim. Appl.}, pp. 459--486. Springer, 2020.
+
+\bibitem[{Sun(2007)}]{Sun07}
+\textsc{Lingli Sun}.
+\newblock The {Erd{\H{o}}s}-{S}\'os conjecture for spiders of diameter 9.
+\newblock \emph{Australas. J. Combin.}, 39:27--37, 2007.
+
+\bibitem[{Tiner(2010)}]{Tiner10}
+\textsc{Gary Tiner}.
+\newblock On the {Erd{\H{o}}s}-{S}\'os conjecture for graphs on {$n=k+3$}
+  vertices.
+\newblock \emph{Ars Combin.}, 95:143--150, 2010.
+
+\bibitem[{Wang et~al.(2000)Wang, Li, and Liu}]{WLL00}
+\textsc{Min Wang, Guo-jun Li, and Ai-de Liu}.
+\newblock A result of {Erd{\H{o}}s}-{S}\'os conjecture.
+\newblock \emph{Ars Combin.}, 55:123--127, 2000.
+
+\bibitem[{Wo{\'z}niak(1996)}]{Wozniak96}
+\textsc{Mariusz Wo{\'z}niak}.
+\newblock
+  \href{https://doi.org/10.1002/(SICI)1097-0118(199602)21:2<229::AID-JGT13>3.3.CO;2-2}{On
+  the {Erd{\H{o}}s}-{S}\'os conjecture}.
+\newblock \emph{J. Graph Theory}, 21(2):229--234, 1996.
+
+\bibitem[{Yin and Li(2004)}]{YL04}
+\textsc{Jian-hua Yin and Jiong-sheng Li}.
+\newblock \href{https://doi.org/10.1007/s10255-004-0178-7}{The
+  {Erd{\H{o}}s}-{S}\'os conjecture for graphs whose complements contain no
+  {$C_4$}}.
+\newblock \emph{Acta Math. Appl. Sin. Engl. Ser.}, 20(3):397--400, 2004.
+
+\bibitem[{Zhou(1984)}]{Zhou84}
+\textsc{Bing Zhou}.
+\newblock A note on the {Erd{\H{o}}s}-{S}\'os conjecture.
+\newblock \emph{Acta Math. Sci. (English Ed.)}, 4(3):287--289, 1984.
+
+\end{thebibliography}
+
+\end{document}

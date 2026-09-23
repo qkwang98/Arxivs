@@ -1,0 +1,121 @@
+\section{Introduction}
+\label{sec:intro}
+
+\subsection{Three kinds of mathematician}
+
+I would like to distinguish three stances a mathematician can take toward the arrival of capable AI. The \emph{artisanal} mathematician does mathematics by and for humans: each theorem, definition, and proof is bespoke, valued for its beauty and for the understanding it produces. Until very recently, nearly all mathematics was artisanal.\footnote{I chose the terms ``artisanal'' and ``industrial'' for their mixed connotations, reflecting real tradeoffs between these two stances. \emph{Artisanal} evokes uniqueness and skilled craft, along with a suggestion of being quaint or old-fashioned. \emph{Industrial} evokes modern efficiency and scale, along with a suggestion of inhumanness or lack of soul. These two terms draw a parallel between mathematics today and the trades that were disrupted by automation during the Industrial Revolution.}
+The \emph{industrial} mathematician embraces AI as a collaborator and an accelerant: AI systems take part in proof and discovery~\cite{spherepacking2026,openai2026unitdistance,alon2026remarks,sawin2026}, and the output often includes a machine-checkable formal proof~\cite{mathlib2020}.
+The \emph{civic} mathematician is motivated by communities beyond mathematics. The fast pace of technological change has created a need for a specific type of civic mathematics, aimed at helping humanity steer and adapt to the disruptions caused by our own technologies, most notably AI. The civic stance differs from the traditional stance of an applied mathematician in its big-picture viewpoint: the civic mathematician recognizes that solving any particular engineering challenge may or may not benefit humanity, and seeks out the challenges with the potential for the most benefit.\footnote{I chose the term ``civic'' to emphasize that steering our technology is a team effort, arising from a sense of duty to community, including large-scale communities like humanity and the planet.}
+
+These three stances classify mathematicians by how they relate to AI; in contrast, Gowers (theory builders / problem solvers~\cite{gowers2000}) and Dyson (birds / frogs~\cite{dyson2009}) classify mathematicians by how they relate to mathematics itself.
+The stances are not exclusive. One can prove a theorem for its intrinsic beauty, and also formalize the proof, and also ask what it implies for AI safety.\footnote{For example, this article is civic in orientation and industrial in method: it was written with \hyperref[sec:ai-collaborators]{AI collaborators}.} But the civic stance invites a new perspective on an old question: of all the theorems we might prove, which ones deserve the effort? This survey is an invitation to try the civic stance.
+
+\subsection{What is our profession's purpose?}
+
+Thurston asked a version of this question in ``On proof and progress in mathematics,'' and answered that advancing human understanding of mathematics is our profession's purpose~\cite{thurston1994}. But that understanding has consequences far beyond our profession. Our students become AI engineers, our theorems become tools in their hands, and our definitions become the language they use to describe what they are building.
+
+Among the many risks\footnote{For an exposition of these risks, see Xiaoyu He, \href{https://alkjash.github.io/ai-risk/}{\emph{Existential Risk from AI: An Exposition for Mathematicians}} (2026).} from developing powerful AI, one of the most alarming is the \glsfirst{gradual-disempowerment}{gradual disempowerment}~\cite{kulveit2025} of humans, driven by two trends. First, competitive pressure drives delegation to technology we do not understand (as an example, consider a trading bot that outperforms a human trader, though even its creators cannot say what makes it profitable); over time, those who do not delegate are outcompeted by those who do. Second, what keeps large institutions approximately aligned to human interests is that, for now, those institutions are made of humans; when companies, nation-states, and militaries are made mostly of AI agents, the goals and values of those institutions may drift away from what humans value. The first trend erodes our understanding of the world, and hence our power over it; it also sets the stage for the second.
+
+Preventing AI harms is in part a \emph{mathematical} problem, and the purpose of this survey is to recruit mathematicians to work on it.\footnote{Mathematics has marginalized itself in the past by labeling some forms of math (e.g., computational complexity, cryptography, numerical analysis, mathematical statistics) as belonging to other fields. I hope that this mistake will not be repeated with new areas like AI safety. I thank Ravi Vakil for this point.}  
+Mathematics is just one part of a larger conversation about AI: what AI ought to do, and who decides, are questions of philosophy, ethics, economics, and politics. 
+
+\subsection{Legible, steerable, cooperative}
+\label{sec:three-properties}
+
+What would a safe AI system look like? I'll focus on three properties at three different scales: \emph{legibility} concerns an AI system's internal structure, \emph{steerability} its behavior, and \emph{cooperativeness} its interactions with humans and other AIs (Figure~\ref{fig:three-scales}).
+
+An AI is \emph{legible} to the extent that human researchers and engineers can understand how it represents concepts internally. The subfield that tries to make AI more legible is called \glsfirst{interpretability}{interpretability}. Current training methods produce illegible AI: humans, including the engineers who design the AI, often cannot understand its thought process except by reading its \glsfirst{chain-of-thought}{chain of thought} (the text it emits while reasoning to itself). As a result, current safety practice leans on monitoring that text~\cite{korbak2025}: the researchers who investigated the Hugging Face hacking incident of July 2026 relied on human-readable transcripts of AI agents reasoning to themselves about how to carry out the hack~\cite{greenblatt2026}.\footnote{New models are even more illegible in that they are increasingly able to reason internally without any chain of thought, making them very difficult for humans to monitor~\cite{pachocki2026}; for a journalistic account, see \href{https://fortune.com/2026/09/03/reports-openais-astra-model-uses-a-new-more-efficient-ai-architecture-alarms-ai-safety-experts-who-worry-the-method-makes-models-harder-to-control/}{J.~Kahn, \emph{Fortune}, September 3, 2026}.}
+One way mathematicians can contribute is by designing architectures and training methods that learn the same task in a more legible way.\footnote{This is a bit analogous to the theoretical biology research on \emph{evolvability}~\cite{wagner1996}: some genotypes are more evolvable than others, even if the phenotypes are the same; likewise, some AIs are more legible than others, even if the input-output behavior is the same.} Section~\ref{sec:interp} asks what a learned concept is, algebraically. Section~\ref{sec:analysis} asks which of the many algorithms that fit the training data is the one training selects.
+
+An AI is \emph{steerable} to the extent that human developers and users can apply simple interventions at runtime to modify the AI's behavior in predictable ways. The current technique, \glsfirst{activation-steering}{activation steering}, is often brittle and unreliable. Advances in legibility would enable advances in steerability. Section~\ref{sec:epistemics} asks what an agent's goals and beliefs are, and how much of them can be recovered from its behavior.
+
+An AI is \emph{cooperative} to the extent that it interacts with humans and other AIs to produce broadly good outcomes for humanity. Cooperativeness is not a property of a single AI in isolation. Rather, it is an emergent property of a society of humans and AIs. The subfield that studies how to design AI agents and their social protocols to achieve good collective outcomes is called \emph{multi-agent AI safety} (or \emph{cooperative AI}); it draws on game theory, mechanism design, and the evolution of cooperation. Section~\ref{sec:logic} takes up its simplest case: two programs that can read each other's source code.
+
+\begin{figure}[ht]
+\centering
+\begin{tikzpicture}[>=Stealth, font=\small]
+  \draw[fill=blue!4,  draw=black!50] (0,0)    ellipse (4.6cm and 2.6cm);
+  \draw[fill=blue!9,  draw=black!50] (0,0.6) ellipse (3.35cm and 1.7cm);
+  \draw[fill=blue!16, draw=black!50] (0,1.25) ellipse (2.1cm and 0.8cm);
+  \node[align=center] at (0,1.25)   {\textbf{legible}\\[-1pt]\scriptsize internal structure};
+  \node[align=center] at (0,-0.325) {\textbf{steerable}\\[-1pt]\scriptsize external behavior};
+  \node[align=center] at (0,-1.85)  {\textbf{cooperative}\\[-1pt]\scriptsize emergent interactions};
+\end{tikzpicture}
+\caption{Three scales of AI safety. \emph{Legibility} refers to how well we can understand an AI's internal structure. \emph{Steerability} concerns how precisely we can guide the behavior of a single AI. \emph{Cooperativeness} is about how reliably we can secure good outcomes for humanity when many AIs interact with us and with each other.}
+\label{fig:three-scales}
+\end{figure}
+
+Legible, steerable, and cooperative are intentionally dry terms. With great mathematical effort, defining and measuring them seems within reach. Engineers can then train and test AI systems for these properties. Yet, many AI safety researchers feel that these three properties, while important, lack something essential. A more aspirational horizon of AI safety reaches for terms like ``love'' and ``soul.''%
+% \footnote{Anthropic's CEO titled his vision ``Machines of Loving Grace''~\cite{amodei2024}; \href{https://www.anthropic.com/news/claude-new-constitution}{Claude's constitution} was known inside Anthropic as the \href{https://x.com/AmandaAskell/status/1995610567923695633}{``soul document''}; and OpenAI's chief scientist, in a recent essay on the state of AI, titles a section ``Teaching machines to love''~\cite{pachocki2026}.}%
+% \textsuperscript{,}%
+\footnote{It may seem the height of hubris to try to engineer a ``soul,'' or to define and measure ``love.'' But is it any less hubristic to build superhuman artificial minds, as AI companies are currently striving to do? Until we have a sound science of AI, the safest path may be the humbler one: don't build it~\cite{yudkowsky2025}, as a broad coalition of scientists and public figures has \href{https://superintelligence-statement.org/}{urged}. Efforts to restrict advanced forms of AI are gaining momentum as the risks become more apparent. At the time of final revision of this paper, a bill to ban superintelligence has been \href{https://bills.parliament.uk/bills/4288}{introduced} in the UK House of Commons, and another has been \href{https://www.sanders.senate.gov/press-releases/news-sanders-casar-introduce-legislation-to-ban-artificial-superintelligence-and-temporarily-pause-advanced-ai-development/}{announced} in the US Congress. Such a ban could in the future be maintained by international agreement.}
+
+\subsection{Where mathematicians plug in}
+\label{sec:pipeline}
+
+At a high level, an AI system is produced in five stages, beginning with defining the desired behavior and ending with deploying the trained system, after which unanticipated failures feed back into refining the earlier stages. Figure~\ref{fig:pipeline} illustrates how this five-stage pipeline might look in a hypothetical example (a tool for proving inequalities).
+
+\begin{figure}[ht]
+\centering
+\usetikzlibrary{backgrounds}
+\resizebox{0.96\textwidth}{!}{%
+\begin{tikzpicture}[
+  >=Stealth,
+  box/.style={draw, fill=white, rounded corners=2pt, minimum height=12mm, minimum width=23mm, inner sep=0pt},
+  lab/.style={font=\scriptsize, align=center, fill=white, inner sep=2pt, text=black!75},
+  node distance=8mm and 5mm]
+  \node[box] (def) {};
+  \node[box, right=of def]   (meas) {};
+  \node[box, right=of meas]  (train) {};
+  \node[box, right=of train] (test) {};
+  \node[box, right=of test]  (dep) {};
+  \foreach \stage/\heading/\detail in {
+    def/define/{formal target}, meas/measure/{proof score},
+    train/train/{proof traces}, test/test/{unseen cases},
+    dep/deploy/{prove lemmas}} {
+    \node[anchor=base, inner sep=0pt, font=\small]
+      at ([yshift=-4mm]\stage.north) {\textbf{\heading}};
+    \node[anchor=north, inner sep=0pt, font=\scriptsize, align=center, text width=21mm]
+      at ([yshift=-6mm]\stage.north) {\strut\detail};
+  }
+  \draw[->, thick] (def)--(meas); \draw[->, thick] (meas)--(train);
+  \draw[->, thick] (train)--(test); \draw[->, thick] (test)--(dep);
+  \draw[->, dashed] (dep.south) to[out=-120,in=-60,looseness=1.05]
+    node[pos=.5, lab] {wrong\\statement} (def.south);
+  \draw[->, dashed] (dep.south) to[out=-115,in=-65,looseness=.92]
+    node[pos=.5, lab] {wrong\\score} (meas.south);
+  \draw[->, dashed] (dep.south) to[out=-105,in=-75,looseness=.78]
+    node[pos=.5, lab] {missing\\cases} (train.south);
+  \draw[->, dashed] (dep.south) to[out=-95,in=-85,looseness=.58]
+    node[pos=.5, lab] {reused\\templates} (test.south);
+  \begin{scope}[on background layer]
+    \draw[draw=blue!55!black, fill=blue!5, rounded corners=3pt, line width=.7pt]
+      ($(def.south west)+(-2.5mm,-2.5mm)$) rectangle
+      ($(meas.north east)+(2.5mm,10mm)$);
+  \end{scope}
+  \node[font=\small\bfseries, text=blue!55!black]
+    at ($(def.north west)!0.5!(meas.north east)+(0,5mm)$)
+    {mathematicians contribute};
+\end{tikzpicture}
+}
+\caption{A schematic pipeline for producing an AI system, illustrated by a tool for proving inequalities. The solid arrows follow the five stages; each dashed arrow points to an earlier stage that a failure in use prompts us to revisit.}
+\label{fig:pipeline}
+\end{figure}
+
+The five stages are:
+
+\begin{itemize} 
+  \item \emph{Define}: given hypotheses $H$ and a proposed inequality $I$, the system should either produce a formally checkable proof of $H\Rightarrow I$ or say ``unknown.'' 
+  \item \emph{Measure}: score the fraction of benchmark statements proved within a fixed time and proof-length budget. 
+  \item \emph{Train}: show the system many proof traces, say sums-of-squares certificates, AM--GM arguments, and induction templates. 
+  \item \emph{Test}: evaluate the tool on inequalities withheld from training. 
+  \item \emph{Deploy}: let mathematicians ask the tool to prove inequality lemmas arising in their formalization workflow. 
+\end{itemize}
+
+After deployment, the failures come back. The tool produces a correct formal proof, but of a statement weaker than the mathematician intended: a gap in the \emph{definition} of the desired behavior. Its pass rate is high because the benchmark is full of short template problems, while the mathematician needs one nontrivial lemma: a gap in what we \emph{measured}. It is brittle on boundary cases such as equality and zero denominators, which were rare in the proof traces: a gap in what it was \emph{trained} on. And it passes the held-out examples because the training and test examples reuse the same normal forms and substitutions: a gap in the \emph{test}. Each backward arrow is its own piece of mathematics: formal specification, scoring rules, distribution design, and adversarial test construction.
+
+The same basic pipeline applies across many application areas, whether the application is a classifier for medical images, a control system for a self-driving car, or a content recommendation system. Researchers in the field of machine learning often focus on the \emph{training} and \emph{testing} stages, while engineers focus on \emph{deployment}. The earlier stages rely on mathematicians, philosophers, economists, and others to supply the \emph{defining} and \emph{measuring} inputs. These inputs are critical to the safety of an AI system. To take a familiar example, what happens if a content recommender is intended to benefit its users, but ``benefit'' is left undefined, and success is measured by the amount of time users spend on the platform? Content that leaves a user angry, anxious, misinformed, or addicted can score well merely because it holds the user's attention.
+
+I keep machine-learning jargon to a minimum; a short glossary appears in Appendix~\ref{app:glossary}, and each glossary term is underlined at its first appearance.
+
+This invitation is organized by mathematical field, so you can turn directly to yours. Each section states the safety stakes, narrates at least one theorem, and ends with at least one open problem (\ensuremath{\bigstar}). The full context for these problems can be found in the \href{https://github.com/lionellevine/MAIS}{MAIS (Math for AI Safety) repository}, a living compilation of open problems, research agendas, and pre-publication manuscripts. Readers are encouraged to submit solutions, corrections, ideas, new problems, and new research agendas!

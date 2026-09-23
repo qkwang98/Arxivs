@@ -1,0 +1,13 @@
+import Bridge.Normalization
+import Bridge.CentralAveraging
+import Bridge.CharacterProjector
+import Bridge.ProjectorConvention
+
+#print axioms Bridge.Normalization.bridge_iff_normalizedBridge
+#print axioms Bridge.Normalization.pdc4433_of_bridge
+#print axioms Bridge.CentralAveraging.centralCoefficient_character_expansion
+#print axioms Bridge.CentralAveraging.character_weighted_pairings_nonneg
+#print axioms Bridge.CharacterProjector.weightedOperator_commutes
+#print axioms Bridge.CharacterProjector.characterProjector_posSemidef
+#print axioms Bridge.CharacterProjector.characterProjector_eq_inverse_sum
+#print axioms Bridge.ProjectorConvention.characterOperator_matrix_eq_characterProjector

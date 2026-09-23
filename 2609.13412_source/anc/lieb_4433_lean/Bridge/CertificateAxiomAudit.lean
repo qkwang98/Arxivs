@@ -1,0 +1,15 @@
+import Bridge.Certificate
+
+#print axioms LiebBridge.Certificate.rowsComputedCheck
+#print axioms LiebBridge.Certificate.computedCoeff_eq_storedCoeff_of_partition
+#print axioms LiebBridge.Certificate.aggregateStoredIdentity
+#print axioms LiebBridge.Certificate.aggregateComputedIdentity
+#print axioms LiebBridge.Certificate.realWeightedIdentity
+#print axioms LiebBridge.Certificate.bridge_of_witness_nonnegative
+#print axioms LiebBridge.Certificate.mem_partitions14_iff
+#print axioms LiebBridge.Certificate.partitions14_nodup
+#print axioms LiebBridge.Certificate.witnessMetadataCheck
+#print axioms LiebBridge.Certificate.tableauSafetyCheck
+#print axioms LiebBridge.Certificate.rowEntriesPartitionCheck
+#print axioms LiebBridge.Certificate.hookDegree_square_sum
+#print axioms LiebBridge.Certificate.rowHookDegreeCancellationCheck
