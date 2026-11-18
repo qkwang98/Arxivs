@@ -1,0 +1,440 @@
+\newif\ifdarkmode %add new option
+\newif\ifjapanese
+
+\DeclareOption{dark}{\darkmodetrue}
+\DeclareOption{japanese}{\japanesetrue}
+\DeclareOption*{\PackageWarning{mymacros_english_paper}{Unknown option `\CurrentOption'}}
+
+\ProcessOptions\relax
+
+%% Necessary to adjust line spacing
+\def\mapdown#1{\Big\downarrow\rlap
+{$\vcenter{\hbox{$\scriptstyle#1$}}$}}
+
+% setspaceパッケージで行間を適切に管理（脚注などに影響を与えない現代的な方法）
+\usepackage{setspace}
+\setstretch{1.2} 
+
+%\usepackage{luatexja} % Needed for Overleaf
+
+% 重複パッケージ（enumerate, graphics, color）を削除・整理
+\usepackage{amscd,amssymb,amsopn,amsmath,amsthm,amsfonts,verbatim,calc}
+\usepackage{etaremune} % reverse enumerate
+\usepackage{stmaryrd} % inverse \mapsto
+
+% ドライバオプション[dvips]を削除（TeX Live 2025等の自動判定に任せる）
+\usepackage{graphicx}
+\usepackage{url}
+
+\usepackage{geometry}
+\geometry{margin=1in}
+
+%prism
+\usepackage{relsize}
+\usepackage[bbgreekl]{mathbbol}
+
+% colorを削除しxcolorに統一
+\usepackage{xcolor}
+
+\newcommand{\syusei}[1]{{\color{red} #1}}
+\renewcommand{\syusei}[1]{{#1}}
+\newcommand{\teisei}[1]{{\color{red} #1}}
+%\renewcommand{\teisei}[1]{{#1}}
+\newcommand{\past}[1]{{\color{blue} #1}}
+\newcommand{\forward}[1]{{\color{red} #1}}
+\newcommand{\cyan}{\color{cyan}}
+\newcommand{\blue}{\color{blue}}
+\newcommand{\cred}{\color{red}}
+\newcommand{\purple}{\color{purple}}
+
+\usepackage{mathtools} %\coloneqq etc
+\usepackage{colonequals} %\colonequals
+
+% 参照された式のみ番号を表示する設定を有効化
+% 注意: showkeys/showlabelsと併用すると、参照されていない式のラベルが表示されない場合があります
+% \mathtoolsset{showonlyrefs=true} 
+
+
+\usepackage{tikz-cd}
+%\usepackage{luatexjp}
+\makeatletter
+\global\let\tikz@ensure@dollar@catcode=\relax
+\makeatother
+
+%Displaystyle in tikzcd
+\tikzcdset{
+  cells={font=\everymath\expandafter{\the\everymath\displaystyle}},
+}
+
+\RequirePackage[l2tabu, orthodox]{nag} % Warn if old writing style is used.
+\usepackage[all, warning]{onlyamsmath} % Warn if you use a math environment other than amsmath
+
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{lmodern}
+
+% footnote settings
+\usepackage{lmodern}
+
+% document language
+\ifjapanese
+  % (japanese モードでは babel を読み込まない)
+\else
+  \usepackage[english]{babel}
+\fi
+\usepackage[autostyle]{csquotes}
+
+% Make \cites behave like \cite and support the trailing-postnote syntax
+%   \cite{key}*{postnote}
+% without swallowing an ordinary interword space after \cite{key}.
+\makeatletter
+
+% Unlike \@ifnextchar, this look-ahead test does not skip spaces.
+% Thus an immediately following `*' selects the extended syntax,
+% while an ordinary space is left untouched.
+\long\def\mep@ifnextchar@noskip#1#2#3{%
+  \let\mep@reserved@d=#1%
+  \def\mep@reserved@a{#2}%
+  \def\mep@reserved@b{#3}%
+  \futurelet\mep@let@token\mep@ifnch@noskip
+}
+\def\mep@ifnch@noskip{%
+  \ifx\mep@let@token\mep@reserved@d
+    \let\mep@reserved@c\mep@reserved@a
+  \else
+    \let\mep@reserved@c\mep@reserved@b
+  \fi
+  \mep@reserved@c
+}
+
+\AtBeginDocument{%
+  \let\mep@origcite\cite
+  \renewcommand{\cite}[2][]{%
+    \mep@ifnextchar@noskip*%
+      {\mep@cite@withpostnote{#1}{#2}}%
+      {\mep@cite@base{#1}{#2}}%
+  }%
+  \@ifundefined{cites}%
+    {\newcommand{\cites}{\cite}}%
+    {\renewcommand{\cites}{\cite}}%
+}
+
+\newcommand{\mep@cite@base}[2]{%
+  \if\relax\detokenize{#1}\relax
+    \mep@origcite{#2}%
+  \else
+    \mep@origcite[#1]{#2}%
+  \fi
+}
+
+\def\mep@cite@withpostnote#1#2*#3{%
+  \if\relax\detokenize{#1}\relax
+    \mep@cite@base{#3}{#2}%
+  \else
+    \mep@origcite[#1, #3]{#2}%
+  \fi
+}
+
+\makeatother
+
+\usepackage{mathrsfs} %  \mathscr
+
+\usepackage{docmute} % To include .sty files without preamble
+
+\usepackage{xr-hyper} % cross-reference between documents with hyperref
+
+%===========================================================
+% Hyperref Settings
+%===========================================================
+\usepackage{hyperref}
+\ifdarkmode % darkmode link color
+\pagecolor[rgb]{0.04,0.04,0.08} % 背景色を黒にする。
+\color[rgb]{1,1,1} % 文字色を白にする。
+  \hypersetup{
+    % dvipdfmx, % 自動判定に任せるため削除
+    bookmarks=true,
+    bookmarksnumbered=true,
+    pdftitle={}, 
+    pdfsubject={}, 
+    pdfauthor={}, 
+    pdfkeywords={}, 
+    pdfusetitle, 
+    colorlinks=true, 
+    citecolor=yellow, 
+    linkcolor=orange, 
+    urlcolor=red, 
+    bookmarksnumbered 
+  }
+\else % normalmode link color
+  \hypersetup{
+    % dvipdfmx, % 自動判定に任せるため削除
+    % bookmarks=true,
+    bookmarksnumbered=true,
+    pdftitle={}, 
+    pdfsubject={}, 
+    pdfauthor={}, 
+    pdfkeywords={}, 
+    % pdfusetitle, 
+    colorlinks=true, 
+    citecolor=violet, 
+    linkcolor=blue, 
+    urlcolor=purple, 
+    bookmarksnumbered 
+  }
+\fi
+% \usepackage{pxjahyper} % Japanese bookmarks
+
+\usepackage{lscape} % Table Rotation
+\usepackage{multirow} % Required to create tables
+
+%===========================================================
+% Cleveref & Showlabels (Order is important!)
+%===========================================================
+% 1. cleveref を読み込む
+\RequirePackage{cleveref}
+\crefformat{enumi}{(#2#1#3)} 
+
+% 2. aliascnt を読み込む (CrefのTheorem化を防ぐため)
+\usepackage{aliascnt}
+
+% 3. showlabels は最後に読み込む (showkeysは削除済み)
+% 必要なければコメントアウト
+%\usepackage[inline]{showlabels} 
+
+\usepackage{slashed}
+%Diffracted Hodge complexを書くために加えました(2016/10/25)
+
+%===========================================================
+% THEOREM ENVIRONMENTS (Using aliascnt for correct Cref)
+%===========================================================
+
+%%% Japanese Option Check
+\ifjapanese
+  \theoremstyle{definition}
+\fi
+
+% --- Parent Counter ---
+\newtheorem{theorem}{Theorem}[section]
+\crefname{theorem}{Theorem}{Theorems}
+
+% --- Aliased Environments (Sharing counter but distinct for Cref) ---
+
+% Lemma
+\newaliascnt{lemma}{theorem}
+\newtheorem{lemma}[lemma]{Lemma}
+\aliascntresetthe{lemma}
+\crefname{lemma}{Lemma}{Lemmas}
+
+% Proposition
+\newaliascnt{proposition}{theorem}
+\newtheorem{proposition}[proposition]{Proposition}
+\aliascntresetthe{proposition}
+\crefname{proposition}{Proposition}{Propositions}
+
+% Corollary
+\newaliascnt{corollary}{theorem}
+\newtheorem{corollary}[corollary]{Corollary}
+\aliascntresetthe{corollary}
+\crefname{corollary}{Corollary}{Corollaries}
+
+% Fact
+\newaliascnt{fact}{theorem}
+\newtheorem{fact}[fact]{Fact}
+\aliascntresetthe{fact}
+\crefname{fact}{Fact}{Facts}
+
+% Key
+\newaliascnt{key}{theorem}
+\newtheorem{key}[key]{Key}
+\aliascntresetthe{key}
+\crefname{key}{Key}{Keys}
+
+% Setting
+\newaliascnt{setting}{theorem}
+\newtheorem{setting}[setting]{Setting}
+\aliascntresetthe{setting}
+\crefname{setting}{Setting}{Settings}
+
+% Claim
+\newaliascnt{claim}{theorem}
+\newtheorem{claim}[claim]{Claim}
+\aliascntresetthe{claim}
+\crefname{claim}{Claim}{Claims}
+
+% Addendum
+\newaliascnt{addendum}{theorem}
+\newtheorem{addendum}[addendum]{Addendum}
+\aliascntresetthe{addendum}
+\crefname{addendum}{Addendum}{Addendums}
+
+% Conjecture
+\newaliascnt{conjecture}{theorem}
+\newtheorem{conjecture}[conjecture]{Conjecture}
+\aliascntresetthe{conjecture}
+\crefname{conjecture}{Conjecture}{Conjectures}
+
+% --- Independent Environments ---
+\newtheorem{maintheorem}{Main Theorem}
+\newtheorem{question}{Question}
+\newtheorem{problem}{Problem}
+
+% --- Alphabetical Theorems ---
+\newtheorem{maintheorema}{Main Theorem A}
+\renewcommand{\themaintheorema}{}
+\Crefformat{maintheorema}{Main Theorem A}
+
+\newtheorem{maintheoremb}{Main Theorem B}
+\renewcommand{\themaintheoremb}{}
+\Crefformat{maintheoremb}{Main Theorem B}
+
+\newtheorem{maintheoremc}{Main Theorem C}
+\renewcommand{\themaintheoremc}{}
+\Crefformat{maintheoremc}{Main Theorem C}
+
+\newtheorem{maintheoremd}{Main Theorem D}
+\renewcommand{\themaintheoremd}{}
+\Crefformat{maintheoremd}{Main Theorem D}
+
+\newtheorem{maintheoreme}{Main Theorem E}
+\renewcommand{\themaintheoreme}{}
+\Crefformat{maintheoreme}{Main Theorem E}
+
+\newtheorem{theoremA}{Theorem}
+\renewcommand{\thetheoremA}{\Alph{theoremA}}
+\crefname{theoremA}{Theorem}{Theorems}
+
+% --- Definition Style ---
+\theoremstyle{definition}
+
+% Definition
+\newaliascnt{definition}{theorem}
+\newtheorem{definition}[definition]{Definition}
+\aliascntresetthe{definition}
+\crefname{definition}{Definition}{Definitions}
+
+% Remark
+\newaliascnt{remark}{theorem}
+\newtheorem{remark}[remark]{Remark}
+\aliascntresetthe{remark}
+\crefname{remark}{Remark}{Remarks}
+
+% Construction
+\newaliascnt{construction}{theorem}
+\newtheorem{construction}[construction]{Construction}
+\aliascntresetthe{construction}
+\crefname{construction}{Construction}{Constructions}
+
+% Observation
+\newaliascnt{observation}{theorem}
+\newtheorem{observation}[observation]{Observation}
+\aliascntresetthe{observation}
+\crefname{observation}{Observation}{Observations}
+
+% Warning
+\newaliascnt{warning}{theorem}
+\newtheorem{warning}[warning]{Warning}
+\aliascntresetthe{warning}
+\crefname{warning}{Warning}{Warnings}
+
+% Notation (Capital N)
+\newaliascnt{Notation}{theorem}
+\newtheorem{Notation}[Notation]{Notation}
+\aliascntresetthe{Notation}
+\crefname{Notation}{Notation}{Notations}
+
+\newtheorem*{Lemma}{Lemma}
+
+% --- Remark Style ---
+\theoremstyle{remark}
+
+% Discussion
+\newaliascnt{discussion}{theorem}
+\newtheorem{discussion}[discussion]{Discussion}
+\aliascntresetthe{discussion}
+\crefname{discussion}{Discussion}{Discussions}
+
+% Example
+\newaliascnt{example}{theorem}
+\newtheorem{example}[example]{Example}
+\aliascntresetthe{example}
+\crefname{example}{Example}{Examples}
+
+% Slogan
+\newaliascnt{slogan}{theorem}
+\newtheorem{slogan}[slogan]{Slogan}
+\aliascntresetthe{slogan}
+\crefname{slogan}{Slogan}{Slogans}
+
+% Acknowledgement (No counter)
+\newtheorem{acknowledgement}{Acknowledgement}
+\renewcommand{\theacknowledgement}{}
+
+% Notation (Lower n)
+\newaliascnt{notation}{theorem}
+\newtheorem{notation}[notation]{Notation}
+\aliascntresetthe{notation}
+\crefname{notation}{Notation}{Notations}
+
+
+\newenvironment{claimproof}[0]
+  {%
+   \paragraph{\textit{Proof}}%
+  }
+  {%
+    \hfill$\blacksquare$%
+  }
+
+\numberwithin{equation}{section}
+
+\DeclareSymbolFontAlphabet{\mathbb}{AMSb} 
+\DeclareSymbolFontAlphabet{\mathbbl}{bbold}
+\newcommand{\prism}{{\mathlarger{\mathbbl{\Delta}}}}
+
+%===========================================================
+% List Configurations (enumitem)
+%===========================================================
+\RequirePackage{enumitem}
+\setlist[itemize]{labelsep=5pt}   % jsclasses default: 0.5zw (l. 1814)
+\setlist[enumerate]{labelsep=5pt} % jsclasses default: 0.5zw (l. 1814)
+\setlist[description]{labelsep=11pt} % jsclasses default: 1zw   (l. 1864)
+
+\renewcommand{\labelenumi}{(\arabic{enumi})} % add parences to first level enumerate
+
+\newlist{enumarabic}{enumerate}{5}
+\setlist[enumarabic]{label=\arabic*,labelsep=5pt}
+\newlist{enumarabicd}{enumerate}{5}
+\setlist[enumarabicd]{label=\arabic*.,labelsep=5pt}
+\newlist{enumarabicp}{enumerate}{5}
+\setlist[enumarabicp]{label=(\arabic*),labelsep=5pt}
+
+\newlist{enumAlph}{enumerate}{5}
+\setlist[enumAlph]{label=\Alph*,labelsep=5pt}
+\newlist{enumAlphd}{enumerate}{5}
+\setlist[enumAlphd]{label=\Alph*.,labelsep=5pt}
+\newlist{enumAlphp}{enumerate}{5}
+\setlist[enumAlphp]{label=(\Alph*),labelsep=5pt}
+
+\newlist{enumalph}{enumerate}{5}
+\setlist[enumalph]{label=\alph*,labelsep=5pt}
+\newlist{enumalphd}{enumerate}{5}
+\setlist[enumalphd]{label=\alph*.,labelsep=5pt}
+\newlist{enumalphp}{enumerate}{5}
+\setlist[enumalphp]{label=(\alph*),labelsep=5pt}
+
+\newlist{enumRoman}{enumerate}{5}
+\setlist[enumRoman]{label=\Roman*,labelsep=5pt}
+\newlist{enumRomand}{enumerate}{5}
+\setlist[enumRomand]{label=\Roman*.,labelsep=5pt}
+\newlist{enumRomanp}{enumerate}{5}
+\setlist[enumRomanp]{label=(\Roman*),labelsep=5pt}
+
+\newlist{enumroman}{enumerate}{5}
+\setlist[enumroman]{label=\roman*,labelsep=5pt}
+\newlist{enumromand}{enumerate}{5}
+\setlist[enumromand]{label=\roman*.,labelsep=5pt}
+\newlist{enumromanp}{enumerate}{5}
+\setlist[enumromanp]{label=(\roman*),labelsep=5pt}
+\newlist{enumromanpc}{enumerate}{5}
+\setlist[enumromanpc]{label=\roman*),labelsep=5pt}
+
+\numberwithin{equation}{section}
