@@ -1,0 +1,333 @@
+\section{Introduction}
+
+When faced with repetition, programmers naturally turn to boilerplate or
+parametrisation. In this paper, we focus on repetition that
+arises from \emph{symmetry}. We develop
+mathematical foundations that explicitly and uniformly capture
+existing implicit patterns in programming and reasoning, and
+define a construction that removes redundant symmetric cases from
+functions and proofs.
+
+Consider Gabriele Cirulli's famous game of 2048\footnote{Available to
+play: \url{https://play2048.co}}, in which the player slides tiles
+labelled by powers of $2$, merging tiles with identical labels. The
+player can slide tiles in all four directions, and the game
+source-code accommodates that ability through a general merging code
+that takes the direction as a parameter, builds a sequence of matrix
+indices to consider, and traverses over them\footnote{See
+\texttt{GameManager.prototype.move}:
+\url{https://github.com/gabrielecirulli/2048/blob/478b6ec/js/game_manager.js\#L129}.}.
+
+Our anecdotal experience with half a dozen student projects
+suggests this parametrisation can be difficult to implement
+correctly. Here is an approach that is simpler to understand and to implement.
+Define the merging logic only for a single direction, say left,
+and exploit the inherent symmetry of the game for the other three
+directions: rotate the board so that the task is to slide left,
+perform the merge, and rotate back, restoring the original
+orientation. Here is an example downwards merge:
+\usetikzlibrary{arrows,arrows.meta}
+\[
+  \newcommand{\twofortyeight}[2]{\vcenter{\hbox{
+        \begin{tikzpicture}[scale=0.6, tile/.style={rounded corners=0.05cm, minimum size=0.55cm, draw=white, thick, font=\sffamily}
+          ]
+          \foreach \x in {0,1,2,3} {
+            \foreach \y in {0,1,2,3} {
+              \node[tile, fill=gray!10] (\x\y) at (\x, \y) {};
+            }
+          }
+          \foreach \row/\col/\num in {#1}
+          \node[tile, fill=gray!10!orange!\num0] at (\col, 3 - \row) {\num};
+          %%%%%%%%%%%%%%%%
+          #2
+  \end{tikzpicture}}}}
+  \twofortyeight{0/1/2, 0/3/2, 1/3/2, 2/1/2, 2/3/4, 3/1/4, 3/3/8}
+  {\draw[ double distance=1.5pt
+      , arrows = {-Latex[]}
+    ]  (02.center) node[above=-2pt]
+    {
+      \begin{tabular}{@{}>{\scriptsize\centering}p{.6cm}@{}}
+        merge \\
+        down
+      \end{tabular}
+    }
+    -- (01.center)
+    ;}
+  \quad
+  \explain\unRotation{rotate}
+  \quad
+  \twofortyeight{1/3/2, 3/3/2, 3/2/2, 1/1/2, 3/1/4, 1/0/4, 3/0/8}
+  {\draw[ double distance=1.5pt
+      , arrows = {-Latex[]}
+  ]  (23.center) node[above] {\clap{\scriptsize merge left\qquad}} -- (13.center);}
+  \quad
+  \explain\mapsto{perform \\[-5pt] merge}
+  \quad
+  \twofortyeight{3/2/4, 1/1/4, 3/1/4, 1/0/4, 3/0/8}
+  {}
+  \quad
+  \explain\Rotation{rotate \\[-5pt] back}
+  \quad
+  \twofortyeight{1/3/4, 2/1/4, 2/3/4, 3/1/4, 3/3/8}
+  {}
+\]
+
+Another common example of symmetry is that of binary
+search trees, in which elements smaller than the root go to the left
+subtree, while larger elements go to the right. Operations such as
+search, insertion, or deletion behave completely
+symmetrically. One way of avoiding repetition by parametrisation is to
+store both subtrees in an array of length two, and then use the
+offset~$1 - i$ to refer to the tree opposite to the one at offset~$i$.
+In practice, though, the additional complexity is often not worth
+losing the high-level abstraction, and programmers prefer to duplicate
+code.
+
+But we can again avoid this repetition with the same approach and
+implement the code only for one case. For example, when inserting an
+element into the right subtree, we can flip the tree (and its ordering
+relation!), insert the element into the left subtree, and then flip
+the resulting tree back:
+\usetikzlibrary{shapes.geometric, patterns, patterns.meta}
+\[
+  \newcommand{\insertion}[1]{\vcenter{\hbox{
+        \begin{tikzpicture}[
+            scale=0.75,
+            inner/.style={circle, draw, minimum width=2.5mm},
+            tree/.style={isosceles triangle, isosceles triangle stretches=true, draw, shape border rotate=90,minimum width=10mm},
+            h/.style={minimum height=10mm},
+            h1/.style={minimum height=12.5mm, yshift=-2.5mm},
+            level 1/.style={sibling distance=20mm},
+            transform/.style={bend left, dashed, shorten >=2.5mm, shorten <=2.5mm, -{stealth}}
+          ] #1
+  \end{tikzpicture}}}}
+  \insertion{
+    \node[inner] (t3) at (0, -4) {}
+    [child anchor=north]
+    child {node[pattern={Lines[angle=-45, distance=1pt]}, pattern color=red, tree, h] {}}
+    child {node[pattern={Lines[angle=-45]}, pattern color=blue, tree, h] {}};
+    \node (x') at (0.6, -4) {${} < x$};
+    \path (x') edge[->, out=0, in=45] (1.3, -5);
+  }
+  \;\;\:\,
+  \explain{\curvearrowright\hskip-10pt|}{flip\\[-5pt]everything}
+  \;\;\:\,
+  \insertion{\node[inner] (t1) at (0, 0) {}
+    [child anchor=north]
+    child {node[pattern={Lines[angle=45]}, pattern color=blue, tree, h] {}}
+    child {node[pattern={Lines[angle=45, distance=1pt]}, pattern color=red, tree, h] {}};
+    \node (x) at (-0.8, 0) {$x <^{\mathrm{op}} {}$};
+    \path (x) edge[->, out=180, in=135] (-1.3, -1);
+  }
+  \;\;\:\,
+  \explain\mapsto{insert\\[-5pt]w.r.t.~$(<^{\mathrm{op}})$}
+  \;\;\:\,
+  \insertion{
+    \node[inner] (t2) at (4, 0) {}
+    [child anchor=north]
+    child {node[pattern={Lines[angle=45]}, pattern color=blue, tree, h1] {}}
+    child {node[pattern={Lines[angle=45, distance=1pt]}, pattern color=red, tree, h] {}};
+  }
+  \;\;\:\,
+  \explain{\curvearrowleft\hskip-8.5pt|}{flip\\[-5pt]back}
+  \;\;\:\,
+  \insertion{
+    \node[inner] (t4) at (4, -4) {}
+    [child anchor=north]
+    child {node[pattern={Lines[angle=-45, distance=1pt]}, pattern color=red, tree, h] {}}
+    child {node[pattern={Lines[angle=-45]}, pattern color=blue, tree, h1] {}};
+  }
+\]
+A reader may justifiably worry about the cost of flipping the whole
+tree each time we descend right, but a more efficient implementation
+fits the same pattern.
+
+Our final example comes from mathematics,
+where one often invokes a \emph{without loss of generality} (or \WLOG)
+argument when we treat a canonical case, and derive the remaining
+cases by symmetry. Consider the pigeonhole principle given as an
+example in the Wikipedia entry for \WLOG{}~\cite{wiki:wlog}:
+%
+\begin{quote}
+If three objects are each painted either red or blue, then there must
+be at least two objects of the same color.
+
+\textbf{Proof.} Assume, without loss of generality, that the first
+object is red. If either of the other two objects is red, then we are
+finished; if not, then the other two objects must both be blue and we
+are also finished.
+\end{quote}
+%
+On paper, \WLOG appeals to an intuitive understanding that nothing has
+been lost by considering a special case. But if the symmetry is complex
+or if we want to convince a proof assistant, we need
+to explicate the reduction of the general case
+to the special one.
+
+We can generalise the special case as a parametric proof that covers
+all cases. Above, we could take the colour of the first object as a
+parameter and then instantiate it to both red and blue. But as
+\citeauthor{DBLP:conf/tphol/Harrison09} argues in his seminal study of
+\WLOG in the context of the HOL proof assistant---and we agree---this
+formulation is not faithful to the informal
+proof~\cite{DBLP:conf/tphol/Harrison09}.
+
+Modern proof assistants offer special tactics to treat \WLOG
+arguments, but approach them from various directions. Some tactics or
+theorems named \texttt{wlog} work in a very restricted setting, such
+as symmetric relations or negation, and some cut in arbitrary
+additional statements that do not involve symmetries.
+These divergent approaches point towards a missing
+mathematical foundation. Furthermore, none treat the
+underlying symmetry as a first-class citizen, and as
+\citeauthor{dijkstra:wlog} argues---and we agree---``omissions [of the
+underlying symmetry] make most `\WLOG{} proofs' rather
+unsatisfactory''~\cite{dijkstra:wlog}.
+
+We can explicate this symmetry by following the same
+pattern we used for programming. In the excluded case where the first object is blue, we can
+exchange the colours to make it red, use the specialised argument, and
+then revert the colours back to the original. For example, one of
+the three cases where there is another blue object in addition to the
+first one proceeds as:
+\[
+  \newcommand{\balls}[2]{\vcenter{\hbox{
+    \begin{tikzpicture}[
+      scale=0.5,
+      obj/.style={circle, draw, inner sep=0pt, minimum size=4mm},
+      rdot/.style={obj, fill=red!60, draw=red},
+      bdot/.style={obj, fill=blue!20, draw=blue},
+      pair/.style={rounded corners, thin, draw=gray},
+      >=stealth, font=\small
+    ]
+      \pgfmathsetmacro\dx{-0.03}
+      \foreach \col/\f in {#1}
+        \node[\f] at (\col+0.5, 0.5) {\ifthenelse{\equal{\f}{bdot}}{b}{r}};
+      #2
+    \end{tikzpicture}
+  }}}
+  \balls{0/bdot, 1/rdot, 2/bdot}{}
+  \qquad
+  \explain{\rightleftharpoons}{exchange\\[-5pt]colours}
+  \qquad
+  \balls{0/rdot, 1/bdot, 2/rdot}{}
+  \qquad
+  \explain{\mapsto}{find another red\\[-5pt]object, if it exists}
+  \qquad
+  \balls{0/rdot, 1/bdot, 2/rdot}{
+    \draw[pair] (0-\dx,0-\dx) rectangle (1+\dx,1+\dx);
+    \draw[pair] (2-\dx,0-\dx) rectangle (3+\dx,1+\dx);
+  }
+  \qquad
+  \explain{\leftrightharpoons}{exchange\\[-5pt]colours back}
+  \qquad
+  \balls{0/bdot, 1/rdot, 2/bdot}{
+    \draw[pair] (0-\dx,0-\dx) rectangle (1+\dx,1+\dx);
+    \draw[pair] (2-\dx,0-\dx) rectangle (3+\dx,1+\dx);
+  }
+\]
+while if both remaining objects are red, we similarly proceed as:
+\[
+  \newcommand{\balls}[2]{\vcenter{\hbox{
+    \begin{tikzpicture}[
+      scale=0.5,
+      obj/.style={circle, draw, inner sep=0pt, minimum size=4mm},
+      rdot/.style={obj, fill=red!60, draw=red},
+      bdot/.style={obj, fill=blue!20, draw=blue},
+      pair/.style={rounded corners, thin, draw=gray},
+      >=stealth, font=\small
+    ]
+      \pgfmathsetmacro\dx{-0.03}
+      \foreach \col/\f in {#1}
+        \node[\f] at (\col+0.5, 0.5) {\ifthenelse{\equal{\f}{bdot}}{b}{r}};
+      #2
+    \end{tikzpicture}
+  }}}
+  \balls{0/bdot, 1/rdot, 2/rdot}{}
+  \qquad
+  \rightleftharpoons
+  \qquad
+  \balls{0/rdot, 1/bdot, 2/bdot}{}
+  \qquad
+  \mapsto
+  \qquad
+  \balls{0/rdot, 1/bdot, 2/bdot}{
+    \draw[pair] (1-\dx,0-\dx) rectangle (3+\dx,1+\dx);
+  }
+  \qquad
+  \leftrightharpoons
+  \qquad
+  \balls{0/bdot, 1/rdot, 2/rdot}{
+    \draw[pair] (1-\dx,0-\dx) rectangle (3+\dx,1+\dx);
+  }
+\]
+
+In this paper, we develop this pattern into a uniform construction, and
+use it to eliminate symmetric cases in definitions of functions and in reasoning.
+On the surface, this pattern is conceptually simple, and so one may,
+just like us, be quickly tempted to implement it, either in a
+programming language or in a proof assistant. We
+experimented in simply- and dependently-typed languages, and
+unsurprisingly, each obstacle pushed us back to pen-and-paper redesigns and
+forced us to enrich the underlying mathematical foundation.
+
+For this reason, while still keeping computational applications in
+mind, this work focuses on these mathematical foundations.
+We postpone a bona fide implementation to future work. Such future
+implementations will allow us to explore symmetric programming on more
+involved examples, in a machine-checked environment, design the best
+interface for exposing it to the programmer, to build a comprehensive
+library for symmetric programming and mechanised reasoning, and
+revisit existing \WLOG formalisations systematically. While we keep these
+downstream goals in mind, we pursue none of them in the
+present work, and remain solely mathematical.
+
+Our contributions:
+\begin{itemize}
+  \item In \secref{wlog construction}, we identify three ingredients:
+    \emph{group actions} capturing the symmetries of the input and
+    output, a \emph{canoniser} map that assigns a canonising group
+    element to each input, and a \emph{core function} that defines the
+    construction on canonical inputs. We then characterise our symmetric \WLOG{}
+    construction as the unique symmetry-preserving
+    (i.e. equivariant) extension of the core function to all the inputs.
+  \item In \secref{dependent types}, we extend this theory to the
+    setting of \emph{dependent types}. We show how via
+    the Curry-Howard correspondence, symmetry-invariant propositions
+    correspond to types equipped with a group action. We show how proofs
+    via the symmetric \WLOG{} argument amount to dependent functions obtained by
+    the above construction.
+    % % Sean Moss tells me this is probably known:
+    % We also rephrase
+    % the classical Orbit-Stabiliser theorem as an equivariant
+    % bijection.
+  \item In \secref{algebraic data types}, we further extend the theory
+    to (simply- and dependently-typed) \emph{algebraic data types} and
+    their induction principles. The main construct we introduce is
+    \emph{symmetry strength}, which defines a group action in terms of
+    data constructors, paving the way for symmetric reasoning on data types,
+    and efficient partial evaluation.
+\end{itemize}
+%
+We conclude with related and future work in \secref{conclusion}.
+\ifthenelse{\boolean{WithSupplementary}}{%
+  The Appendix has further details and proofs.%
+}{%
+  The accompanying Technical Report~\cite{kammar-pretnar:symmetric-programming-and-reasoning-tech-report}
+  is an otherwise identical copy of this manuscript, apart from
+  this sentence and detailed appendices supporting the claims we make, which we cross-reference from here.%
+}
+
+
+\begin{remark}
+  Our development has been informed by category theoretic
+  structure. To keep exposition accessible, we do not rely on the
+  language of and concepts from category theory in the lion's share of this
+  work.  The notable exception is our account of symmetric data types
+  (\secref{algebraic data types}). There, generic accounts of the
+  computational structure are close to their underlying categorical
+  structure, and consequently we explicitly employ the categorical
+  language. Readers who wish to reconstruct the category theoretic
+  picture can consult \figref{indexed-datatypes-summary} in
+  \subsecref{indexed data types} alongside the development.
+\end{remark}

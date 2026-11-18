@@ -1,0 +1,284 @@
+\ProvidesPackage{diags}
+\RequirePackage{ifthen}
+\RequirePackage{tikz}
+\usetikzlibrary{matrix, arrows, calc, decorations.pathmorphing, shapes}
+
+%
+% in case we dont' have draftdef yet
+\providecommand{\isdraft}{false}
+%\DeclareOption{draft}{\renewcommand{\isdraft}{true}}
+\providecommand{\draftdef}[4][0]{%
+    \ifthenelse{\equal{\isdraft}{true}}{%
+		\expandafter\newcommand\csname #2\endcsname[#1]{#3}}{%
+		\expandafter\newcommand\csname #2\endcsname[#1]{#4}}}
+
+% we need the following in the header of something that uses this
+% for now, make sure that this is called AFTER SC
+%\usepackage{tikz}
+%\usetikzlibrary{matrix,arrows}
+
+
+\tikzset{
+ >=stealth, 
+ ^/.style={auto},
+ under/.style={auto,swap}, % and an alias, _
+ _/.style={auto,swap},
+ description/.style={fill=white,inner sep=2pt}, % and an alias, !
+ !/.style={fill=white,inner sep=2pt},
+% we/.style={label=above:{$\displaystyle\sim$},label distance=-.2ex},
+ raise/.style={above=.4ex},
+ implies/.style={double,double equal sign distance,-implies},
+ overbackground/.style={-,line width=6pt,white},
+ shiftup/.style = {transform canvas={yshift=0.3ex}},
+ shiftdown/.style = {transform canvas={yshift=-0.3ex}},
+}
+%\tikzstyle{every node}=[midway]
+\tikzstyle{matrix of math nodes}=[%
+  matrix of nodes,
+  nodes={%
+   execute at begin node=$\displaystyle,%
+   execute at end node=$%
+  }%
+]
+
+% displayed diagram macros
+\def\stddiagwidth{2.5em}
+\def\stddiagheight{2.5em}
+\def\widediagwidth{3em}
+\def\squisheddiagheight{.9em}
+\def\squisheddiagwidth{2.25em}
+
+\newenvironment{general-diagram}[2]{\begin{center}\def\to{\diagArrow{->}}\begin{tikzpicture}%
+\matrix (m) [matrix of math nodes, row sep=#1,%
+column sep=#2]}{\end{tikzpicture}\end{center}}
+\newenvironment{general-inline-diagram}[2]{\def\to{\diagArrow{->}}\begin{tikzpicture}[baseline]%
+\matrix (m) [matrix of math nodes, row sep=#1,%
+column sep=#2]}{\end{tikzpicture}}
+\newenvironment{general-fixed-diagram}[2]{\begin{center}\def\to{\diagArrow{->}}\begin{tikzpicture}%
+\matrix (m) [matrix of math nodes, row sep=#1,%
+column sep=#2, text height=2.2ex, text depth=0.7ex]}{\end{tikzpicture}\end{center}}
+\newenvironment{general-numbered-diagram}[3]{\def\to{\diagArrow{->}}\begin{equation}\label{#3}\begin{tikzpicture}[baseline]%
+\matrix (m) [matrix of math nodes, row sep=#1,%
+column sep=#2]}{\end{tikzpicture}\end{equation}}
+
+
+% splitting node names
+\newcount\nbofcoords
+\makeatletter  
+\def\myutil@empty{}
+\def\multiwords#1-#2\@nil{% 
+ \def\NextArg{#2}%
+ \advance\nbofcoords by  1 %   
+ \expandafter\edef\csname coord\@alph\nbofcoords\endcsname{#1}% 
+ \ifx\myutil@empty\NextArg
+     \let\next\@gobble
+ \fi
+ \next#2\@nil
+}%    
+
+\def\GetCoords#1{%
+   \let\next\multiwords 
+   \nbofcoords=0 %
+   \expandafter\next#1-\@nil %
+}% 
+\makeatother
+
+\newenvironment{inline-diagram}[1][1.8em]{\begin{general-inline-diagram}{1.8em}{#1}}{\end{general-inline-diagram}}
+\newenvironment{diagram}[1][2.5em]{\begin{general-diagram}{2.5em}{#1}}{\end{general-diagram}}
+\newenvironment{widediagram}{\begin{general-diagram}{1em}{3em}}{\end{general-diagram}}
+\newenvironment{squisheddiagram}{\begin{general-diagram}{.9em}{2.25em}}{\end{general-diagram}}
+\newenvironment{diagram-fixed}[1][2.5em]{\begin{general-fixed-diagram}{2.5em}{#1}}{\end{general-fixed-diagram}}
+\newenvironment{diagram-numbered}[2][2.5em]{\begin{general-numbered-diagram}{2.5em}{#1}{#2}}{\end{general-numbered-diagram}}
+
+% diagram arrow drawing commands
+\def\diagDrawArrow#1#2#3#4#5{%
+  \GetCoords{#2-#3}%
+  \ifthenelse{\coordb=\coorde}%
+  {\ifthenelse{\coordc<\coordf}%
+    {\path[font=\scriptsize] (#2.mid east) edge[#1] node[#4] {$#5$} (#3.mid west);}%
+    {\path[font=\scriptsize] (#2.mid west) edge[#1] node[#4] {$#5$} (#3.mid east);}}%
+  {\path[font=\scriptsize] (#2) edge[#1] node[#4] {$#5$} (#3);}}
+\def\diagDrawArrowND#1#2#3#4#5{%
+  \path[font=\scriptsize] (#2) edge[#1] node[#4] {$#5$} (#3);}
+\def\diagDrawWEArrow#1#2#3#4#5{\path[font=\scriptsize] (#2) edge[#1] node[#4]
+  {$#5$} node[above=-.7ex,sloped] {$\sim$} (#3);}
+\def\diagDrawArrowS#1#2#3#4#5{%
+  \path[font=\scriptsize] (#2) edge[#1] node[#4] {$#5$} (#3);}
+% for compatibility with old versions
+\newcommand{\noHorizArrowDetection}{\def\diagDrawArrow##1##2##3##4##5{\path[font=\scriptsize] (##2) edge[##1] node[##4] {$##5$} (##3);}}
+
+\def\diagArrow#1#2#3{%
+    \def\diagDrawArrowHelper{\diagDrawArrow{#1}{m-#2}{m-#3}}  %
+    \futurelet\diagArrowLookedAtToken\diagArrowDecide}
+\def\diagArrowS#1#2#3{%
+    \def\diagDrawArrowHelper{\diagDrawArrowS{#1}{m-#2}{m-#3}}  %
+    \futurelet\diagArrowLookedAtToken\diagArrowDecide}			
+\def\diagWEArrow#1#2#3{%
+    \def\diagDrawArrowHelper{\diagDrawWEArrow{#1}{m-#2}{m-#3}}  %
+            \futurelet\diagArrowLookedAtToken\diagArrowDecide}			
+\def\diagDrawArrowHelperOther#1#2#3{\diagDrawArrowHelper{#2}{#3}}
+\def\diagDrawArrowHelperBlank{\diagDrawArrowHelper{}{}}
+\def\diagArrowDecide{%
+   \ifx\diagArrowLookedAtToken^%
+       \let\next=\diagDrawArrowHelper %
+   \else\ifx\diagArrowLookedAtToken_ %
+	   \let\next=\diagDrawArrowHelper %
+   \else\ifx\diagArrowLookedAtToken! %
+       \let\next=\diagDrawArrowHelper %
+   \else\ifx\diagArrowLookedAtToken+ %
+       \let\next=\diagDrawArrowHelperOther %
+   \else %
+       \let\next=\diagDrawArrowHelperBlank %
+   \fi\fi\fi\fi %
+   \next}
+% \def\diagArrowHorizDecide{%
+%   \ifx\diagArrowStarToken*%
+%       \let\next=\diagArrowDrawingNoHoriz %
+%   \else \let\next=\diagArrowDrawing %
+%   \fi %
+%   \next}
+% \def\diagWEArrowHorizDecide{%
+%   \ifx\diagArrowStarToken*%
+%       \let\next=\diagWEArrowDrawingNoHoriz %
+%   \else \let\next=\diagWEArrowDrawing %
+%   \fi %
+%   \next}
+% \def\diagWEArrowDrawingNoHoriz#1#2#3#4{%
+%     \def\diagDrawArrowHelper{\diagDrawWEArrowNoHoriz{#2}{m-#3}{m-#4}}  %
+%             \futurelet\diagArrowLookedAtToken\diagArrowDecide}			
+
+   
+   
+% inline diagram constructors
+\newcommand{\tk}{\tikz[baseline, font=\scriptsize]}
+\def\inlineDrawArrow#1^#2{\;\tk\draw[#1](0,0.5ex)-- node [above] {$#2$} (\inlinearrowlength,0.5ex);\;}
+\def\inlineArrow#1{\def\inlineDrawArrowHelper{\inlineDrawArrow{#1}}  %
+            \futurelet\inlineArrowLookedAtToken\inlineArrowDecide}
+\def\inlineArrowDecide{%
+   \def\inlineDrawArrowHelperBlank{\inlineDrawArrowHelper^{}}
+   \ifx\inlineArrowLookedAtToken^%
+       \let\next=\inlineDrawArrowHelper %
+   \else\ifx\inlineArrowLookedAtToken_ %
+	   \let\next=\inlineDrawArrowHelper %
+   \else\ifx\inlineArrowLookedAtToken- %
+       \let\next=\inlineDrawArrowHelper %
+   \else %
+       \let\next=\inlineDrawArrowHelperBlank %
+   \fi\fi\fi %
+   \next}
+\def\inlineDrawWEArrow#1^#2{\;\tk\draw[#1, label distance=.5ex](0,0.5ex) -- node[label=above:$#2$, above=-.6ex] {$\sim$} (\inlinearrowlength,0.5ex);\;}
+\def\inlineWEArrow#1{\def\inlineDrawArrowHelper{\inlineDrawWEArrow{#1}}  %
+            \futurelet\inlineArrowLookedAtToken\inlineArrowDecide}
+
+% inline stacked arrows
+\def\inlineDoubleDrawArrow#1#2^#3{\;\begin{tikzpicture}[baseline, font=\scriptsize]%
+    \draw[#1](0,1.1ex)-- node [above] {$#3$} (\inlinearrowlength,1.1ex);%
+    \draw[#2](0,0.4ex)-- node {} (\inlinearrowlength,0.4ex); \end{tikzpicture}%
+    \;}
+\def\inlineDoubleArrow#1#2{\def\inlineDrawArrowHelper{\inlineDoubleDrawArrow{#1}{#2}}  %
+            \futurelet\inlineArrowLookedAtToken\inlineArrowDecide}
+			
+% subscript diagram constructors
+\def\subscriptDrawArrow#1{\;\tk\draw[#1](0,0.5ex)-- node {} (\subscriptarrowlength,0.5ex);\;}
+\def\subscriptArrow#1{\def\subscriptDrawArrowHelper{\subscriptDrawArrow{#1}}  %
+            \futurelet\subscriptArrowLookedAtToken\subscriptArrowDecide}
+\def\subscriptArrowDecide{%
+   \def\subscriptDrawArrowHelperBlank{\subscriptDrawArrowHelper^{}}
+   \ifx\subscriptArrowLookedAtToken^%
+       \let\next=\subscriptDrawArrowHelper %
+   \else\ifx\subscriptArrowLookedAtToken_ %
+	   \let\next=\subscriptDrawArrowHelper %
+   \else\ifx\subscriptArrowLookedAtToken- %
+       \let\next=\subscriptDrawArrowHelper %
+   \else %
+       \let\next=\subscriptDrawArrowHelperBlank %
+   \fi\fi\fi %
+   \next}
+   
+\newcommand{\makelong}[2][\longinlinearrowlength]{{\def\inlinearrowlength{#1}#2}}
+\newcommand{\makeshort}[2][\shortinlinearrowlength]{{\def\inlinearrowlength{#1}#2}}
+\newcommand{\setlen}[2]{{\def\inlinearrowlength{#1}#2}}
+\everydisplay{\def\inlinearrowlength{\longinlinearrowlength}}
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%% START ARROW DEFINITIONS %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+			
+\def\inlinearrowlength{0.5}
+\def\longinlinearrowlength{0.75}
+\def\shortinlinearrowlength{0.5}
+\def\subscriptarrowlength{0.4}
+
+\draftdef{rto}{\rightarrow}{\inlineArrow{->}}
+%\draftdef{longrto}{\longrightarrow}{{\def\inlinearrowlength{\longinlinearrowlength}\inlineArrow{->}}}
+\draftdef{longrto}{\longrightarrow}{\makelong\rto}
+\draftdef{lto}{\leftarrow}{\inlineArrow{<-}}
+\draftdef{rcofib}{\hookrightarrow}{\inlineArrow{right hook->}}
+\draftdef{lcofib}{\hookleftarrow}{\inlineArrow{<-left hook}}
+\draftdef{rfib}{\twoheadrightarrow}{\inlineArrow{->>}}
+\draftdef{lfib}{\twoheadleftarrow}{\inlineArrow{<<-}}
+\draftdef{lsub}{\dashleftarrow}{\inlineArrow{densely dashed, <-}}
+\draftdef{rsub}{\dashrightarrow}{\inlineArrow{densely dashed, ->}}
+\draftdef{lcover}{\twoheadleftarrow}{\inlineArrow{densely dashed, <<-}}
+\draftdef{rcover}{\rightsquigarrow}{\inlineArrow{densely dashed, ->>}}
+\draftdef{rwe}{\stackrel{\sim}{\rightarrow}}{\inlineWEArrow{->}}
+\draftdef{lwe}{\stackrel{\sim}{\leftarrow}}{\inlineWEArrow{<-}}
+\draftdef{lacyccofib}{\stackrel{\sim}{\hookleftarrow}}{\inlineWEArrow{<-left hook}}
+\draftdef{racyccofib}{\stackrel{\sim}{\hookrightarrow}}{\inlineWEArrow{right hook->}}
+\draftdef{lacycfib}{\stackrel{\sim}{\twoheadleftarrow}}{\inlineWEArrow{<<-}}
+\draftdef{racycfib}{\stackrel{\sim}{\twoheadrightarrow}}{\inlineWEArrow{->>}}
+\draftdef{rgoesto}{\mapsto}{\inlineArrow{|->}}
+\draftdef{lgoesto}{\inlineArrow{<-|}}{\inlineArrow{<-|}}
+\draftdef{longrgoesto}{\longmapsto}{\makelong\rgoesto}
+\draftdef{Rto}{\Rightarrow}{\inlineArrow{implies, -implies}}
+\draftdef{Lto}{\langle\!=}{\inlineArrow{implies, implies-}}
+\draftdef{req}{===}{\inlineArrow{implies,-}}
+\draftdef{subrto}{\rightarrow}{\subscriptArrow{->}}
+\draftdef{rrto}{\rightrightarrows}{\inlineDoubleArrow{->}{->}}
+\draftdef{rlto}{\rightleftarrows}{\inlineDoubleArrow{->}{<-}}
+\draftdef{lrto}{\leftrightarrows}{\inlineDoubleArrow{<-}{->}}
+\draftdef{bothto}{\leftrightarrow}{\inlineArrow{<->}}
+\draftdef{rlsquig}{\leftrightarrow}{\inlineArrow{<->, decoration={snake,%
+      pre=lineto, pre length=4pt, post=lineto, post length=4pt, amplitude=0.9pt,%
+    segment length=1.5mm}, decorate}}
+
+
+% diagram arrow type definitions
+%\def\to{\diagArrow{->}}
+\def\ot{\diagArrow{<-}}
+\def\tot{\diagArrow{<->}}
+%\def\cofib{\diagArrow{right hook->}}
+\newcommand{\cofib}[1][right]{\diagArrow{#1 hook->}}
+\def\fib{\diagArrow{->>}}
+\def\sub{\diagArrow{densely dashed,->}}
+\def\cover{\diagArrow{densely dashed,->>}}
+\def\we{\diagWEArrow{->}}
+\def\acyccofib{\diagWEArrow{right hook->}}
+\def\acycfib{\diagWEArrow{->>}}
+\def\fibcofib{\diagArrow{right hook->>}}
+\newcommand{\goesto}{\diagArrow{|->}}
+\def\To{\diagArrow{implies, -implies}}
+\def\eq{\diagArrow{implies, -}}
+\def\over{\diagArrow{overbackground}}
+
+\renewcommand{\to}{\rto}
+
+%special cases --- obsolete
+%\def\toh#1#2{\diagArrow{->}{#1.mid east}{#2.mid west}}
+%\def\oth#1#2{\diagArrow{<-}{#1.mid east}{#2.mid west}}
+
+% shortcuts
+\newcommand{\num}{\pgfmathprintnumber[int trunc]{\pgfmathresult}}
+\newcommand{\diagaddone}[1]{\pgfmathadd{1}{#1}\pgfmathprintnumber[int trunc]{\pgfmathresult}}
+\newcommand{\arrowsquare}[5][->]{\diagArrow{#1}{1-1}{1-2}^{#2} \diagArrow{#1}{1-2}{2-2}^{#4} \diagArrow{#1}{2-1}{2-2}^{#5} \diagArrow{#1}{1-1}{2-1}_{#3}}
+\newcommand{\largearrowsquare}[4]{%
+\foreach \x in {#1,...,#2} %
+  \foreach \y in {#3,...,#4} %
+  {%
+    \ifthenelse{\equal{\x}{#2}}{}{\pgfmathparse{int(1+\x)}%
+	    \to{\x-\y}{\pgfmathresult-\y};}%
+	\ifthenelse{\equal{\y}{#4}}{}{\pgfmathparse{int(1+\y)}%
+	    \to{\x-\y}{\x-\pgfmathresult};}%
+  }%
+}

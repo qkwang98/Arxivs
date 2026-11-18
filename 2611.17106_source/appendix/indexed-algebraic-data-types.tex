@@ -1,0 +1,354 @@
+\section{Indexed algebraic data types}
+\applabel{indexed adts}
+
+In \subsecref{indexed data types} we summarised the changes to the
+simply-typed development of symmetric data types. In this appendix, we
+spell the theory out in full detail, for completeness.
+
+To extend the theory to indexed data types $\carrier\Ctx \types
+\TConst D$, we use endofunctors $\struct[\TConst D] :
+\Fam_{\carrier\Ctx} \to \Fam_{\Ctx}$ over the category
+$\Fam_{\carrier\Ctx}$ of families indexed by a set $\carrier\Ctx$ and
+vertical maps between them. The data type $\TConst D$ denotes an
+initial $\struct[\TConst D]$-algebra $\carrier\Ctx \types \roll :
+\struct[\TConst D] \TConst D \to \TConst D$. As in the non-indexed
+case, we equip those endofunctors with a symmetry strength relative to
+an ambient $\G$-action $\Ctx = \pair{\carrier\Ctx}{(\act)}$ on the set
+of indices. This strength will be a certain natural transformation
+$\strength : \gast \struct[\TConst D] \X \to \struct[\TConst D](\gast
+\X)$, where $(\gast-)$ is the functor part of the \emph{free
+$\Ctx$-indexed $\G$-action} monad.  Initial algebras for such
+endofunctors enjoy an indexed version of the parameterised initiality
+and representation theorems, and stating and establishing those is our
+main goal.
+
+We'll use the indexed family $\mt : \Tree \types \NodeIn \mt$ as our
+running example, but unlike \exampleref{node lookup}, we avoid the
+redundant cases through symmetric programming. As our endofunctor, we
+take:
+\begin{gather*}
+(\struct[\NodeIn]\X)_{\Leaf} \definedby \emptyset
+\qquad
+(\struct[\NodeIn]\X)_{\Node\,\ell\, n\,r} \definedby
+  \Nil \Or \Lft\:: \X_{\ell} \Or \Rgt\:: \X_{r}
+\\
+(\fmap f)_{u}\Nil \definedby \Nil
+\qquad
+(\fmap f)_{u}(\Lft\:: x) \definedby \Lft\:: f_{\ell}x
+\qquad
+(\fmap f)_{u}(\Rgt\:: y) \definedby \Rgt\:: f_{r}y
+\tag{where: $\mt : \Tree \types f : \X \to \Y$, $u = \Node\, \ell\, n\, r$}
+\end{gather*}
+The initial algebra has as carrier $\mt :
+\Tree \types \NodeIn\mt$ from \exampleref{families example}.
+
+We denote the multiplication
+of the free $\Ctx$-indexed $\G$-action monad $P$ by:
+\[
+(\muast) : \gast(\gast \X) \to \gast\X
+\qquad
+\pair g{\pair h{x : \X_{\inv h \act \inv g \act \ctx}}} \definedby
+\pair{g\mul h}{x : \X_{\inv*{g\mul h}\act\ctx}}
+\]
+It is the functor $(\gast)$ that generalises the notion of strength to
+the indexed setting:
+\begin{definition}\definitionlabel{indexed symmetry strength}
+  Let $\Ctx$ be a $\G$-action and $F : \Fam_{\carrier\Ctx} \to
+  \Fam_{\carrier\Ctx}$ be an endofunctor. A \emph{$\Ctx$-indexed
+  $\G$-symmetry strength} is a natural transformation $\strength :
+  \gast F\X \to F(\gast \X)$, satisfying:
+  \begin{gather*}
+  \strength_{\ctx}(\unit, u) = \fmap(\fun x\pair\unit x) u
+  \qquad
+  \fmap(\muast)
+  \compose
+    \strength(g, \strength(h, x)) =
+  \strength(g\mul h, x)
+  \end{gather*}
+\end{definition}
+
+\begin{example}%
+  \examplelabel{path strength}
+  We define an $\Sym2$-symmetry strength for $\mt : \Tree \types \NodeIn\mt$.
+  Only the $\swap$ case is interesting, as the first strength axiom forces the
+  definition for $\stet$:
+  \begin{gather*}
+  \strength[\NodeIn]_{\parent{\NodeV \ell n r}}
+  \pair{\text{$\swap$}}{\Nil : \NodeIn {\NodeV{\swap\act r}n{\swap\act \ell}}}
+  \definedby \Nil : \NodeIn \parent{\NodeV{\ell}n{r}}
+  \\
+  \strength[\NodeIn]_{\parent{\NodeV \ell n r}}\pair\swap{\Lft \:: (x : \X_{\swap\act r})} \definedby
+  \Rgt \:: \pair\swap{x : \X_{\swap \act r}} \in (\struct[\NodeIn](\gast\X))_{\parent{\NodeV \ell nr}}
+  \\
+  \strength[\NodeIn]_{\parent{\NodeV \ell n r}}\pair\swap{\Rgt \:: (x : \X_{\swap\act \ell})} \definedby
+  \Lft \:: \pair\swap{x : \X_{\swap \act \ell}} \in (\struct[\NodeIn](\gast\X))_{\parent{\NodeV \ell nr}}
+  \end{gather*}
+  To prove the second strength axiom, only the case $g \definedby h
+  \definedby \swap$ is interesting though straightforward:
+  \begin{align*}
+    \fmap(\muast)&\compose\strength(\swap, \strength(\swap, \Nil))
+    = \fmap(\muast)\compose\strength(\swap, \Nil)
+    = \fmap(\muast)\Nil
+    = \Nil
+    \\&= \strength(\swap\mul\swap, \Nil)
+    \\
+    \fmap(\muast)&\compose\strength(\swap, \strength(\swap, \Lft\:: x))
+    = \fmap(\muast)\compose\strength(\swap, \Rgt\::\pair\swap x)
+    \\&= \fmap(\muast)(\Lft\::\pair{\swap\mul\swap} x)
+    = \Lft \:: \pair\stet x
+    = \strength(\swap\mul\swap, \Lft \::x)
+  \end{align*}
+  and symmetrically for $\Rgt::x$. We cannot avoid this
+  symmetric argument using wlog as we are setting up the symmetric
+  action by defining the strength. Later uses of $\wlg{}$
+  will exploit this work.
+\end{example}
+
+The appropriate category-theoretic concept that abstracts this notion
+of strength is a \emph{monad-functor distributive law}, and we will
+use this perspective in our category theoretic development in
+\appref{cat dev}. As may be clear, when $\terminal \types X$ is a
+single-fibred family, $\terminal \types \gast X$ is the single-fibred
+family $\carrier G \times X$, subsuming the simply-typed case.
+
+The following lemma justifies checking only the interesting cases, as
+we did in \exampleref{path strength}:
+\begin{lemma}\lemmalabel{indexed check only non-trivial}
+  Let $\strength$ be the structure of an indexed $\G$-symmetric
+  strength, satisfying the first axiom. Then the second axiom holds
+  when either $g = \unit$ or $h = \unit$.
+\end{lemma}
+
+Our main initiality theorem uses an indexed notion of equivariant
+algebras (cf.~\definitionref{equivariant F-algebra}):
+\begin{definition}
+  Let $\Ctx$ be a $\G$-action, $F : \Fam_{\carrier\Ctx} \to
+  \Fam_{\carrier\Ctx}$ an endofunctor equipped with a symmetry
+  strength. For every indexed action $\A$, the \emph{lifted action}
+  is given by:
+  \[
+  \carrier{F_{\strength}\A} \definedby F\carrier\A
+  \qquad
+  g \iact\ctx u \definedby \fmap (\act) \strength_{g\act\ctx}\pair gt
+  \]
+  An \emph{equivariant $F$-algebra} $\pair\A f$ for an endofunctor
+  equipped with a symmetry strength, consists of an indexed action
+  $\A$ equipped with an equivariant algebra structure $\Ctx \types f :
+  F_{\strength}\A \equito \A$. An equivariant $F$-algebra homomorphism is
+  then a family map between the carrier families of two such algebras
+  that is simultaneously equivariant and $F$-algebra homomorphic.
+\end{definition}
+
+We generalise the Equivariant Initiality \theoremref{representation for algebras}
+to indexed families:
+\begin{theorem}[indexed equivariant initiality]%
+  \theoremlabel{indexed representation}
+  Let $\roll : F\fix F \to \fix F$ be an initial algebra for a
+  functor $F$ over $\Ctx$-indexed families with a $\G$-symmetry strength
+  $\strength : \gast
+  F\X \to F(\gast\X)$. There is a unique map $(\act) : \gast \fix F \to \fix F$
+  satisfying \(
+  g \act (\roll u)
+  =
+  \roll (\fmap(\act)(\strength(g, u)))
+  \).
+  It makes $\pair{\fix f}{\roll}$
+  into an initial equivariant $F$-algebra: for every
+  equivariant $F$-algebra $\pair\A{f : F_{\strength}\A \equito \A}$,
+  the
+  $F$-homomorphism into $\carrier\A$
+   is equivariant: $\fold f :
+  \fix F \equito \A$.
+\end{theorem}
+
+Like its simply-typed variant, the proof of this theorem uses an
+appropriate notion of parameterised initiality originally proposed by
+\citeauthor{bird-paterson:generalised-folds-for-nested-datatypes}~\cite{%
+  bird-paterson:generalised-folds-for-nested-datatypes}.
+
+\begin{example}
+  The action induced by the Indexed Equivariant Initiality
+  \theoremref{indexed representation} satisfies:
+  \begin{align*}
+  \swap\act(\Lft \:: \Rgt \:: \Nil) &=
+  \roll\compose\fmap(\act)\strength(\swap, \Lft \:: (\Rgt \:: \Nil)) =
+  \roll\compose\fmap(\act)(\Rgt \:: \pair\swap{\Rgt \:: \Nil})
+  \\&=
+  \Rgt\::(\swap \act (\Rgt \:: \Nil))=
+  \Rgt\::\Lft \:: (\swap \act \Nil)=
+  \Rgt\::\Lft \:: \Nil
+  \end{align*}
+  as we may expect from the example at the beginning of \subsecref{indexed actions}.
+\end{example}
+
+\begin{example}%
+  \examplelabel{wlog node lookup}%
+  Let's implement the dependently-typed node lookup function and
+  simultaneously show its equivariance $\lookup :
+  \DPair\mt{\Tree}{\NodeIn\mt} \equito \naturals$. We'll
+  construct an indexed equivariant map $\mt : \Tree \types
+  \lookup_{\mt} : \NodeIn\mt \equito \naturals$. By the Indexed
+  Equivariant Initiality \theoremref{indexed representation}, it
+  suffices to equip $\naturals$ with an equivariant
+  $\struct[\NodeIn]$-algebra structure $\lookupElim : \struct[\NodeIn]
+  \naturals \equito \naturals$. Informally, \WLOG{}, the path to the
+  node is either empty or starts with the $\Lft$eft subtree,
+  eliminating one symmetric case. Formally, define a
+  canoniser by
+  \(
+  \canoniser\Nil \definedby \canoniser(\Lft\:: n) \definedby \stet
+  \) and \(
+  \canoniser(\Rgt\:: n) \definedby \swap
+  \).
+  Its canonical elements are $\Nil$ and $\Lft\::n$.
+  This canoniser is equivariant, but not strictly:
+  \begin{align*}
+  \canoniser(\swap \act \Nil) &=
+  \canoniser\Nil = \stet \stabeq{\Nil} \swap = \stet\mul\inv\swap =
+  \swap\act \canoniser\,\Nil \\
+  \canoniser(\swap \act (\Lft \:: n)) &=
+  \canoniser(\Rgt \:: n) =
+  \swap = \stet \mul \inv\swap = \swap\act\canoniser(\Lft\:: n)
+  \end{align*}
+  and symmetrically for $\Rgt \:: n$. Again, we cannot avoid this
+  symmetry with wlog since we are setting up the symmetric argument.
+
+  Let's define the core function for
+  the eliminator $\mt : \Tree \types \lookupCore :
+  \Canon\canoniser \to \naturals$:
+  \[
+  \lookupCore_{\parent{\Node\, \ell\,n\,  r}} \Nil \definedby n
+  \qquad
+  \lookupCore_{\parent{\Node\,\ell\,n\,  r}} (\Lft \:: p) \definedby p
+  \]
+  and we do not need to consider the symmetric case.
+  The stabiliser subgroup for $\naturals$ is the whole of $\Sym2$
+  since its action is trivial. Consequently, every core function is
+  stable, and we don't need to work out the stabilisers for canonical
+  elements. For completeness, here they are.  The stabiliser subgroup
+  for $\Nil$ is the whole of $\Sym2$, and the stabiliser subgroup for
+  $\Lft\::p$ is the trivial subgroup $\set\stet$.
+
+  We use the
+  Indexed Representation \theoremref{indexed-wlog-construction} to
+  show the extended function is equivariant: $\lookupElim \definedby
+  \wlg(c,f) : \struct[\NodeIn]\naturals \equito \naturals$.
+  \end{example}
+
+As in the simply-typed case (cf.~\subsecref{wlog-traversals}), we
+reuse the same canoniser for multiple traversals of the same symmetric
+indexed data type, and streamline the steps in \exampleref{wlog node lookup}.
+
+\begin{definition}
+  Let $\Ctx$ be a $\G$-action, and $F$ be a $\Ctx$-indexed
+  $\G$-strong.  An \emph{indexed canoniser} for $F$ is a natural
+  transformation $\carrier\Ctx \types \canoniser : F \to
+  \carrier\G$. Each such canoniser induces the \emph{canonical
+  elements} functor $\Canon\canoniser : \Action\G_{\Ctx} \to
+  \Fam_{\carrier\Ctx}$ given by:
+  \[
+  ((\Canon\canoniser)\A)_{\ctx} \definedby
+  (\Canon[F\A]\canoniser_{\carrier\A})_{\ctx} \definedby
+  \set{
+    g \iact[F\A]\dtx u \suchthat
+    \begin{array}{@{}l@{}}
+      g = \canoniser_{\carrier\A; \dtx}u, g \act \dtx = \ctx,\\
+      u \in (\carrier F\carrier\A)_{\dtx}
+    \end{array}
+  }
+  \qquad
+  (\Canon\canoniser)h : \fun u (\carrier Fh)u
+  \]
+\end{definition}
+
+An indexed canoniser is uniquely determined by its component at the
+terminal family $\carrier\Ctx \types \terminal$.
+
+\begin{example}
+  The indexed $\Sym 2$-strong functor $\struct[\NodeIn]$ has the
+  canoniser (cf.\exampleref{goLeft canoniser})
+  \[
+  \goLeft_{\Node n\,\ell\,r}\,\Nil \definedby \stet \defines \goLeft_{\Node \ell\,n\,r} (\Lft\:: p)
+  \quad
+  \goLeft_{\Node \ell\,n\,r} (\Rgt\:: p) \definedby \swap
+  \]
+  The canonical elements are:
+  \[
+  (\Canon[\A]\goLeft)_{\Leaf} \definedby \emptyset
+  \qquad
+  (\Canon[\A]\goLeft)_{\Node \ell\,n\,r} \definedby
+  \set{\Nil, \Lft\:: a \suchthat a \in \carrier\A_{\Node \ell\,n\,r}}
+  \tag*{\qedhere}
+  \]
+\end{example}
+
+Continuing in tandem with the development of \subsecref{indexed data types},
+we define the data we use to traverse an indexed symmetric data type:
+
+\begin{definition}\definitionlabel{indexed core algebras}
+  Let $F$ be a $\Ctx$-indexed $\G$-strong functor and $\canoniser : \carrier F \to
+  \carrier\G$ a canoniser for it. An \emph{indexed $\canoniser$-core
+  $F$-algebra} $\pair\A f$ consists of a $\Ctx$-indexed $\G$-action $\A$ equipped
+  with a vertical map $\carrier\Ctx \types f : (\Canon\canoniser)\A \to \carrier\A$. It is
+  \emph{equivariant} when $f$ is equivariant $\Ctx \types f :
+  \parent{(\Canon\canoniser)\A \subset F\A} \equito \A$. A
+  \emph{homomorphism} of equivariant indexed $\canoniser$-core $F$-algebras $h
+  : \pair\A f \to \pair \B g$ is an equivariant map $\Ctx \types h : \A \equito
+  \B$ satisfying: $h (f\, u) = g\, ((\Canon\canoniser) h\,u)$.
+\end{definition}
+
+\begin{example}\examplelabel{dependently typed lookup as core algebra}
+  We have the following equivariant $\goLeft$-core $\struct[{\NodeIn}]$-algebra:
+  \begin{gather*}
+  \lookupCore : (\Canon\goLeft)(\Triv{\naturals}) \to
+  \carrier{\Triv{\naturals}} = \naturals
+  \\
+  \lookupCore_{\Node \ell\,n\,r}
+  \Nil \definedby n
+  \qquad
+  \lookupCore_{\Node \ell\,n\,r}
+  \parent{
+    \Lft\:: (k \in \naturals)
+  } \definedby k
+  \tag*{\qedhere}
+  \end{gather*}
+\end{example}
+
+Next, chain together the traversal and \WLOG{} constructions:
+\[
+\carrier\Ctx\types
+\parent{\Canon[F\A]\canoniser_{\carrier\A} = (\Canon\canoniser)\A \xto f \carrier\A}
+\mapsto
+\parent{F\carrier \A \xto{\wlg(\canoniser_{\carrier\A}, f)} \carrier\A}
+\mapsto
+\parent{\flg[\A](\canoniser, f) :
+  \fix\carrier F \xto{\fold \wlg(\canoniser_{\carrier\A}, f)} \carrier \A}
+\]
+And similarly chain \theoremref{indexed-wlog-construction} and the
+Indexed Equivariant Initiality \theoremref{indexed representation}:
+
+
+\begin{theorem}[indexed core initiality]
+  \theoremlabel{indexed representation for core algebras}
+  Let $F$ be a $\Ctx$-indexed $\G$-strong functor, $\carrier\Ctx \types
+  \roll : \carrier F\fix
+  \carrier F \to \fix \carrier F$ an initial algebra of $\carrier F$,
+  and $\canoniser$ a canoniser for $F$. Then restricting $\roll$ to canonical elements
+  makes $\fix F$ into the initial indexed $\canoniser$-core $F$-algebra
+  $\roll : (\Canon\canoniser)\fix F \equito \fix F$:
+  for any equivariant indexed $\canoniser$-core $F$-algebra ${f :
+    (\Canon\canoniser)\A \equito A}$, the unique equivariant
+  indexed $\canoniser$-core $F$-algebra homomorphism
+  into $f$ is:\/ $\flg(\canoniser, f) : \fix F \equito \A$.
+\end{theorem}
+
+This theorem implies, by \exampleref{dependently typed lookup as core
+  algebra}, that we have an equivariant function:
+\[
+t : \Tree \types \lookup \definedby
+\flg(\goLeft, \lookupCore) : \text{$\NodeIn t \equito \Triv \naturals$}
+% For some reason this empty \mathbf is needed, otherwise the font in
+% \flg at the beginning on the line preceding this comment is typeset
+% in blackboard bold
+\mathbf{}
+\]

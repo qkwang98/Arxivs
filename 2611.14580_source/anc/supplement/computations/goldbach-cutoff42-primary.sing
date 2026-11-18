@@ -1,0 +1,131 @@
+// Full binary Goldbach ideal on the odd primes below 42.
+// Run: Singular -q goldbach-cutoff42-primary.sing
+LIB "primdec.lib";
+
+proc equalIdeals(ideal A, ideal B)
+{
+    return(size(ideal(reduce(A, std(B)))) == 0
+        && size(ideal(reduce(B, std(A)))) == 0);
+}
+
+proc binaryRelations(intvec primes)
+{
+    int n,i,j;
+    ideal I=0;
+    poly anchor,pair;
+    for (n=6;n<=2*primes[size(primes)];n=n+2)
+    {
+        anchor=0;
+        for (i=1;i<=size(primes);i++)
+        {
+            for (j=i;j<=size(primes);j++)
+            {
+                if (primes[i]+primes[j]==n)
+                {
+                    pair=var(i)*var(j);
+                    if (anchor==0) { anchor=pair; }
+                    else { I=I,anchor-pair; }
+                }
+            }
+        }
+    }
+
+    return(I);
+}
+
+proc verifyCutoff(int ch)
+{
+    ring R=ch,(x3,x5,x7,x11,x13,x17,x19,x23,x29,x31,x37,x41),dp;
+    intvec primes=3,5,7,11,13,17,19,23,29,31,37,41;
+    int i;
+    ideal I=binaryRelations(primes);
+
+    // The toric map x_p -> v*u^((p-3)/2) has the same kernel as
+    // x_p -> v*u^p: equal ordinary lengths are imposed in both.
+    ring E=ch,(u,v,x3,x5,x7,x11,x13,x17,x19,x23,x29,x31,x37,x41),dp;
+    ideal parametrization;
+    for (i=1;i<=size(primes);i++)
+    { parametrization[i]=var(i+2)-v*u^((primes[i]-3) div 2); }
+    ideal kernelE=eliminate(parametrization,u*v);
+    setring R;
+    ideal J=imap(E,kernelE);
+    ideal cubics=x13*x37^2-x5*x41^2, x19*x37^2-x11*x41^2,
+        x31^3-x11*x41^2, x31^2*x37-x17*x41^2, x29*x37^2-x31^2*x41,
+        x31*x37^2-x23*x41^2, x37^3-x29*x41^2;
+    if (!equalIdeals(J,I+cubics)) { ERROR("Incorrect toric generators"); }
+
+    poly w=1;
+    for (i=1;i<=size(primes);i++) { w=w*var(i); }
+    if (!equalIdeals(quotient(I,ideal(x3)),J)) { ERROR("Incorrect colon by x3"); }
+    if (!equalIdeals(quotient(I,ideal(w)),J)) { ERROR("Incorrect colon by the variable product"); }
+
+    ideal P29=x3,x5,x7,x11,x13,x17,x19,x23,x29;
+    ideal P31=P29,x31;
+    list decomp=primdecGTZ(I);
+    if (size(decomp)!=3) { ERROR("Unexpected primary decomposition"); }
+    int toricParts,coordinateParts,embeddedParts;
+    ideal Q31;
+    for (i=1;i<=size(decomp);i++)
+    {
+        ideal Q=decomp[i][1];
+        ideal P=decomp[i][2];
+        if (equalIdeals(P,J) && equalIdeals(Q,J)) { toricParts++; }
+        if (equalIdeals(P,P29) && equalIdeals(Q,P29)) { coordinateParts++; }
+        if (equalIdeals(P,P31) && !equalIdeals(Q,P31))
+        { embeddedParts++; Q31=Q; }
+        kill Q,P;
+    }
+    if (toricParts!=1 || coordinateParts!=1 || embeddedParts!=1)
+    { ERROR("Unexpected associated primes"); }
+    ideal candidate=sat(I+ideal(x31^3),ideal(x37));
+    if (!equalIdeals(Q31,candidate)) { ERROR("Incorrect embedded primary ideal"); }
+    // Uncomment the next line to display an explicit minimal generating set.
+    // print(minbase(std(Q31)));
+
+    if (!equalIdeals(intersect(intersect(J,P29),Q31),I))
+    { ERROR("Primary components do not intersect to I"); }
+
+    poly f=cubics[1];
+    if (reduce(f,std(I))==0 || !equalIdeals(quotient(I,ideal(f)),P31))
+    { ERROR("Incorrect witness annihilator"); }
+    for (i=1;i<=size(primes);i++)
+    {
+        int regular=equalIdeals(quotient(I,ideal(var(i))),I);
+        if (regular!=(primes[i]>31)) { ERROR("Incorrect regularity"); }
+        kill regular;
+    }
+    print("PASS char "+string(ch)+": J and P29 minimal; P31 embedded.");
+    print("Annihilator of x13*x37^2-x5*x41^2 is P31; x37, x41 regular.");
+}
+
+
+// Smaller cutoff: x19 is regular although x23 is a zero divisor.
+proc verifyCutoff30(int ch)
+{
+    ring R=ch,(x3,x5,x7,x11,x13,x17,x19,x23,x29),dp;
+    intvec primes=3,5,7,11,13,17,19,23,29;
+    ideal I=binaryRelations(primes);
+    list decomp=primdecGTZ(I);
+    if (size(decomp)!=2) { ERROR("Unexpected primary decomposition at 30"); }
+    ideal P=x3,x5,x7,x11,x13,x17,x23;
+    int i,coordinateParts;
+    for (i=1;i<=size(decomp);i++)
+    {
+        if (equalIdeals(decomp[i][2],P)) { coordinateParts++; }
+    }
+    if (coordinateParts!=1) { ERROR("Missing coordinate prime at 30"); }
+    int regular;
+    for (i=1;i<=size(primes);i++)
+    {
+        regular=equalIdeals(quotient(I,ideal(var(i))),I);
+        if (regular != (primes[i]==19 || primes[i]==29))
+        { ERROR("Incorrect regularity at 30"); }
+    }
+    print("PASS char "+string(ch)+", cutoff 30: x19 and x29 regular; x23 zero divisor.");
+}
+
+verifyCutoff(0);
+verifyCutoff(2);
+verifyCutoff30(0);
+verifyCutoff30(2);
+quit;

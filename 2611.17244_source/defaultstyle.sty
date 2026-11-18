@@ -1,0 +1,458 @@
+% !TeX program = xelatex
+% Only run with XeLaTeX to ensure that there are no errors.
+
+% This is a package intended for personal use as a collection of my most commonly used
+% setup and commands. Some commands are commented out because I do not use them often,
+% but I thought it would be good to remember they exist.
+% 
+% (c) Aleksandar Ivanov (https://github.com/ackiivanov)
+%
+%% This program can be redistributed and/or modified under the terms
+%% of the LaTeX Project Public License Distributed.
+%
+
+% This date is not strictly necessary, but older dates have not been tested
+\NeedsTeXFormat{LaTeX2e}[2024/11/01]
+\ProvidesPackage{defaultstyle}[2025/08/07 v0.01 LaTeX package of my defualt style]
+
+% Flags to exclude certain sections (include everything by default)
+\newif\ifincludecompilation
+\newif\ifincludebibliography
+\newif\ifincludegraphics
+\newif\ifincludetikz
+
+\includecompilationtrue
+\includebibliographytrue
+\includegraphicstrue
+\includetikztrue
+
+% Define options
+\DeclareOption{excludecompilation}{\includecompilationfalse}
+\DeclareOption{excludebibliography}{\includebibliographyfalse}
+\DeclareOption{excludegraphics}{\includegraphicsfalse}
+\DeclareOption{excludetikz}{\includetikzfalse}
+\DeclareOption{minimal}{%
+    \includecompilationfalse
+    \includebibliographyfalse
+    \includegraphicsfalse
+    \includetikzfalse
+}
+
+% Process options
+\ProcessOptions\relax
+
+
+%---------------------------------------------------------------------
+%	COMPILATION
+%---------------------------------------------------------------------
+\ifincludecompilation
+
+\RequirePackage{subfiles}
+
+\fi
+%---------------------------------------------------------------------
+
+
+%---------------------------------------------------------------------
+%	FORMATING AND TYPESETTING
+%---------------------------------------------------------------------
+
+% Option to change margin size
+\RequirePackage[margin=2cm]{geometry}
+
+% Font and encoding settings
+\RequirePackage{fontspec} % only works with xetex and luatex
+
+% Footnotes
+\RequirePackage[stable]{footmisc}
+
+% Indentation and spacing
+\RequirePackage{indentfirst} % indentation
+\RequirePackage{enumitem}[leftmargin=0pt,shortlabels] % enumerate spacing
+\setlist{nosep}
+\setlist[enumerate,1]{label = \textit{(\roman*)}}
+
+% Start numbering sections from zero
+\setcounter{section}{-1}
+
+% Formating of titles
+\RequirePackage{titlesec}
+\titleformat{\section}
+{\normalfont\large\bfseries}{\thesection}{1em}{}
+\titleformat{\subsection}
+{\normalfont\normalsize\bfseries}{\thesubsection}{1em}{}
+\titleformat{\subsubsection}
+{\normalfont\small\bfseries}{\thesubsubsection}{1em}{}
+\titleformat{\paragraph}[runin]
+{\normalfont\small\bfseries}{\theparagraph}{1em}{}
+\titleformat{\subparagraph}[runin]
+{\normalfont\small\bfseries}{\thesubparagraph}{1em}{}
+\RequirePackage[titletoc]{appendix}
+
+% Multi column environment
+\RequirePackage{multicol}
+
+% Math typesetting packages
+\RequirePackage{amsmath, amssymb, amsthm, mathtools, bbold}
+\RequirePackage[mathscr]{euscript} % euler script font
+
+% TIkz-cd for displaying commutative diagrams
+\RequirePackage{tikz-cd}
+
+% Cramped style for inline tikzcd diagrams
+\tikzcdset{
+    cramped*/.style = {
+        line cap = round,
+        every matrix/.append style = {
+            every outer matrix/.append style = {inner sep = +0pt}},
+            every cell/.append style = {
+                inner sep = +0pt,
+                outer sep = 1.25 * width("$\;$")
+            },
+            column sep/.evaluated = width("${}\to{}$")
+    }
+}
+
+% Helpful box for seeing the size of tikzcd diagrams and arranging them
+\newenvironment{boxedtikzcd}{\begin{lrbox}{\boxedtikzcdbox}\begin{tikzcd}}{\end{tikzcd}\end{lrbox}\fbox{\usebox{\boxedtikzcdbox}}}
+\newsavebox{\boxedtikzcdbox}
+
+% Theorem tools, especially the restatable environment, is useful for including theorems in the introduction verbatim. However, it may not work with include from the subfiles package. In restatable, either the definition or the subsequent call has to be starred, and the counter points to the unstarred version
+\RequirePackage{thmtools, thm-restate}
+
+%---------------------------------------------------------------------
+
+
+%---------------------------------------------------------------------
+%	BIBLIOGRAPHY
+%---------------------------------------------------------------------
+\ifincludebibliography
+
+\RequirePackage[backend = biber, style = alphabetic]{biblatex}
+\renewcommand*{\bibfont}{\small}
+\addbibresource{\jobname.bib} % same name convention for bib and tex file
+
+\fi
+%---------------------------------------------------------------------
+
+
+%---------------------------------------------------------------------
+%	COLORS
+%---------------------------------------------------------------------
+
+% Define the colors
+\RequirePackage{xcolor}
+\definecolor{brown}{HTML}{CD853F}
+\definecolor{blue}{HTML}{4169E1}
+\definecolor{green}{HTML}{2E8B57}
+\definecolor{red}{HTML}{D3383B}
+\definecolor{softblack}{rgb}{0.1, 0.1, 0.1}
+\definecolor{softwhite}{rgb}{0.77, 0.77, 0.77}
+
+% Invert colors
+\newcommand{\invertbackgroundcolor}{\pagecolor{softblack}\tikzcdset{background color = softblack}}  
+\newcommand{\inverttextcolor}{\color{softwhite}}    
+\newcommand{\invertcolors}{\invertbackgroundcolor\inverttextcolor}
+
+%---------------------------------------------------------------------
+
+
+%---------------------------------------------------------------------
+%	HYPERLINKS
+%---------------------------------------------------------------------
+
+% Setup options for hyperlinks
+\RequirePackage{hyperref}
+\hypersetup{
+    colorlinks = true,
+    breaklinks = true,
+    linktoc = all,
+    bookmarksnumbered = true,
+    urlcolor = brown,
+    linkcolor = blue,
+    citecolor = green
+}
+
+% Referencing package
+\RequirePackage{cleveref}
+\crefname{section}{\S\!}{\S\S\!}
+\Crefname{section}{\S\!}{\S\S\!}
+
+%---------------------------------------------------------------------
+
+
+%---------------------------------------------------------------------
+%	THEOREM STYLES
+%---------------------------------------------------------------------
+
+% Define a counter to keep count for all sub-environments
+% and one for the special lettered ones
+\newcounter{userrunningcounter}
+\newcounter{userspecialcounter}
+\renewcommand{\theuserspecialcounter}{\Alph{userspecialcounter}}
+
+
+% We reset the counter at every section and ensure that hyperref still
+%has unique identifiers even with the reset
+\numberwithin{userrunningcounter}{section}
+\renewcommand*{\theHuserrunningcounter}{\theHsection.\arabic{userrunningcounter}}
+
+
+% Define theorem styles here based on the definition style
+\theoremstyle{definition}
+
+\newtheorem{definition}[userrunningcounter]{Definition}
+\crefname{definition}{definition}{definitions}
+
+\newtheorem{specialdefinition}[userspecialcounter]{Definition}
+\crefname{specialdefinition}{definition}{definitions}
+
+
+\newtheorem{construction}[userrunningcounter]{Construction}
+\crefname{construction}{construction}{constructions}
+
+\newtheorem{observation}[userrunningcounter]{Observation}
+\crefname{observation}{observation}{observations}
+
+\newtheorem{notation}[userrunningcounter]{Notation}
+\crefname{notation}{notation}{notations}
+
+% Define theorem styles here based on the plain style
+\theoremstyle{plain}
+
+\newtheorem{theorem}[userrunningcounter]{Theorem}
+\crefname{theorem}{theorem}{theorems}
+
+\newtheorem*{theorem*}{Theorem}
+\crefname{theorem*}{theorem}{theorems}
+
+\newtheorem{specialtheorem}[userspecialcounter]{Theorem}
+\crefname{specialtheorem}{theorem}{theorems}
+
+\newtheorem{corollary}[userrunningcounter]{Corollary}
+\crefname{corollary}{corollary}{corollaries}
+
+\newtheorem{lemma}[userrunningcounter]{Lemma}
+\crefname{lemma}{lemma}{lemmata}
+
+\newtheorem{proposition}[userrunningcounter]{Proposition}
+\crefname{proposition}{proposition}{propositions}
+
+\newtheorem{conjecture}[userrunningcounter]{Conjecture}
+\crefname{conjecture}{conjecture}{conjectures}
+
+% Define theorem styles here based on the remark style
+\theoremstyle{remark}
+
+\newtheorem{example}[userrunningcounter]{Example}
+\crefname{example}{example}{examples}
+
+\newtheorem{counterexample}[userrunningcounter]{Counterexample}
+\crefname{counterexample}{counterexample}{counterexamples}
+
+\newtheorem{remark}[userrunningcounter]{Remark}
+\crefname{remark}{remark}{remarks}
+
+%---------------------------------------------------------------------
+
+
+%---------------------------------------------------------------------
+%	IMPORTED GRAPHICS
+%---------------------------------------------------------------------
+\ifincludegraphics
+
+% Importing graphics
+\RequirePackage{float, caption, graphicx}
+\graphicspath{{images/}} % images go in folder next to tex file convention
+
+% Importing pdf files
+\RequirePackage{pdfpages}
+
+\fi
+%---------------------------------------------------------------------
+
+
+%---------------------------------------------------------------------
+%	TIKZ GRAPHICS
+%---------------------------------------------------------------------
+\ifincludetikz
+
+% Tikz for native graphics
+\RequirePackage{tikz}
+\usetikzlibrary{calc, matrix, arrows.meta, shapes.geometric, decorations.pathmorphing, decorations.pathreplacing, decorations.markings, fadings, shadows}
+
+% ? will possibly change when I understand tikz more
+\tikzset{
+    string/.style = {
+        draw = #1,
+        postaction = {decorate},
+        decoration = {markings, mark = at position .51 with {\arrow[draw = #1, scale=0.5]{>}}}
+    },
+    costring/.style={
+        draw = #1,
+        postaction = {decorate},
+        decoration = {markings, mark = at position .51 with {\arrow[draw = #1, scale=0.5]{<}}}
+    },
+    ostring/.style = {
+        draw = #1,
+        postaction = {decorate},
+        decoration = {markings, mark = at position .47 with {\arrow[draw = #1, scale=0.5]{>}}}
+    },
+    ustring/.style = {
+        draw = #1,
+        postaction = {decorate},
+        decoration = {markings, mark = at position .56 with {\arrow[draw = #1, scale=0.5]{>}}}
+    },
+    oostring/.style = {
+        draw = #1,
+        postaction = {decorate},
+        decoration = {markings, mark = at position .43 with {\arrow[draw = #1, scale=0.5]{>}}}
+    },
+    uustring/.style = {
+        draw = #1,
+        postaction = {decorate},
+        decoration = {markings, mark = at position .59 with {\arrow[draw = #1, scale=0.5]{>}}}
+    },
+    directed/.style = {
+        string = blue!50!black
+    }, 
+    odirected/.style = {
+        ostring = blue!50!black
+    }, 
+    udirected/.style = {
+        ustring = blue!50!black
+    }, 
+    oodirected/.style = {
+        oostring = blue!50!black
+    }, 
+    uudirected/.style = {
+        uustring = blue!50!black
+    },     
+    redirected/.style = {
+        costring = blue!50!black
+    },
+    redirectedgreen/.style = {
+        costring = green!50!black
+    },
+    directedgreen/.style = {
+        string = green!50!black
+    }
+}
+
+\tikzset{
+    -dot-/.style = {
+        postaction = {decorate},
+        decoration = {markings, mark = at position 0.5 with {\fill circle (2pt);}}
+    },
+    Fdot/.style = {
+        circle,
+        draw,
+        fill,
+        inner sep = 0pt
+    }, 
+	Odot/.style = {
+        circle,
+        draw,
+        fill = white,
+        inner sep = 0.1pt,
+        minimum size = 0.1cm
+    },
+    Obox/.style = {
+        regular polygon,
+        regular polygon sides = 4,
+        draw,
+        fill = white,
+        inner sep = -0.1pt,
+        minimum size = 0.2cm,
+        font = \tiny
+    }
+}
+
+%\def\nicedashedcolourscheme{\shadedraw[top color=blue!22, bottom color=blue!22, draw=gray, dashed]}
+%\def\nicedashedpalecolourscheme{\shadedraw[top color=blue!12, bottom color=blue!12, draw=gray, dashed]}
+%\def\nicecolourscheme{\shadedraw[top color=blue!22, bottom color=blue!22, draw=blue!22]}
+%\def\nicepalecolourscheme{\shadedraw[top color=blue!12, bottom color=blue!12, draw=white]}
+%\def\nicenocolourscheme{\shadedraw[top color=gray!2, bottom color=gray!25, draw=white]}
+%\def\nicereallynocolourscheme{\shadedraw[top color=white!2, bottom color=white!25, draw=white]}
+  
+%\def\boringcolourscheme{\draw[fill=blue!20, dashed]}
+
+%  \tolerance 1414
+%  \hbadness 1414
+%  \hfuzz 0.3pt
+%  \widowpenalty=10000
+%  \vfuzz \hfuzz
+%  \raggedbottom
+
+% Preset Tikz commands
+
+% tikz half circle arc
+\AtBeginDocument{\newcommand{\tkarc}[6]{
+    % Usage: tkarc{vertical orientation}{which leg is origin}{leg x coordinate}{leg y coordinate}{width}{height}
+    % vertical orientation = +1 for evaluation, -1 for coevaluation
+    % which leg is origin = +1 for right leg, -1 for left leg
+    \draw[very thick, directedgreen] (#3, #4) .. controls (#3, #4 + 2 / 3 * #1 * #6) and (#3 - #2 * #5, #4 + 2 / 3 * #1 * #6) .. (#3 - #2 * #5, #4);
+}}
+
+% tikz trivalent vertex
+\AtBeginDocument{\newcommand{\tktrival}[6]{
+    % Usage: tktrival{vertical orientation}{which leg is origin}{leg x coordinate}{leg y coordinate}{width}{height}
+    % vertical orientation = +1 for multiplication, -1 for comultiplication
+    % which leg is origin = +1 for right leg, 0 for middle leg, -1 for left leg
+    \ifx 0#2%
+        \draw[very thick, color=green!60!black] (#3 - #5 / 2, #4 - #1 * #6) .. controls (#3 - #5 / 2, #4 - #1 * #6 / 3) and (#3 + #5 / 2, #4 - #1 * #6 / 3) .. (#3 + #5 / 2, #4 - #1 * #6);
+        \draw[very thick, color=green!60!black] (#3, #4) -- (#3, #4 - #1 * #6 / 2);%
+    \else%
+        \draw[very thick, color=green!60!black] (#3, #4) .. controls (#3, #4 + 2 / 3 * #1 * #6) and (#3 - #2 * #5, #4 + 2 / 3 * #1 * #6) .. (#3 - #2 * #5, #4);
+        \draw[very thick, color=green!60!black] (#3 - #2 * #5 / 2, #4 + #1 * #6 / 2) -- (#3 - #2 * #5 / 2, #4 + #1 * #6);%
+    \fi
+}}
+
+% tikz trivalent vertex with straight edge
+\AtBeginDocument{\newcommand{\tkstrival}[6]{
+    % Usage: tkstrival{vertical orientation}{which leg is origin}{leg x coordinate}{leg y coordinate}{width}{height}
+    % vertical orientation = +1 for multiplication, -1 for comultiplication
+    % which leg is origin = +1 for right leg, 0 for middle leg, -1 for left leg
+    \ifx 0#2%
+        \draw[very thick, color=green!60!black] (#3 - #5, #4 - #1 * #6) .. controls (#3 - #5, #4 - 2 / 3 * #1 * #6) and (#3 - 3 / 4 * #5, #4 - 1 / 2 * #1 * #6) .. (#3, #4 - 1 / 2 * #1 * #6);
+        \draw[very thick, color=blue!60!black] (#3, #4) -- (#3, #4 - #1 * #6);%
+    \else%
+        \draw[very thick, color=green!60!black] (#3, #4) .. controls (#3, #4 + 1 / 3 * #1 * #6) and (#3 - 1 / 2 * #2 * #5, #4 + 1 / 2 * #1 * #6) .. (#3 - #2 * #5, #4 + 1 / 2 * #1 * #6);
+        \draw[very thick, color=blue!60!black] (#3 - #2 * #5, #4) -- (#3 - #2 * #5, #4 + #1 * #6);%
+    \fi
+}}
+
+\fi
+%---------------------------------------------------------------------
+
+
+%---------------------------------------------------------------------
+%	NEW COMMANDS
+%---------------------------------------------------------------------
+
+% The commands that change font style in math mode are often used but not mnemonically named for code editors because they all begin with math
+\newcommand{\sfmath}[1]{\mathsf{#1}}
+\newcommand{\scrmath}[1]{\mathscr{#1}}
+\newcommand{\bbmath}[1]{\mathbb{#1}}
+\newcommand{\rmmath}[1]{\mathrm{#1}}
+\newcommand{\itmath}[1]{\mathit{#1}}
+\newcommand{\bfmath}[1]{\mathbf{#1}}
+
+
+% redefine the empty set
+\renewcommand{\emptyset}{\varnothing}
+
+
+% angle brackets
+\newcommand{\lrangle}[1]{\langle #1 \rangle}
+
+% half-open interval
+\newcommand{\hoint}{\mathbb{R}_{\geq 0}}
+
+%---------------------------------------------------------------------
+
+
+\endinput
+
+%%
+%% End of file `defaultstyle.sty'.

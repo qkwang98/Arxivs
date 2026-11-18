@@ -1,0 +1,880 @@
+\let\Bbbk\undefined
+\usepackage{amsthm,proof,amssymb}
+\usepackage{enumitem}
+\usepackage{oktheorem,okgeneralmath,okcategory}
+\usepackage{bbold}
+\usepackage{epiolmec}
+\usepackage{oksemantics}
+\usepackage{mathpartir}
+\usepackage{todonotes}
+\usepackage{natbib}
+\usepackage{fp}
+\usepackage{xparse}
+\usepackage{xspace}
+
+%next two for no-depth underlining
+\usepackage{contour}
+%\usepackage[normalem]{ulem}
+\newcommand{\OhK}[1]{\todo[inline,author=OK]{#1}}
+\newcommand{\ohk}[1]{\todo[size=\tiny]{OK: #1}{}}
+\newcommand{\MaP}[1]{\todo[inline,author=MP,color=LightGreen]{#1}}
+\newcommand{\map}[1]{\todo[size=\tiny,color=LightGreen]{MP: #1}{}}
+
+
+%%%%%%%%%%% Cross references %%%%%%%%%%
+\newboolean{WithSupplementary}
+\setboolean{WithSupplementary}{true}
+\newcommand\seclabel[1]{\label{sec:#1}}
+\newcommand\secref[1]{\S\ref{sec:#1}}
+\newcommand\applabel[1]{\label{app:#1}}
+\newcommand\appref[2][]{Appendix~%
+  \ifthenelse{\boolean{WithSupplementary}}%
+             {\ref{app:#2}}%
+             {#1}%
+             }
+\newcommand\applemmaref[2][]{%
+  \ifthenelse{\boolean{WithSupplementary}}%
+             {\lemmaref{#2}}%
+             {Lemma~#1}%
+}
+\newcommand\apptheoremref[2][]{%
+  \ifthenelse{\boolean{WithSupplementary}}%
+             {\theoremref{#2}}%
+             {Theorem~#1}%
+}
+\WithSuffix\newcommand\appref*[1]{\ref{app:#1}}
+\newcommand\subseclabel[1]{\label{subsec:#1}}
+\newcommand\subsecref[1]{\S\ref{subsec:#1}}
+\newcommand\subsubseclabel[1]{\label{subsubsec:#1}}
+\newcommand\remarklabel[1]{\label{remark:#1}}
+\newcommand\remarkref[1]{Remark~\ref{remark:#1}}
+\newcommand\subsubsecref[1]{\S\ref{subsubsec:#1}}
+\newcommand\figlabel[1]{\label{fig:#1}}
+\newcommand\figref[1]{Fig.~\ref{fig:#1}}
+
+\newcommand\figfile[2]{%
+    \begin{figure}%
+      \begin{center}%
+        \input{sections/#1}%
+        \caption{#2}%
+        \figlabel{#1}%
+      \end{center}%
+    \end{figure}%
+}
+
+{
+  \theoremstyle{definition}
+  \newtheorem{remark}[definition]{Remark}
+}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+
+%%%%%%%%%%% Add possessive citations, e.g. "Leroy's (1992)", taken
+\newcommand{\citepos}[1]{\citeauthor{#1}'s~\cite{#1}}
+\WithSuffix\newcommand\citepos*[2]{\citeauthor{#1}'s #2~\cite{#1}}
+\WithSuffix\newcommand\citepos-[2]{\citeauthor{#1}#2~\cite{#1}}
+%%%%%%%%%%%%%%%% End of possessive citation %%%%%%%%%%%%%%%%%%%%%
+\makeatletter
+\newcommand\ibidt[2][]{%
+  \citeauthor{#2}~\ibid[#1]{#2}
+}
+\newcommand\ibid[2][]{%
+  \citetext{%
+    \hyper@natlinkstart{#2}%
+    \textit{ibid.}%
+    \hyper@natlinkend%
+    \ifx\ibid@empty#1\ibid@empty%
+    \else%
+    , #1%
+    \fi%
+  }%
+}
+
+\newcommand\citloct[1]{%
+  \citeauthor{#1}~\citloc{#1}%
+}
+\newcommand\citloc[1]{%
+  \citetext{%
+    \hyper@natlinkstart{#1}%
+    \textit{cit.~loc.}%
+    \hyper@natlinkend%
+  }%
+}
+\newcommand\citlocpos[1]{%
+  \citeauthor{#1}'s~\citloc{#1}%
+}
+\WithSuffix\newcommand\citlocpos*[2]{%
+  \citeauthor{#1}'s #2~\citloc{#1}%
+}
+\makeatother
+
+
+\newcommand\diagram[1]{\begin{center}
+    \diagram*{#1}
+\end{center}}
+\WithSuffix\newcommand\diagram*[2][c]{\begin{tabular}[#1]{@{}c@{}}\includegraphics{generated-diagrams/diagram-#2.mps}\end{tabular}}
+\newcommand\diagramNumbered[2][]{%
+  \begin{equation}
+  #1
+  \hfill
+  \diagram*{#2}
+  \hfill
+  \end{equation}%
+}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\usepackage{tcolorbox}
+\newtcbox{\myfigbox}{%
+  on line, arc=3pt, outer arc=3pt,
+  colback=black!8, colframe=black!8,
+  boxsep=0pt,
+  left=2pt,right=2pt,top=1pt,bottom=1pt,%
+  boxrule=0pt}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Import a single character from a font to conserve font tables
+\makeatletter
+\NewDocumentCommand\NewFontImport{O{\hbox}O{\tf@size}mmmmmm}{
+\newcommand#3{\begingroup\mathchoice%
+  {#1{\fontsize{#2}{#2}\usefont{#4}{#5}{#6}{#7}\char#8}}%
+  {\hbox{\fontsize{\tf@size}{\tf@size}\usefont{#4}{#5}{#6}{#7}\char#8}}%
+  {\hbox{\fontsize{\sf@size}{\sf@size}\usefont{#4}{#5}{#6}{#7}\char#8}}%
+  {\hbox{\fontsize{\ssf@size}{\ssf@size}\usefont{#4}{#5}{#6}{#7}\char#8}}%
+  \endgroup%
+}}
+\makeatother
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\makeatletter
+\newcommand\newmvar[3][]{%
+  \newcommand#2[1][1]{#1{\ifcase ##1\or #3\or\else@ctrerr\fi}}%
+}
+
+%% introduce a variation of a defined meta-variable
+\newcommand\mvarvar[3]{%
+  \WithSuffix\newcommand#1#2[1][0]{%
+    \FPeval{\tempindex}{clip(#3+##1)}%
+    #1[\tempindex]%
+  }
+}
+
+\makeatother
+
+
+%% half-open intervals, since they mess up indentation
+\newcommand\oc[2]{(#1, #2]}
+\newcommand\co[2]{[#1, #2)}
+
+\newcommand\symdiff{\mathbin{\triangle}}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%% monads %%%%%%%%%%%%%
+\newcommand\newop[2]{\newcommand{#1}{\mathop{{\mathrm{#2}}}\nolimits}}
+\newcommand{\bindsymbol}{\mathrel{\small\rrangle}\joinrel\mathrel{\small=}}
+\newcommand{\klseq}{\ggg}
+\newcommand{\bind}{\mathrel{\bindsymbol}}
+\newop{\return}{return}
+\newop{\strengthName}{\mathbf{st}}
+\newcommand{\strength}[1][]{\supimplicit[{#1}]{\strengthName}}
+\newcommand{\xstrength}[1][]{\supimplicit[{#1};\times]{\strengthName}}
+\newop{\shadow}{shadow}
+
+\newcommand\suspend[1]{\boldsymbol\{#1\boldsymbol\}}
+\newcommand\spair[2]{\langle #1, #2\rangle}
+\newcommand\sunit{\langle\rangle}
+\makeatletter
+\let\llangle\@undefined
+\let\rrangle\@undefined
+%% \DeclareMathDelimiter{\llangle}{\mathopen}%
+%%                      {okMnSymbolLargeSymbols}{'164}{okMnSymbolLargeSymbols}{'164}
+%% \DeclareMathDelimiter{\rrangle}{\mathclose}%
+%%                      {okMnSymbolLargeSymbols}{'171}{okMnSymbolLargeSymbols}{'171}
+\makeatother
+\def\pexplen{0mu}
+\def\pexpmidlen{12mu}
+\newcommand\pexp{
+  \mathrel{%
+    \overrightharpoon{%
+      {\mspace{-\pexplen}\smash{\mathord{\relbar\mspace{-\pexpmidlen}\relbar}}\vphantom{.}}\mspace{-\pexplen}}%
+  }%
+}
+\usepackage{mathtools}
+\usepackage{pst-venn}
+\usepackage{tikz-cd}
+\usetikzlibrary{decorations.pathmorphing}
+
+% code from Gonzalo
+\newcommand\xrsquigarrow[1]{%
+    \mathrel{%
+        \begin{tikzpicture}[%
+            baseline={(current bounding box.south)}
+            ]
+        \node[%
+            ,inner sep=.44ex
+            ,align=center
+            ] (tmp) {$\scriptstyle #1$};
+        \path[%
+            ,draw,<-
+            ,decorate,decoration={%
+            ,snake,aspect=0
+            ,amplitude=1pt
+            ,segment length=1.5mm,pre length=3.5pt
+                }
+            ]
+        (tmp.south east) -- (tmp.south west);
+        \end{tikzpicture}
+        }
+    }
+\newcommand\xlsquigarrow[1]{%
+    \mathrel{%
+        \begin{tikzpicture}[%
+            ,baseline={(current bounding box.south)}
+            ]
+        \node[%
+            ,inner sep=.44ex
+            ,align=center
+            ] (tmp) {$\scriptstyle #1$};
+        \path[%
+            ,draw,<-
+            ,decorate,decoration={%
+                ,zigzag
+                ,amplitude=0.7pt
+                ,segment length=1.2mm,pre length=3.5pt
+                }
+            ]
+        (tmp.south west) -- (tmp.south east);
+        \end{tikzpicture}
+        }
+    }
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\usepackage[dvipsnames,svgnames,table]{xcolor}
+\usepackage{listings}
+\colorlet{code}{DarkBlue}
+\colorlet{types}{Magenta}
+\colorlet{implicit}{Gray}
+%%%%%%%%%%%%%%%%% Syntax %%%%%%%%%%%%%%%%%
+\newcommand\gdefinedby{\mathrel{::=}}
+\newcommand\gor{\lvert}
+
+
+\newcommand\syncat[1]{\mspace{-25mu}\synname{#1}}
+\newcommand\synname[1]{\qquad\text{#1}}
+
+\newenvironment{syntax}[1][]{%
+\(
+  \rowcolors{100}{white}{white}%
+  \begin{array}[t]{#1l@{}l@{\,}*2{l@{}}@{\,}l}
+}{
+\end{array}
+\)%
+}
+
+\newenvironment{sugar}{%
+  \(
+  \begin{array}[t]{@{\bullet\ }l@{\mspace{20mu}}ll}
+    \multicolumn{1}{@{\hphantom{\bullet}}l}{\text{Sugar}} & \text{Elaboration}\\
+    \hline
+}{
+  \end{array}
+  \)%
+}
+
+\usepackage{scalerel,stackengine}
+\stackMath
+\newcommand\reallywidehat[1]{%
+\savestack{\tmpbox}{\stretchto{%
+  \scaleto{%
+    \scalerel*[\widthof{\ensuremath{#1}}]{\kern-.6pt\bigwedge\kern-.6pt}%
+    {\rule[-\textheight/2]{1ex}{\textheight}}%WIDTH-LIMITED BIG WEDGE
+  }{\textheight}%
+}{0.5ex}}%
+\stackon[1pt]{#1}{\tmpbox}%
+}
+
+\newcommand\sem[1]{\scottbrackets{#1}}
+
+\newenvironment{catdef}{%
+\begingroup%
+\newcommand\objects[1]{\item[Objects $##1$:]}%
+\newcommand\morphisms[1]{\item[{Morphisms $##1$:}]}%
+\begin{description}}{\end{description}\endgroup}
+
+\NewDocumentCommand\eval{oO{}}{\mathop{\mathrm{eval}}\nolimits_{\IfNoValueF{#1}{#1;}#2}}
+\NewDocumentCommand\curry{oO{}}{\mathop{\mathrm{curry}}\nolimits_{\IfNoValueF{#1}{#1;}#2}}
+\NewDocumentCommand\uncurry{oO{}}{\mathop{\mathrm{uncurry}}\nolimits_{\IfNoValueF{#1}{#1;}#2}}
+\RenewDocumentCommand\Dom{oO{}}{\mathop{\mathrm{Dom}}\nolimits_{\IfNoValueF{#1}{#1;}#2}}
+\newcommand\swap{\mathtt{F}}
+\newcommand\stet{\mathtt{I}}
+\newcommand\pto\rightharpoonup
+\newcommand\xpto\xrightharpoonup
+
+\newcommand\genepto[2]{
+\mathrel{\raisebox{#1}{$#2\lhook$}}\joinrel\rightleftharpoons
+}
+
+\newcommand\epto{
+  \mathchoice{\genepto{1pt}{\displaystyle}}
+             {\genepto{1pt}{\textstyle}}
+             {\genepto{0.8pt}{\scriptstyle}}
+             {\genepto{0.8pt}{\scriptscriptstyle\mkern -1mu}}
+}
+
+\newcommand\xeptogen[2]{
+\mathrel{\raisebox{#1}{$#2\lhook$}}\joinrel\xrightleftharpoons
+}
+
+\newcommand\xepto[2][]{
+  \mathchoice{\xeptogen{.9pt}{\displaystyle}[#1]{#2}}
+             {\xeptogen{1pt}{\textstyle}[#1]{#2}}
+             {\xeptogen{0.8pt}{\scriptstyle}[#1]{#2}}
+             {\xeptogen{0.8pt}{\scriptscriptstyle\mkern -1mu}[#1]{#2}}
+}
+\newcommand\dif{\mathrm{d}}
+\newcommand\Dif{\mathop\triangle\!}
+\DeclareFontFamily{U}{bskarr}{}
+\DeclareFontShape{U}{bskarr}{m}{n}{<->bskarr10}{ }
+\NewFontImport\rightarrowTriangle{U}{bskarr}{m}{n}{"FB}
+\NewFontImport\rightarrowtriangle{U}{bskarr}{m}{n}{"FE}
+\NewDocumentCommand\kto{O{}}{\mathrel{\rightarrowtriangle}_{%
+  \ifthenelse{\equal{#1}{sig}}%
+          {\sigma}{%
+  \ifthenelse{\equal{#1}{prb}}{1}{%
+  \ifthenelse{\equal{#1}{fin}}{\textrm{fin}}{%
+  \ifthenelse{\equal{#1}{sub}}{\leq1}
+             {#1}}}}%
+}}
+
+\DeclareFontEncoding{LS1}{}{}
+\DeclareFontFamily{LS1}{stixarrows1}{ }
+\DeclareFontSubstitution{LS1}{stix}{m}{n}
+\DeclareFontShape{LS1}{stixarrows1}{m}{n} {<-> stix-mathsf}{}
+%\NewFontImport\lhook{LS1}{stixarrows1}{m}{n}{"2A}
+\newcommand{\xbothooks}{%
+  \mathchoice{\mathrel{\lhook}\mspace{-4mu}\joinrel\mathrel{\raisebox{-2.6pt}{$\displaystyle\lhook$}}}
+             {\mathrel{\lhook}\mspace{-3mu}\joinrel\mathrel{\raisebox{-2.6pt}{$\lhook$}}}
+             {\mathrel{\raisebox{.6pt}{$\scriptstyle\lhook$}}%
+                 \mspace{-3mu}\joinrel%
+              \mathrel{\raisebox{-1.05pt}{$\scriptstyle\lhook$}}}
+             {\mathrel{\raisebox{1.5pt}{$\scriptscriptstyle\lhook$}}%
+                 \mspace{-2mu}\joinrel%
+              \mathrel{\raisebox{-.19pt}{$\scriptscriptstyle\lhook$}}}}
+\newcommand{\bothooks}{%
+  \mathchoice{\mathrel{\lhook}\mspace{-3.5mu}\joinrel\mathrel{\raisebox{-2.6pt}{$\displaystyle\lhook$}}}
+             {\mathrel{\lhook}\mspace{-3mu}\joinrel\mathrel{\raisebox{-2.6pt}{$\lhook$}}}
+             {\mathrel{\lhook}%
+                 \mspace{-3mu}\joinrel%
+              \mathrel{\raisebox{-1.9pt}{$\scriptstyle\lhook$}}}
+             {\mathrel{\raisebox{.2pt}{$\scriptscriptstyle\lhook$}}%
+                 \mspace{-2mu}\joinrel%
+              \mathrel{\raisebox{-1.25pt}{$\scriptscriptstyle\lhook$}}}}
+\DeclareFontFamily{LS1}{stixintegrals}{ }
+\DeclareFontShape{LS1}{stixintegrals}{m}{n} {<-> stix-mathcal}{}
+%\NewFontImport[\raisebox{-2pt}][15pt]\sqintslop{LS1}{stixintegrals}{m}{n}{"A8}
+\NewFontImport\intcupupop{LS1}{stixintegrals}{m}{n}{"C7}
+\newcommand\intcupup{\DOTSI\mathop{\intcupupop}\limits}
+\DeclareFontFamily{LS1}{stixletters}{ }
+\DeclareFontShape{LS1}{stixletters}{m}{it}{<-> stix-mathit}{}
+\NewFontImport{\scurel}{LS1}{stixletters}{m}{it}{"FE}
+\DeclareFontFamily{LS1}{stixfrak}{ }
+\DeclareFontShape{LS1}{stixfrak}{m}{n}{<-> stix-mathfrak}{}
+\NewFontImport{\boxastSymb}{LS1}{stixfrak}{m}{n}{"B5}
+\newcommand\mapmul{\mathbin{\boxastSymb}}
+\makeatletter
+%\newcommand\sqint{\DOTSI\mathop{\sqintslop}\nolimits}
+\makeatother
+
+\newcommand\cotuple\coseq
+\newcommand\deneq{\mathrel{%
+  \raisebox{.5ex}{%
+  \scalebox{0.4}{\EOx}%
+  }
+  }}
+\newcommand\vto[3]{%
+  \begin{smallmatrix}%
+        \hphantom{#2}#1     \\%
+        #2\mathord\downarrow\\%
+        \hphantom{#2}#3       %
+  \end{smallmatrix}%
+}
+\WithSuffix\newcommand\vto+[3]{%
+  \begin{smallmatrix}%
+        #1     \\%
+        \mathllap{#2}\mathord\downarrow\\%
+        #3       %
+  \end{smallmatrix}%
+}
+\WithSuffix\newcommand\vto*[3]{%
+  \begin{smallmatrix}%
+        #1\hphantom{#2}     \\%
+        \mathord\downarrow#2\\%
+        #3\hphantom{#2}       %
+  \end{smallmatrix}%
+}
+\WithSuffix\newcommand\vto-[3]{%
+  \begin{smallmatrix}%
+        #1     \\%
+        \mathord\downarrow\mathrlap{#2}\\%
+        #3       %
+  \end{smallmatrix}%
+}
+\newcommand\vtotwo[5]{%
+  \begin{smallmatrix}%
+        \hphantom{#2}#1     \\%
+        #2\mathord\downarrow\\%
+        \hphantom{#2}#3     \\%
+        #4\mathord\downarrow\\%
+        \hphantom{#4}#5       %
+  \end{smallmatrix}%
+}
+\WithSuffix\newcommand\vtotwo+[5]{%
+  \begin{smallmatrix}%
+        #1                             \\%
+        \mathllap{#2}\mathord\downarrow\\%
+        #3                             \\%
+        \mathllap{#4}\mathord\downarrow\\%
+        #5
+  \end{smallmatrix}%
+}
+\WithSuffix\newcommand\vtotwo*[5]{%
+  \begin{smallmatrix}%
+        #1\hphantom{#2}     \\%
+        \mathord\downarrow#2\\%
+        #3\hphantom{#2}     \\%
+        \mathord\downarrow#4\\%
+        #5\hphantom{#4}       %
+  \end{smallmatrix}%
+}
+\newcommand\vfrom[3]{%
+  \begin{smallmatrix}%
+        \hphantom{#2}#1     \\%
+        #2\mathord\uparrow\\%
+        \hphantom{#2}#3       %
+  \end{smallmatrix}%
+}
+
+\newcommand\para{\mathbin{\mathrel\lvert\mathrel\lvert}}
+
+%% \DeclareFontFamily{U}{mathb}{}
+%% \DeclareFontShape{U}{mathb}{m}{n}{
+%%       <5> <6> <7> <8> <9> <10> gen * mathb
+%%       <10.95> mathb10 <12> <14.4> <17.28> <20.74> <24.88> mathb12
+%%       }{}
+%% \DeclareFontSubstitution{U}{bbold}{m}{n}
+%%\NewFontImport\llcorner{mathb}{"7A}
+%%\NewFontImport\lrcorner{mathb}{"7B}
+
+
+%\newcommand\carrier[2][]{\llcorner\underset{#1}{#2}\lrcorner}
+\newcommand\carrier[1]{\underline{#1}}
+\newcommand\free[2][]{\ulcorner\overset{#1}{#2}\urcorner}
+\newcommand\fun[1]{#1 \mapsto}
+\newenvironment{casefun}{\uplambda\begin{cases}}{\end{cases}}
+\newcommand\mathi{\mathchoice%
+  {\text{\normalsize\rm\i}}%
+  {\text{\normalsize\rm\i}}%
+  {\text{\scriptsize\rm\i}}%
+  {\text{\tiny\rm\i}}%
+}
+
+\newenvironment{codeblock}%
+   {\begin{array}[t]{@{}l@{}}}
+   {\end{array}}
+
+\DeclareFontFamily{U}{bbold}{}
+\DeclareFontShape{U}{bbold}{m}{n}{<->bbold10}{}
+\DeclareFontSubstitution{U}{bbold}{m}{n}
+\NewFontImport\SinSym{U}{bbold}{m}{n}{'017}
+
+%%%%%%%%%%%%%  Metavariables %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+% algebras
+\newmvar\A{A \or B \or C \or D}
+\newcommand\B{\A[2]}
+\let\C\undefined
+\newcommand\C{\A[3]}
+\newcommand\D{\A[4]}
+% Sets
+\newmvar\X{X \or Y \or Z}
+\newcommand\Y{\X[2]}
+\newcommand\Z{\X[3]}
+\newmvar\mX{X \or Y \or Z}
+\newcommand\mY{\mX[2]}
+\newcommand\mZ{\mX[3]}
+\newmvar\mx{x \or y \or z}
+\newcommand\my{\mx[2]}
+\newcommand\mz{\mx[3]}
+
+\newmvar\E{E}
+% Groups
+\newmvar\G{G \or H \or K}
+\newmvar\M{M \or K \or L}
+\let\H\undefined
+\newcommand\H{\G[2]}
+\newcommand\K{\G[3]}
+% Predicates
+\let\P\undefined
+\newmvar\P{P \or Q}
+\newcommand\Q{\P[2]}
+% Representations
+\newmvar\rep{\rho\or\sigma\or\tau}
+% Actions are algebras
+
+\newcommand\implicit[2][]{\overset{{\color{implicit}#1}}{#2}}
+% inlined implicit
+\newcommand\inplicit[1]{{\color{implicit}#1}}
+\newcommand\subimplicit[2][]{#2_{{\color{implicit}#1}}}
+\newcommand\supimplicit[2][]{#2^{{\color{implicit}#1}}}
+\newcommand\Group{\Category{Grp}}
+\newcommand\presentation[2]{\langle #1 \mid #2 \rangle}
+\newcommand\unit[1][]{\implicit[{#1}]{e}}
+\newcommand\mul[1][]{\mathbin{\implicit[#1]{\ast}}}
+\newcommand\ginv[2][]{\subimplicit[#1]{\inv{#2}}}
+\WithSuffix\newcommand\ginv*[2][]{\subimplicit[#1]{\inv*{#2}}}
+\newcommand\Mul[1][]{\mathop{\implicit[#1]{\bigast}}}
+\newcommand\Action[1]{#1\text{-}\Category{Act}}
+\WithSuffix\newcommand\Action*{\Category{Act}}
+\newcommand\FaithfulAction{\Category{FaithfulAct}}
+\newcommand\ConcGroup{\Category{ConcreteGrp}}
+\newcommand\ConcAction{\Category{ConcreteAct}}
+\newcommand\srAction[1]{#1\text{-}\Category{Act}_{\mathrm{sr}}}
+\newcommand\act[1][]{\mathbin{{\circledast}^{\inplicit{#1}}}}
+\WithSuffix\newcommand\act'[1][]{\mathop{\implicit[#1]{\odot}}\nolimits}
+\newcommand\lact[2][\act]{#1#2}
+\newcommand\ract[2][\act]{#2#1}
+\newcommand\iact[2][]{\mathbin{{\circledast}^{\inplicit{#1}}_{#2}}}
+\WithSuffix\newcommand\iact*[2][]{\mathbin{{\circledast}^{\inplicit{#1}_{\inplicit{#2}}}}}
+\WithSuffix\newcommand\iact+[2][]{\act[#1]}
+\newcommand\Orb[1][\,]{\mathsf{Orb}#1}
+\newcommand\Triv[1][]{\mathsf{Triv}_{#1}}
+\newcommand\Trans[1][\,]{\mathsf{Trans}#1}
+\newcommand\adjunit[1][]{\implicit[#1]{\eta}}
+\newcommand\adjcounit[1][]{\implicit[#1]{\epsilon}}
+\newcommand\wlg{\mathop{\mathsf{wlog}}\nolimits}
+\newcommand\equito{\mathrel{\raisebox{.25ex}{$\scriptscriptstyle\circledast$}}\joinrel\to}
+\newcommand\homoto{\mathrel{\raisebox{.15ex}{$\scriptstyle\ast$}}\joinrel\to}
+\newcommand\equifrom{\from\joinrel\mathrel{\raisebox{.25ex}{$\scriptscriptstyle\circledast$}}}
+\newcommand\xequifrom[1]{\overset{#1}\equifrom}
+\newcommand\xequito[1]{\overset{#1}\equito}
+
+\newcommand\types\vdash
+\newcommand\flatten{\mathop{\mathsf{flatten}}\nolimits}
+
+\newcommand\Ker{\mathop{\mathrm{Ker}}\nolimits}
+\newcommand\WKer{\mathop{{\mathrm{\tilde{K}er}}}\nolimits}
+\newcommand\Canon[2][]{\mathop{\mathsf{Can}}\nolimits_{#1}{#2}}
+\newcommand\canoniser{c}
+\newcommand\SemiRegAction[1]{\Action{#1}_{\mathrm{sreg}}}
+
+\newcommand\normsub{\triangleleft}
+\newcommand\groth\oint
+\newcommand\quotact{\mathop{\mathsf{quotAct}}\nolimits}
+\newcommand\stabilise[2][\G]{#1_{#2}}
+\newcommand\stabeq[1]{\overset{#1}\sim}
+\newcommand\Fin{\mathop{\mathsf{\TConst{Fin}}}\nolimits}
+
+\newcommand\Sym[1]{\mathbf{S}_{#1}}
+\newcommand\Cyc[1]{\mathbf{C}_{#1}}
+\newcommand\Dih[1]{\mathbf{D}_{#1}}
+\newcommand\Trn[1]{\mathbf{T}_{#1}}
+\newcommand\Dag[1]{\mathbf{DAG}_{#1}}
+\newcommand\Graph[1]{\mathbf{Graph}_{#1}}
+\newcommand\TopDag[1]{\mathbf{DAG}^\mathrm{top}_{#1}}
+\newmvar\perm{\pi\or\sigma\or\tau}
+\newcommand\TopSort{\mathop{\mathsf{TopSort}}\nolimits}
+\newcommand\topSort{\mathop{\mathsf{topSort}}\nolimits}
+\newcommand\topSortDepthFirst{\mathop{\mathsf{topSortDepthFirst}}\nolimits}
+\newcommand\sort{\mathop{\mathsf{sort}}\nolimits}
+\newcommand\insrt{\mathop{\mathsf{insert}}\nolimits}
+\newcommand\Natinf{\naturals_{\infty}}
+\newcommand\dist{\mathop{\mathsf{dist}}\nolimits}
+\newcommand\Dist[1]{\mathbf{Dist}_{#1}}
+\newcommand\Prop{\mathbf{\TConst{Prop}}}
+\newmvar\prop{\phi\or\psi\or\xi}
+\newcommand\mprop[1][1]{\BoundV{\prop[#1]}}
+\newcommand\length\cardinality
+\newcommand\Bool{\mathbf{Bool}}
+\WithSuffix\newcommand\++{\mathbin{+\mspace{-8mu}{+}}}
+\WithSuffix\newcommand\h+{\mathbin{{\color{red}+}\mspace{-8mu}{\color{blue}+}}}
+\newcommand\preleq{\sqsubseteq}
+\newcommand\pregeq{\sqsupseteq}
+\newcommand\prelt{\sqsubset}
+\newcommand\pregt{\sqsupset}
+\newcommand\LL[1]{{#1}_{\infty}}
+\newcommand\Total[1][\keys]{\mathop{\mathbf{Total}}_{#1}}
+\newcommand\Bound[1]{\mathop{\mathbf{Bound}}_#1}
+\newcommand\Interval[1]{\mathop{\mathsf{Interval}}#1}
+\newcommand\IsInterval[2][]{\mathop{\mathsf{IsInterval}}_{#1}#2}
+\newcommand\Ordering{\mathop{\mathsf{Ordering}}}
+\makeatletter
+\long\def\ok@tree[#1][#2]{\mathop{\mathsf{T}}_{#1}^{#2}}
+\newcommand\SearchTree{\optparams{\ok@tree}{[{}][{}]}}
+\makeatother
+\WithSuffix\newcommand\SearchTree*[1]{#1\text{-}\SearchTree}
+%\newcommand\Tree[1][l \preleq u]{\mathop{\mathbf{Tree}}_{#1}}
+
+\newmvar\btree{t\or s\or r}
+\newcommand\mtree[1][1]{\BoundV{\btree[#1]}}
+%\newcommand\Node[4][]{\mathsf{Node}\,\inplicit{#1}#2\, #3\, #4}
+\newcommand\NodeName{\mathsf{Node}}
+\WithSuffix\newcommand\leq?[1][\preleq]{\overset{?}{#1}}
+\WithSuffix\newcommand\in?{\mathrel{\overset?\in}}
+\WithSuffix\newcommand\=?{\mathrel{\overset?=}}
+\WithSuffix\newcommand\in!{\mathrel{\overset!\in}}
+\WithSuffix\newcommand\notin!{\mathrel{\overset!{\not\in}}}
+\newcommand\Aye{\mathsf{Yes}}
+\newcommand\Nay{\mathsf{No}}
+\newcommand\May{\mathsf{M}}
+\newcommand\At{\mathbin\mathbf{@}}
+\newmvar\Ctx{\Gamma\or\Delta\or\Xi\or\Psi\or\Phi}
+\newcommand\Dtx{\Ctx[2]}
+\newmvar\ctx{\gamma\or\delta\or\xi\or\psi\or\varphi}
+\newcommand\dtx{\ctx[2]}
+\newcommand\xtx{\ctx[3]}
+\newcommand\With{\mathrel{\mathbf{with}}}
+\newcommand\inLeft{\mathop{\mathsf{inLeft}}\nolimits}
+\newcommand\inRoot{\mathop{\mathsf{inRoot}}\nolimits}
+\newcommand\inRigt{\mathop{\mathsf{inRight}}\nolimits}
+\newcommand\prf{\text{prf}}
+\newcommand\punct[1]{#1_{*}}
+\newcommand\Dec{\mathsf{Dec}}
+\newcommand\dec{\mathsf{dec}}
+
+\newcommand\preals{\mathbb{R}_+}
+\newcommand\pnaturals{\mathbb{N}_+}
+
+\newcommand\rulename\textsc
+\newcommand\NeutRule{\rulename{neutral}}
+\newcommand\CompRule{\rulename{compose}}
+\newcommand\InvRule{\rulename{inverse}}
+\newcommand\Gen[1]{\left\langle #1\right\rangle}
+\newcommand\unitval\star
+\newcommand\Board[1]{\TConst{Board}_{#1}}
+\newcommand\symmap[1]{\subimplicit[\mathsf{symm}]{#1}}
+\newcommand\elemap[1]{\subimplicit[\mathsf{elem}]{#1}}
+\newcommand\fmap[1][]{\mathop{\subimplicit[{#1}]{F}}}
+\newcommand\strings{\mathbb{String}}
+\newcommand\chars{\mathbb{Char}}
+\newcommand\toUpper{\mathsf{toUpper}}
+\newcommand\MkString[1]{{\color{DarkRed}\text{``#1''}}}
+\newcommand\MkChar[1]{{\color{DarkRed}\text{`#1'}}}
+\newcommand\subst[2]{#1\bracks{#2}}
+\newcommand\For[2]{#1{\mathrel{\color{DarkRed}\mapsto}}#2}
+\newcommand\rotate[1][\,]{\mathsf{rotate}#1}
+\newcommand\norm[1]{\left\lVert#1\right\rVert}
+\newcommand\cnorm[2][]{\norm{#2}_{#1}}
+\newcommand\Vertex[1][]{\mathsf{V}_{#1}}
+\newcommand\Edge[1][]{\mathsf{E}_{#1}}
+\newmvar\Grph{G\or H\or K}
+\newcommand\walkto\leadsto
+\newenvironment{permutation}{%
+  \left(%
+  \begin{array}{@{}>{\scriptstyle}l@{\scriptstyle{}\mapstio{}}>{\scriptstyle}l@{}}%
+  }{
+  \end{array}%
+  \right)%
+  }
+\newcommand\Row[1]{\TConst{Row}_{#1}}
+\newcommand\Vct[2]{\TConst{Vect}_{#1}#2}
+\newcommand\Mat[3]{\TConst{Mat}_{#1\times#2}#3}
+\DeclareSymbolFont{okMnSymbolA}{U}{MnSymbolA}{m}{n}
+\SetSymbolFont{okMnSymbolA}{bold}{U}{MnSymbolA}{b}{n}
+\DeclareFontShape{U}{MnSymbolA}{b}{n}{
+    <-6>  MnSymbolA-Bold5
+   <6-7>  MnSymbolA-Bold6
+   <7-8>  MnSymbolA-Bold7
+   <8-9>  MnSymbolA-Bold8
+   <9-10> MnSymbolA-Bold9
+  <10-12> MnSymbolA-Bold10
+  <12->   MnSymbolA-Bold12}{}
+\DeclareMathSymbol{\rcurvearrownw}{\mathrel}{okMnSymbolA}{197}
+\DeclareMathSymbol{\rcurvearrowleft}{\mathrel}{okMnSymbolA}{194}
+\DeclareMathSymbol{\rcurvearrowright}{\mathrel}{okMnSymbolA}{192}
+\DeclareMathSymbol{\lcurvearrowsw}{\mathrel}{okMnSymbolA}{190}
+\DeclareMathSymbol{\lcurvearrowse}{\mathrel}{okMnSymbolA}{191}
+\DeclareMathSymbol{\rcirclearrowright}{\mathrel}{okMnSymbolA}{248}
+\DeclareMathSymbol{\downrsquigarrow}{\mathrel}{okMnSymbolA}{171}
+\newcommand\Rotation{\mathord{\DConst{\boldsymbol\rcurvearrownw}}}
+\newcommand\twiceRotation{\mathord{\DConst{\boldsymbol\rcurvearrowright}}}
+\newcommand\unRotation{\mathord{\DConst{\boldsymbol\lcurvearrowse}}}
+\newcommand\nonRotation{\mathord{\DConst{\boldsymbol\rcirclearrowright}}}
+\newcommand\vplusstyle[3]{%
+\mathbin{
+  \begin{array}[c]{@{}>{#3}c@{}}
+    \color{red}+\\[#1]\color{blue}+\\[#2]
+  \end{array}
+}}
+\WithSuffix\newcommand\v+{%
+\mathchoice%
+        {\vplusstyle{-2.25ex}{.02ex}{\displaystyle}}%
+        {\vplusstyle{-2.25ex}{.02ex}{\textstyle}}%
+        {\vplusstyle{-2.25ex}{.2ex}{\scriptstyle}}%
+        {\vplusstyle{-2.5ex}{.5ex}{\scriptscriptstyle}}%
+}
+\newcommand\Tile{\TConst{Tile}}
+\newcommand\bimap{\mathsf{map}_2}
+\newcommand\transpose{\mathsf{transpose}}
+\newcommand\reverse{\mathsf{reverse}}
+\newcommand\Direction{\TConst{Dir}}
+\newcommand\Rt{\DConst{\mathord\Rightarrow}}
+\newcommand\Lt{\DConst{\mathord\Leftarrow}}
+\newcommand\Up{\DConst{\mathord\Uparrow}}
+\newcommand\Dn{\DConst{\mathord\Downarrow}}
+\newcommand\mkLt[1][\,]{\mathsf{mkLft}#1}
+\newcommand\rotRow[1][\,]{\mathsf{rotRow}#1}
+\newcommand\To\Rightarrow
+\newcommand\mergeLeft[1][]{\merge_{\Lt}^{#1}}
+\newcommand\rw{\mathrm{row}}
+\newcommand\merge{\mathsf{merge}}
+\newcommand\minimal{\mathsf{indexMin}}
+\newcommand\struct[1][]{\subimplicit[{#1}]{F}}
+\usepackage[svgnames]{xcolor}
+\usepackage{listings}
+\colorlet{types}{DarkCyan}
+\colorlet{code}{DarkRed}
+\colorlet{bound}{MediumPurple}
+\newcommand\TConst[1]{\mathsf{\textcolor{types}{#1}}}
+\newcommand\DConst[1]{\mathsf{\textcolor{code}{#1}}}
+% \newcommand\BoundV[1]{\mathsf{\textcolor{bound}{#1}}}
+\newcommand\BoundV[1]{#1}
+\newcommand\Nil{\DConst{Nil}}
+\newcommand\Leaf{\DConst{Leaf}}
+\WithSuffix\newcommand\::{\mathbin{\DConst{::}}}
+\newcommand\Node{\mathop{\DConst{Node}}\nolimits}
+\newcommand\List{\mathop{\TConst{List}}}
+\newcommand\Maybe{\mathop{\TConst{Maybe}}}
+\newcommand\Nothing{{\DConst{Nothing}}}
+\newcommand\Just{\mathop{\DConst{Just}}}
+\newcommand\Tree{\mathop{\TConst{Tree}}}
+\newcommand\Data{\mathrel{\mathbf{data}}}
+\newcommand\Or{\mathrel{\boldsymbol\vert}}
+\newcommand\roll[1][]{\subimplicit[{#1}]{\mathop{\mathbf{roll}}\nolimits}}
+\newcommand\unroll[1][]{\subimplicit[{#1}]{\mathop{\mathbf{unroll}}\nolimits}}
+\newcommand\vecmap[1][]{\subimplicit[{#1}]{\mathop{\mathbf{map}}\nolimits}}
+\newcommand\fold[1][]{\subimplicit[{#1}]{\mathop{\mathbf{fold}}\nolimits}}
+\newcommand\pfold[1][]{\subimplicit[{#1}]{\mathop{\mathbf{pfold}}\nolimits}}
+\newcommand\Param[1][]{\mathbf{param}_{#1}}
+\newcommand\Sort[1][]{\mathbf{sort}_{#1}}
+\newcommand\fix{\boldsymbol\mu}
+\newcommand\TreeLabel{{\mathbf{Step}}}
+\newcommand\TreePath{\TConst{Path}}
+\newcommand\Lft{\DConst{L}}
+\newcommand\Rgt{\DConst{R}}
+\newenvironment{tree diagram}%
+  {\scriptsize\begin{tikzcd}[ampersand replacement=\&,column sep=tiny,row sep=tiny, scale=0.3]}%
+  {\end{tikzcd}}
+\newcommand\treeLink[4]{\arrow["", from=#1-#2, to=#3-#4, no head, no tail]}
+\newcommand\NodeV[3]{
+ \begin{tree diagram}
+      \& #2 \& \\
+    \text{$#1$}\&    \& \text{$#3$}
+   \treeLink1221
+   \treeLink1223
+   \end{tree diagram}
+ }
+\newcommand\NodeL[2]{
+ \begin{tree diagram}
+      \& #2 \\
+    \text{$#1$}\&
+   \arrow["", from=1-2, to=2-1, no head, no tail]
+ \end{tree diagram}
+ }
+\newcommand\NodeR[2]{
+ \begin{tree diagram}
+   #1 \& \\
+      \& \text{$#2$}
+   \arrow["", from=1-1, to=2-2, no head, no tail]
+ \end{tree diagram}
+ }
+
+\NewDocumentCommand\gstrength{O{}o}{
+  \IfNoValueTF{#2}
+    {\supimplicit[{#1}]{\strengthName}}
+    {\supimplicit[{#1};{#2}]{\strengthName}}%
+ }
+
+\newcommand\WLOG{w.l.o.g.\xspace}
+\newcommand\wLOG{W.l.o.g.\xspace}
+\newcommand\lookup{\mathsf{lookup}}
+\newcommand\lookupElim{\mathsf{lookup}^{\mathrm{Elim}}}
+\newcommand\lookupCore{\mathsf{lookup}^{\mathrm{Core}}}
+\newcommand\lookLeft{\mathsf{lookLeft}}
+\newcommand\PositionIn{\mathsf{\TConst{Pos}}}
+\newcommand\NodeInName{\mathsf{\TConst{InPath}}}
+\newcommand\NodeIn{\mathop{\NodeInName}}
+\newcommand\Type[1]{\mathop{\mathsf{\TConst{#1}}}}
+\newmvar\msubst{\theta\or \xi\or\zeta}
+\newcommand\OrbitOf[2][\G]{#1\act\bracks{#2}}
+\newcommand\weaken[1][]{\mathsf{wkn}_{#1}}
+\newmvar\x{\BoundV x\or\BoundV y \or\BoundV z}
+\newcommand\y{\x[2]}
+\newcommand\z{\x[3]}
+\newcommand\DPair[2]{\parent{#1 : #2}\mathbin{\times}}
+\newcommand\dpair[1]{#1\mathbin{\DConst,}}
+\newcommand\DFun[2]{\parent{#1 : #2}\mathbin{\to}}
+\newcommand\EFun[2]{\parent{#1 : #2}\mathbin{\equito}}
+\newcommand\Fun[1]{#1\mathbin{\to}}
+\newcommand\Tru{\DConst{True}}
+\newcommand\Fls{\DConst{False}}
+\newmvar\mn{\BoundV m \or \BoundV n\or \BoundV k}
+\newmvar\mm{\mn[2]}
+\newmvar\mk{\mn[3]}
+\newmvar\mt{\BoundV t}
+\newmvar\mell{\BoundV \ell}
+\newmvar\mr{\BoundV r}
+\newmvar\ma{a\or b\or c}
+\newcommand\mb{\ma[2]}
+\newcommand\mc{\ma[3]}
+\newcommand\mctx[1][1]{\BoundV{\ctx[#1]}}
+\newmvar\g{g\or h\or k}
+\newcommand\mg[1][1]{\BoundV{\g[#1]}}
+\newcommand\Schur{\mathsf{Schur}}
+\newcommand\schur{\mathsf{schur}}
+\newcommand\transformation{\textbf{transformation}}
+\newcommand\plane{\textbf{plane}}
+\renewcommand\amalg{+}
+
+\newcommand\keys{\mathbb K}
+\newcommand\cmp{\mathsf{compare}}
+\newcommand\LT{\mathrm{\DConst{Lt}}}
+\newcommand\GT{\mathrm{\DConst{Gt}}}
+\newcommand\EQ{\mathrm{\DConst{Eq}}}
+\newcommand\Rel{\mathop{\mathsf{Rel}}\nolimits}
+\newcommand\Sandwich[1]{#1_{\TConst\bot}^{\TConst\top}}
+\newcommand\sandwich[1]{\mathrel{#1_{\bot}^{\top}}}
+\newcommand\pminfty{\DConst{\pm\infty}}
+\newcommand\mpinfty{\DConst{\mp\infty}}
+\newcommand\pinfty{\DConst{\infty}}
+\newcommand\minfty{\DConst{-\infty}}
+\newcommand\trichotomy{\mathop{\mathsf{trich}}\nolimits}
+\newcommand\interval[1][\keys]{\mathsf{interval}_{#1}}
+\newcommand\BST[3][\parent]{\mathbb T_{#1{#2}}{#3}}
+\newcommand\TLeaf[1][]{\subimplicit[#1]{\mathop\Leaf}}
+\newcommand\TNode[1][\triple]{\Node#1}
+\newcommand\Btx{\Ctx_{\BST[]{}{}}}
+\newcommand\structBST{\mathbf{BST}}
+\newcommand\tleaf{\mathsf{leaf}}
+\newcommand\tnode{\mathsf{node}}
+\newcommand\gast[1][\G]{#1\mathbin{\TConst\boxastSymb}}
+\newcommand\lollybox[1][\G]{#1\mathrel{\TConst{\relbar\joinrel\mathrel{\boxastSymb}}}}
+\newcommand\alg{\mathbf{alg}}
+\newcommand\abs[1]{\left\lvert#1\right\rvert}
+\newcommand\muast{\boxast}
+\newcommand\rec{\mathrm{rec}}
+\newcommand\Pair[1]{#1\mathbin{\TConst\times}}
+\newcommand\insrtElim{\mathop{\mathsf{insert}}\nolimits^{\mathsf{Elim}}}
+\newcommand\insrtCore{\mathop{\mathsf{insert}}\nolimits^{\mathsf{Core}}}
+
+\newcommand\Fam{\Category{Fam}}
+\newop{\costrength}{costrength}
+\newcommand\RED{\DConst{r}}
+\newcommand\BLU{\DConst{b}}
+\newcommand\lift{\mathop{\mathsf{\DConst{lift}}}\nolimits}
+\newcommand\coerce{\mathop{\mathsf{coerce}}\nolimits}
+\newcommand\goLeft{\mathsf{goLeft}}
+\newcommand\flg[1][]{\subimplicit[{#1}]{\mathop{\mathbf{flog}}\nolimits}}
+\newcommand\subtree{\mathsf{subtree}}
+\newcommand\subtreeCore{\mathsf{subtree}^{\mathrm{Core}}}
+\newcommand\subtreeAux{\mathsf{subtree}^{\mathrm{aux}}}
+\newcommand\subtreeAuxCore{\mathsf{subtree}^{\mathrm{auxCore}}}
+\newcommand\canonise[1][]{\mathop{\mathsf{canonise}}\nolimits_{#1}}

@@ -1,0 +1,501 @@
+% !TEX root = TI5.tex
+
+\section{Faster algorithms for isomorphism of odd order class-2 nilpotent groups}
+ 
+%\begin{theorem}
+%[Main result for \algprobm{Group Isomorphism}]
+%There is an algorithm to de
+%\end{theorem}
+
+In this section, we prove Theorem~\ref{thm:tensor_isomorphism_main} by giving an algorithm for testing isomorphism of two nilpotent class-2 groups of odd order in time $N^{O((\log N)^{8/9})}$, where $N$ is the order of the two groups.
+
+In Section~\ref{sec:group_iso_to_tensor_iso}, we reduce \algprobm{Group Isomorphism} for class-2 nilpotent groups to \algprobm{Alternating Matrix Space Isometry} over $\Z/p^e \Z$ for some prime $p$ and integer $e$. 
+In Section~\ref{sec:tensor_iso_to_matrix_tuple}, we further reduce \algprobm{Alternating Matrix Space Isometry} to \algprobm{Alternating Matrix Tuple Isometry}. 
+In Section~\ref{sec:matrix_tuple}, we give a polynomial time algorithm for the \algprobm{Alternating Matrix Tuple Isometry} problem. 
+
+In this section, we say that
+an $n \times n \times m$ tensor $\tA = (a_{i, j, k})$ is alternating (between the first and second directions) if, for any $1 \leq i, j \leq n$ and $k \leq m$, $a_{i, j, k} = -a_{j, i, k}$. 
+The \algprobm{Alternating Matrix Space Isometry} problem %, the input contains two $n \times n \times m$ alternating tensors $\tA$ and $\tB$ over $\Z / p^e \Z$ for some prime $p$ and positive integers $n, m, e$, 
+is to determine  whether for two $n \times n \times m$ alternating tensors $\tA$ and $\tB$ over $\Z / p^e \Z$, there are two matrices $P \in \GL(n, \Z / p^e \Z)$ and $Q \in \GL(m, \Z / p^e \Z)$ such that $\tB = (P, P, Q) \circ \tA$.
+The \algprobm{Alternating Matrix Tuple Isometry} problem %, the input contains two $n \times n \times m$ alternating tensors $\tA$ and $\tB$ over $\Z / p^e \Z$ for some prime $p$ and positive integers $n, m, e$, 
+is to determine whether for two alternating matrix tuples $(A_1, \dots, A_k)$ and $(B_1, \dots, B_k)$ in $\M(n, \Z / p^e \Z)$, there is a matrix $P \in \GL(n, \Z / p^e \Z)$ such that $B_i = P A_i P^t$ for any $1 \leq i \leq k$.
+
+
+\subsection{Reduction to \algprobm{Alternating Matrix Space Isometry} over $\Z/p^e \Z$}\label{sec:group_iso_to_tensor_iso}
+%\ynote{This subsection needs to be filled in. I assume that the reduction would be to isomorphism problems for $\Lambda^2((\Z/p^e\Z)^n)\otimes (\Z/p^f\Z)^m$. Is this understanding correct?} \jnote{Now it is :).}
+
+%\begin{theorem}[Baer's Correspondence]
+%
+%\end{theorem}
+
+%An abelian group is called \emph{homocyclic} if it is of the form $(\Z/m \Z)^d$ for some $m,d$. By extension, we call a Lie ring homocyclic if its underlying Abelian group is homocyclic.
+%
+%\begin{lemma} \label{lem:homocyclic}
+%There is a reduction from \algprobm{Lie Ring Isomorphism} for Lie rings over $\Z/p^e \Z$ to \algprobm{Homocyclic Lie Ring Isomorphism} over $\Z/p^e \Z$.
+%\end{lemma}
+%
+%\begin{proof}
+%As $\Z/p^e \Z$-modules, $\Z/p^k \Z$ is isomorphic to $p^{e-k} \Z / p^e \Z$. Thus, if the underlying Abelian group of a Lie ring is $\bigoplus_{i=1}^n \Z/p^{e_i} \Z$, then 
+%\end{proof}
+\begin{comment}
+\begin{definition}\label{def:tensor_from_group}
+Let $G$ and $H$ be two Abelian $p$-groups for some odd prime $p$, and $\tA$ be a tensor in $G \otimes G\otimes H$ with $f_\tA$ as the multilinear function associated with $\tA$. 
+Let $e$ be an integer such that the largest order of elements in both $G$ and $H$ is at most $p^e$. 
+Suppose $G$ is isomorphic to 
+\[\bigoplus_{\ell = 1}^{e} \left(\Z / p^{\ell } \Z\right)^{\alpha_\ell},\]
+and $H$ is isomorphic to 
+\[\bigoplus_{\ell = 1}^{e} \left(\Z / p^{\ell } \Z\right)^{\beta_\ell}.\]
+Let $n = \sum_{\ell = 1}^{e} \alpha_\ell$ and $m = \sum_{\ell = 1}^{e} \beta_\ell $. 
+An $n \times n \times m$ tensor $\tB = (b_{i, j, k})$ over $\Z / p^e \Z$ is a tensor derived from $\tA$ if there exist
+$c_1, \dots, c_n \in G$ and $d_1, \dots, d_m \in H$ satisfying the following conditions:
+\begin{enumerate}
+\item $c_1, \dots, c_n$ generate $G$ and for each $1 \leq \ell \leq e$, $c_{j}$ is of order $p^\ell$ for any $(\sum_{i = 1}^{\ell - 1} \alpha_i) + 1 \leq j \leq \sum_{i = 1}^{\ell} \alpha_i$. 
+\item $d_1, \dots, d_m$ generate $H$ and for each $1 \leq \ell \leq e$, $d_{j}$ is of order $p^\ell$ for any $(\sum_{i = 1}^{\ell - 1} \beta_i) + 1 \leq j \leq \sum_{i = 1}^{\ell} \beta_i$. 
+\item For any $1 \leq i, j \leq n, 1 \leq k \leq m$, $b_{i, j, k} = f_\tA(c_i, c_j, d_k)\cdot p^{e - t}$, where $t$ is the integer such that the order of $d_k$ is $p^t$. 
+\end{enumerate}
+
+
+
+%Suppose $[G, G]$ is isomorphic to 
+%\[\bigoplus_{\ell = 1}^{e} \left(\Z / p^{\ell } \Z\right)^{\alpha_\ell},\]
+%and $G / Z(G)$ is isomorphic to 
+%\[\bigoplus_{\ell = 1}^{e} \left(\Z / p^{\ell } \Z\right)^{\beta_\ell}.\]
+%Let $m = \sum_{\ell = 1}^{e} \alpha_\ell$ and $n = \sum_{\ell = 1}^{e} \beta_\ell $. 
+
+
+
+%and $e$ be the smallest integer such that the largest order of elements in both $[G, G]$ and $G / Z(G)$ is at most $p^e$. 
+%Suppose $[G, G]$ is isomorphic to 
+%\[\bigoplus_{\ell = 1}^{e} \left(\Z / p^{\ell } \Z\right)^{\alpha_\ell},\]
+%and $G / Z(G)$ is isomorphic to 
+%\[\bigoplus_{\ell = 1}^{e} \left(\Z / p^{\ell } \Z\right)^{\beta_\ell}.\]
+%Let $m = \sum_{\ell = 1}^{e} \alpha_\ell$ and $n = \sum_{\ell = 1}^{e} \beta_\ell $. 
+
+%An $n \times n \times m$ tensor $\tA = (a_{i, j, k})$ over $\Z / p^e \Z$ is a tensor derived from $G$ if there exist
+%$c_1, \dots, c_n \in G / Z(G)$ and $d_1, \dots, d_m$ satisfying the following conditions:
+%\begin{enumerate}
+%\item $c_1, \dots, c_n$ generate $G / Z(G)$ and for each $1 \leq \ell \leq e$, $c_{j}$ is of order $p^\ell$ for any $(\sum_{i = 1}^{\ell - 1} \beta_i) + 1 \leq j \leq \sum_{i = 1}^{\ell} \beta_i$. 
+%\item $d_1, \dots, d_m$ generate $[G, G]$ and for each $1 \leq \ell \leq e$, $d_{j}$ is of order $p^\ell$ for any $(\sum_{i = 1}^{\ell - 1} \alpha_i) + 1 \leq j \leq \sum_{i = 1}^{\ell} \alpha_i$. 
+%\item For any $1 \leq i, j \leq n$, $[c_i, c_j] = \prod_{k = 1}^md_k^{a_{i, j, k}} \cdot p^{e - t}$, where $t$ is the integer such that the order of $d_k$ is $p^t$. 
+%\end{enumerate}
+\end{definition}
+
+
+
+\begin{definition}\label{def:matrix_from_group}
+Let $G$ and $H$ be two Abelian $p$-groups for some odd prime $p$, and $A$ be a matrix in $G \otimes H$ with $f_A$ as the bilinear function associated with $A$. 
+Let $e$ be an integer such that the largest order of elements in both $G$ and $H$ is at most $p^e$. 
+Suppose $G$ is isomorphic to 
+\[\bigoplus_{\ell = 1}^{e} \left(\Z / p^{\ell } \Z\right)^{\alpha_\ell},\]
+and $H$ is isomorphic to 
+\[\bigoplus_{\ell = 1}^{e} \left(\Z / p^{\ell } \Z\right)^{\beta_\ell}.\]
+Let $n = \sum_{\ell = 1}^{e} \alpha_\ell$ and $m = \sum_{\ell = 1}^{e} \beta_\ell $. 
+An $n \times m$ matrix  $B = (b_{i, j})$ over $\Z / p^e \Z$ is a matrix derived from $A$ if there exist
+$c_1, \dots, c_n \in G$ and $d_1, \dots, d_m \in H$ satisfying the following conditions:
+\begin{enumerate}
+\item $c_1, \dots, c_n$ generate $G$ and for each $1 \leq \ell \leq e$, $c_{j}$ is of order $p^\ell$ for any $(\sum_{i = 1}^{\ell - 1} \alpha_i) + 1 \leq j \leq \sum_{i = 1}^{\ell} \alpha_i$. 
+\item $d_1, \dots, d_m$ generate $H$ and for each $1 \leq \ell \leq e$, $d_{j}$ is of order $p^\ell$ for any $(\sum_{i = 1}^{\ell - 1} \beta_i) + 1 \leq j \leq \sum_{i = 1}^{\ell} \beta_i$. 
+\item For any $1 \leq i, j \leq n, 1 \leq k \leq m$, $b_{i, j} = f_A(c_i, d_j)\cdot p^{e - t}$, where $t$ is the integer such that the order of $d_j$ is $p^t$. 
+\end{enumerate}
+
+
+
+%Suppose $[G, G]$ is isomorphic to 
+%\[\bigoplus_{\ell = 1}^{e} \left(\Z / p^{\ell } \Z\right)^{\alpha_\ell},\]
+%and $G / Z(G)$ is isomorphic to 
+%\[\bigoplus_{\ell = 1}^{e} \left(\Z / p^{\ell } \Z\right)^{\beta_\ell}.\]
+%Let $m = \sum_{\ell = 1}^{e} \alpha_\ell$ and $n = \sum_{\ell = 1}^{e} \beta_\ell $. 
+
+
+
+%and $e$ be the smallest integer such that the largest order of elements in both $[G, G]$ and $G / Z(G)$ is at most $p^e$. 
+%Suppose $[G, G]$ is isomorphic to 
+%\[\bigoplus_{\ell = 1}^{e} \left(\Z / p^{\ell } \Z\right)^{\alpha_\ell},\]
+%and $G / Z(G)$ is isomorphic to 
+%\[\bigoplus_{\ell = 1}^{e} \left(\Z / p^{\ell } \Z\right)^{\beta_\ell}.\]
+%Let $m = \sum_{\ell = 1}^{e} \alpha_\ell$ and $n = \sum_{\ell = 1}^{e} \beta_\ell $. 
+
+%An $n \times n \times m$ tensor $\tA = (a_{i, j, k})$ over $\Z / p^e \Z$ is a tensor derived from $G$ if there exist
+%$c_1, \dots, c_n \in G / Z(G)$ and $d_1, \dots, d_m$ satisfying the following conditions:
+%\begin{enumerate}
+%\item $c_1, \dots, c_n$ generate $G / Z(G)$ and for each $1 \leq \ell \leq e$, $c_{j}$ is of order $p^\ell$ for any $(\sum_{i = 1}^{\ell - 1} \beta_i) + 1 \leq j \leq \sum_{i = 1}^{\ell} \beta_i$. 
+%\item $d_1, \dots, d_m$ generate $[G, G]$ and for each $1 \leq \ell \leq e$, $d_{j}$ is of order $p^\ell$ for any $(\sum_{i = 1}^{\ell - 1} \alpha_i) + 1 \leq j \leq \sum_{i = 1}^{\ell} \alpha_i$. 
+%\item For any $1 \leq i, j \leq n$, $[c_i, c_j] = \prod_{k = 1}^md_k^{a_{i, j, k}} \cdot p^{e - t}$, where $t$ is the integer such that the order of $d_k$ is $p^t$. 
+%\end{enumerate}
+\end{definition}
+
+
+\begin{lemma}
+Let $G, H, G', H'$ be four Abelian $p$-groups such that $G \cong G'$ and $H \cong H'$, and $\tA, \tA'$ be two tensors in $G \otimes G  \otimes H$ and $G' \otimes G' \otimes H'$ respectively.  
+Let $\tB$ and $\tB'$ be two tensors over $\Z / p^e \Z$ for some integer $e$ derived from $\tA$ and $\tA'$ respectively. 
+Then $\tA$ and $\tA'$ are isomorphic if and only if their derived tensors are isomorphic.
+\end{lemma}
+\begin{proof}
+By Definition~\ref{def:tensor_from_group}, the two tensors are of the same dimension. 
+Let $c_{\tA, 1}, \dots, c_{\tA, n}, d_{\tA, 1}, \dots, d_{\tA, m}$ and $c_{\tA', 1}, \dots, c_{\tA', n}, d_{\tA', 1}, \dots, d_{\tA', m}$ be the elements used to obtain $\tB$ and $\tB'$  following Definition~\ref{def:tensor_from_group} respectively. 
+
+Since both $\{c_{\tA, 1}, \dots, c_{\tA, n}\}$ and $\{c_{\tB, 1}, \dots, c_{\tB, n}\}$ are generating sets of $G$, there are $x_{i, j}$ such that $c_{\tB, i} = \prod_{j = 1}^n c_{\tA, j}^{x_{i, j}}$ for every $1 \leq i, j \leq n$, and $x_{i, j}'$ such that $c_{\tA, i} = \prod_{j = 1}^n c_{\tB, j}^{x_{i, j}'}$ for every $1 \leq i, j \leq n$. 
+Let $X = (x_{i, j})$ and $X' = (x_{i, j}')$. 
+Both $X$ and $X'$ are invertible matrices because $X X' = I$. 
+
+Similarly, both $\{d_{\tA, 1}, \dots, d_{\tA, m}\}$ and $\{d_{\tB, 1}, \dots, d_{\tB, m}\}$ are generating sets of $H$, there are $y_{i, j}$ such that $d_{\tB, i} = \prod_{j = 1}^m d_{\tA, j}^{y_{i, j}}$ for every $1 \leq i, j \leq m$, and $y_{i, j}'$ such that $d_{\tA, i} = \prod_{j = 1}^n d_{\tB, j}^{y_{i, j}'}$ for every $1 \leq i, j \leq m$. 
+Let $Y = (y_{i, j})$ and $Y' = (y_{i, j}')$. 
+Both $Y$ and $Y'$ are invertible matrices because $Y Y' = I$. 
+
+It is easy to verify that $\tB = (X, X^t, Y') \circ \tA$. 
+\end{proof}
+\end{comment}
+
+
+\begin{comment}
+\begin{lemma}
+Let $G$ be a $p$-group of nilpotent class 2 for some odd prime $p$, and $e$ be the smallest integer such that the largest order of elements in both $[G, G]$ and $G / Z(G)$ is at most $p^e$. 
+Let $\tA$ and $\tB$ be two tensors derived from $G$.  $\tA$ and $\tB$ are of the same dimension and there are invertible matrices $X$ and $Y$ such that 
+$\tA = (X, X^t, Y') \circ \tB$. 
+\end{lemma}
+
+\begin{proof}
+By Definition~\ref{def:tensor_from_group}, the two tensors are of the same dimension. 
+Let $c_{\tA, 1}, \dots, c_{\tA, n}, d_{\tA, 1}, \dots, d_{\tA, m}$ and $c_{\tB, 1}, \dots, c_{\tB, n}, d_{\tB, 1}, \dots, d_{\tB, m}$ be the elements used to obtain $\tA$ and $\tB$ following Definition~\ref{def:tensor_from_group} respectively. 
+
+Since both $\{c_{\tA, 1}, \dots, c_{\tA, n}\}$ and $\{c_{\tB, 1}, \dots, c_{\tB, n}\}$ are generating sets of $G / Z(G)$, there are $x_{i, j}$ such that $c_{\tB, i} = \prod_{j = 1}^n c_{\tA, j}^{x_{i, j}}$ for every $1 \leq i, j \leq n$, and $x_{i, j}'$ such that $c_{\tA, i} = \prod_{j = 1}^n c_{\tB, j}^{x_{i, j}'}$ for every $1 \leq i, j \leq n$. 
+Let $X = (x_{i, j})$ and $X' = (x_{i, j}')$. 
+Both $X$ and $X'$ are invertible matrices because $X X' = I$. 
+
+Similarly, both $\{d_{\tA, 1}, \dots, d_{\tA, m}\}$ and $\{d_{\tB, 1}, \dots, d_{\tB, m}\}$ are generating sets of $[G, G]$, there are $y_{i, j}$ such that $d_{\tB, i} = \prod_{j = 1}^m d_{\tA, j}^{y_{i, j}}$ for every $1 \leq i, j \leq m$, and $y_{i, j}'$ such that $d_{\tA, i} = \prod_{j = 1}^n d_{\tB, j}^{y_{i, j}'}$ for every $1 \leq i, j \leq m$. 
+Let $Y = (y_{i, j})$ and $Y' = (y_{i, j}')$. 
+Both $Y$ and $Y'$ are invertible matrices because $Y Y' = I$. 
+
+One can verify that $\tB = (X, X^t, Y') \circ \tA$. 
+\end{proof}
+\end{comment}
+
+%\begin{lemma}
+%Let $G$ be a $p$-group of nilpotent class 2 for some odd prime $p$, $N$ be the order of $G$, and $e$ be the smallest integer such that the largest order of elements in both $[G, G]$ and $G / Z(G)$ is at most $p^e$. 
+%There is an algorithm to compute a tensor derived from $G$ in polynomial time of $N$. 
+%\end{lemma}
+
+We define some notations for tensors. 
+Let $\tA = (a_{i, j, k})$ be an $n \times m \times h$ tensor over $\Z / p^{e} \Z$. For $i\in[n]$, let $\mathfrak{X}_{\tA, i}$ be the $h \times m$ matrix over $\Z / p^{e} \Z$ such that $\mathfrak{X}_{\tA, i}[k, j] = a_{i, j, k}$ for any $1 \leq j \leq m, 1 \leq k \leq h$. For $j\in[m]$, let 
+$\mathfrak{Y}_{\tA, j}$ be the $h \times n$ matrix over $\Z / p^{e} \Z$ such that $\mathfrak{Y}_{\tA, j}[k, i] = a_{i, j, k}$ for any $1 \leq i \leq n, 1 \leq k \leq h$. For $k\in[h]$, let $\mathfrak{Z}_{\tA, k}$ be the $n \times m$ matrix over $\Z / p^{e} \Z$ such that $\mathfrak{Z}_{\tA, k}[i, j] = a_{i, j, k}$ for any $1 \leq i \leq n, 1 \leq j \leq m$.
+Let $\alpha_{\tA, 1}, \dots, \alpha_{\tA, e}$ be the integers such that the abelian group generated by $\mathfrak{Z}_{\tA, k}$ over $k\in[h]$ is isomorphic to 
+\[\bigoplus_{\ell = 1}^{e} \left(\Z / p^{\ell } \Z\right)^{\alpha_{\tA, \ell}},\]
+$\beta_{\tA, 1}, \dots, \beta_{\tA, e}$ be the integers such that the abelian group generated by $\mathfrak{X}_{\tA, i}$ over $i\in[n]$ is isomorphic to 
+\[\bigoplus_{\ell = 1}^{e} \left(\Z / p^{\ell } \Z\right)^{\beta_{\tA, \ell}},\]
+and 
+$\gamma_{\tA, 1}, \dots, \gamma_{\tA, e}$ be the integers such that the abelian group generated by $\mathfrak{Y}_{\tA, j}$ over $j\in[m]$ is isomorphic to 
+\[\bigoplus_{\ell = 1}^{e} \left(\Z / p^{\ell } \Z\right)^{\gamma_{\tA, \ell}}.\]
+We call $\sum_{\ell = 1}^e \ell \cdot (\alpha_{\tA, \ell} + \beta_{\tA, \ell} + \gamma_{\tA, \ell})$ the \emph{complex parameter} for the tensor. 
+
+
+
+
+The following theorem reduces the group isomorphism problem for class-2 nilpotent groups to the \algprobm{Alternating Matrix Space Isometry} problem. 
+
+%Lastly, we define the following problem:
+%
+%\begin{quotation}
+%\noindent \algprobm{Alternating Matrix Space Isometry with Stabilized Gadget}
+%\noindent \textit{Input:} $\cA,\cB, \Gamma$, $\Z/p^e \Z$-submodules of $\Wedge^2(n, \Z/p^e \Z)$
+%\noindent \textit{Decide:} Does there exist $P \in \GL_n(\Z/p^e Z)$ such that $P \cA P^t = \cB$ and $P \Gamma P^t = \Gamma$?
+%\end{quotation}
+%
+%We will reduce to this problem in such a way that $\cA,\cB$ will encode our groups, and their complex parameter will be polynomial in $|G|$, while $\Gamma$ will be $O(1)$-generated, and is a ``gadget'' that enforces certain structures for the reduction.
+
+\begin{theorem} \label{thm:GpI-to-AMSI}
+The problem of testing isomorphism of odd order nilpotent groups of class 2 reduces to \algprobm{Alternating Matrix Space Isometry} over the integers modulo prime powers in polynomial time.
+
+Moreover, if the input groups are of order $N$, then for each instance of the \algprobm{Alternating Matrix Space Isometry} problem with tensors over $p^e$ for some prime $p$ and positive integer $e$, 
+then the tensors are of dimension $O(\log_p N) \times O(\log_p N) \times O(\log_p N)$ with complex parameter $O(\log_p N)$. %\jnote{I removed the base $p$ because I realized if the groups aren't $p$-groups, then there could be multiple primes.}\xnote{I change the complex parameter from linear in group order to logarithmic in group order because of the change of the complex parameter.}
+\end{theorem}
+
+Before coming to the proof, we recall a key component, which is Baer's Correspondence \cite{Bae38} (see, e.g., \cite{khukhro,naik} for expository treatments). Given a finite odd order nilpotent group $G$ of class 2, Baer's Correspondence constructs a finite Lie ring, denoted $\log(G)$, on the same underlying set as $G$, and where the Lie ring operations are defined by
+\[
+x + y := xy / \sqrt{[x,y]} \qquad -x := x^{-1} \qquad [x,y]_{Lie} := xyx^{-1} y^{-1},
+\]
+where here the expressions on the LHS are the Lie ring operations and those on the RHS are in the group. We note that $|G|$ is odd, every element has a unique square root, and since the group has class 2, $[x,y]$ is in the center, making the first expression $xy / \sqrt{[x,y]}$ well-defined. In the opposite direction, given a finite nilpotent Lie ring $L$ of odd order and class 2, Baer's Correspondence defines a group, denotes $\exp(L)$, on the same underlying set as $L$, and in which the group operations are defined by:
+\[
+xy := x + y + \frac{1}{2}[x,y] \qquad x^{-1} := -x,
+\]
+where here the LHS is in the group and the RHS is in the Lie ring $L$. Baer's Correspondence says that these two constructions are inverses of one another, and that they give an equivalence between the category of these groups and the category of these Lie rings. In particular, two groups $G,H$ are isomorphic iff $\log(G)$ and $\log(H)$ are isomorphic Lie rings. From the formulas above, it is readily seen that, in the Cayley table model, one can construct $\log(G)$ from $G$ in polynomial time, and one can construct $\exp(L)$ from $L$ in polynomial time (in fact, with the additional requirement of exponent $p$, this can also be done efficiently in the setting of matrix groups and matrix Lie rings; see, e.g., \cite[Sec.~6.2]{TI2}). Furthermore, several properties of $G$ are preserved in $\log(G)$ and vice versa:
+\begin{description}
+\item[Element orders.] For any integer $k$, we have $x + x + \dotsb + x$ ($k$ times) in the Lie ring is the same element as $x^k$ in the group, and thus if $x \in G$ has (multiplicative) order $p^e$, then $x \in \log(G)$ has (additive) order $p^e$. That is, in $\log(G)$, we have $p^e x = 0$ and $p^e$ is the least such integer. Thus the additive group underlying $\log(G)$ contains the information of the orders of elements of $G$.
+
+\item[Nilpotency class.] $\log(G)$ is nilpotent of class 2.
+
+\item[Centers.] The underlying set of $Z(G)$ is the same as the underlying set of $Z(\log(G))$. The group multiplication on $Z(G)$ is identical to the Lie ring addition operation on $Z(\log(G))$---that is, $Z(G)$ and $Z(\log(G))$ are identical as Abelian groups.
+
+\item[Central quotients.] There is a natural isomorphism between $G / Z(G)$ and $\log(G) / Z(\log(G))$, as Abelian groups. That is, in $G/Z(G)$, the group operation is still given by multiplication in $G$, simply working modulo $Z(G)$. Similarly, since addition in $\log(G)$ is given by $x+y = xy / \sqrt{[x,y]}$ and $[x,y] \in Z(G) = Z(\log(G))$, we have that addition in $\log(G)/Z(\log(G))$ is given exactly by group multiplication, modulo $Z(G)$.
+\end{description}
+
+Given two finite Lie rings $L,L'$, an \emph{isomorphism} between them is a bijection $\varphi \colon L \to L'$ such that (1) $\varphi$ is linear, that is, $\varphi(x+y) = \varphi(x) + \varphi(y)$, (2) $\varphi([x,y]) = [\varphi(x), \varphi(y)]$ for all $x,y \in L$. As with finite groups, finite Lie rings may be given by their ``Cayley tables'', which actually consists of two tables: one for the addition operation and one for the Lie bracket.
+
+\begin{proof}[Proof of Theorem~\ref{thm:GpI-to-AMSI}]
+First, any finite nilpotent group is the direct product of its Sylow subgroups. As factoring a group into its direct products is unique (the Remak--Krull--Schmidt Theorem), and can be done in polynomial time \cite{WilsonProductsI, WilsonProductsII,KN}, for isomorphism testing we thus reduce to the case of testing isomorphism of $p$-groups of class 2, for some odd prime $p$ (which may be given as part of the input).
+
+Next, from Baer's Correspondence, we reduce from testing isomorphism of $p$-groups of class 2 to testing isomorphism $p$-Lie rings of class 2, of the same size as the groups we started with. Let $L,L'$ denote the corresponding Lie rings that we wish to test for isomorphism.
+
+Now, given $L$, consider the following system of linear and bilinear maps between Abelian $p$-groups. Let $U = Z(L)$, $V = L$, $W = L/Z(L)$. Let $\iota \colon U \to V$ be the natural inclusion map of $Z(L)$ as an additive subgroup of $L$, and let $\pi \colon V \to W$ be the natural quotient map $L \to L/Z(L)$ with kernel $Z(L)$. Finally, let $B \colon W \otimes W \to U$ denote the Lie bracket. Let $U',V',W',\iota', \pi', B'$ be the corresponding groups and maps correpsonding to $L'$. 
+
+%\jnote{Wait, why are we going to all this trouble? If we are going to just say ``TI4 works over $\Z/p^e \Z$'' anyway, TI4 already lets us reduce directly from Lie algebra/ring iso to TI to AltMatSpIsom. I mean, I guess all this trouble lets us rely a \emph{little} less on just saying that TI4 works over finite local PIRs...}
+
+\begin{lemma} \label{lem:iso-Lie-ring}
+With notation as above, $L \cong L'$ if and only if there are Abelian group isomorphisms $\varphi_U \colon U \to U'$, $\varphi_V \colon V \to V'$, $\varphi_W \colon W \to W'$ such that the following conditions hold:
+\begin{align} 
+\varphi_V \circ \iota & = \iota' \circ \varphi_U \label{eqn:iso-condition-inj} \\
+\varphi_W \circ \pi & = \pi' \circ \varphi_V \label{eqn:iso-condition-surj} \\
+\varphi_U(B(x,y)) & = B'(\varphi_W(x), \varphi_W(y)) \qquad (\forall x,y \in W) \label{eqn:iso-condition-bracket}
+\end{align}
+\end{lemma}
+
+This is essentially standard, but we phrase it this way as it will help us below to set up the tensors we are aiming for. Over a field, we do not need such a complicated setup, and instead can just focus on $W=L/Z(L)$ and $U=Z(L)$; by including $L$ itself in the setup, we are automatically including the Abelian group structure on $L$, which need no longer be the direct sum of $Z(L)$ and $L/Z(L)$. Conditions \eqref{eqn:iso-condition-inj} and \eqref{eqn:iso-condition-surj} then essentially say that the isomorphism on the center is just the restriction of the isomorphism on $L$, and the isomorphism on $L/Z(L)$ is the one induced from the isomorphism on $L$.
+
+\begin{proof}[Proof of Lemma~\ref{lem:iso-Lie-ring}]
+($\Rightarrow$) Suppose $\varphi \colon L \to L'$ is a Lie ring isomorphism; equivalently, $\varphi$ is an isomorphism of the additive groups such that $\varphi([x,y]) = [\varphi(x), \varphi(y)]$ for all $x,y \in L$. Since the center is a characteristic sub-Lie-ring, $\varphi(Z(L)) = Z(L')$, and therefore $\varphi$ also induces a map $L/Z(L) \to L'/Z(L')$, namely, the map which sends $x + Z(L)$ to $\varphi(x) + Z(L') = \varphi(x) + \varphi(Z(L)) = \varphi(x + Z(L))$. Let $\varphi_U = \varphi|_{Z(L)}$, $\varphi_V = \varphi$, and $\varphi_W$ be the induced map on $L/Z(L)$ just described.
+
+Since $Z(L)$ is characteristic, $\varphi_U$ is an isomorphism of the (Abelian) Lie rings $Z(L) \cong Z(L')$, and therefore in particular an isomorphism of their underlying Abelian groups. By definition $\varphi_V = \varphi$ is an isomorphism of Lie rings, hence of Abelian groups. And then $\varphi_W$ must also be an isomorphism of Abelian groups: it is a homomorphism by construction, surjective because $\varphi$ is surjective, and injective because its kernel is $Z(L)$ by construction. 
+
+We claim that $(\varphi_U, \varphi_V, \varphi_W)$ satisfy \eqref{eqn:iso-condition-inj}--\eqref{eqn:iso-condition-bracket}.
+\begin{itemize}
+\item[\ref{eqn:iso-condition-inj}: ] Suppose $u \in U = Z(L)$. Then we have $\varphi_V(\iota(u)) = \varphi(u)$ and $\iota'(\varphi_U(u)) = \iota'(\varphi(u)) = \varphi(u)$, where here we have identified elements of $U = Z(L)$ with the corresponding elements of $L$, so that e.g. $\iota(u) = u$ and $\iota'(u') = u'$ for $u \in Z(L), u' \in Z(L')$.
+
+\item[\ref{eqn:iso-condition-surj}: ] Let $x \in L$. Then we have $\pi(x) = x + Z(L)$ (considered as an element of $L/Z(L)$). So we have 
+\begin{align*}
+\varphi_W(\pi(x)) & = \varphi_W(x + Z(L)) = \varphi(x + Z(L)) = \varphi(x) + \varphi(Z(L)) \\ & = \varphi(x) + Z(L') = \pi'(\varphi(x)) = \pi'(\varphi_V(x)).
+\end{align*}
+
+\item[\ref{eqn:iso-condition-bracket}: ] Let $x,y \in L$.  Then we have
+\begin{align*}
+\varphi_U(B(x + Z(L),y + Z(L))) & = \varphi_U([x,y]) & \text{(since $[Z(L),*]=[*,Z(L)]=0$)} \\
+ & = \varphi([x,y]) & \text{(since $[x,y] \in Z(L)$)} \\
+ & = [\varphi(x), \varphi(y)] & \text{(since $\varphi$ is a homomorphism)}\\
+ & = [\varphi(x) + Z(L'), \varphi(y) + Z(L')] \\
+ &  = B'(\varphi_W(x), \varphi_W(y)).
+\end{align*}
+
+\end{itemize}
+
+($\Leftarrow$) Conversely, suppose $(\varphi_U, \varphi_V, \varphi_W)$ satisfy \eqref{eqn:iso-condition-inj}--\eqref{eqn:iso-condition-bracket}. Let $\varphi = \varphi_V$; we claim that $\varphi$ is in fact an isomorphism of Lie rings. By assumption, $\varphi_V = \varphi$ is an isomorphism of Abelian groups, so all that remains to show is that $\varphi$ preserves the Lie bracket, i.e., that $\varphi([x,y]) = [\varphi(x), \varphi(y)]$. For all $x,y \in L$, we have:
+\begin{align*}
+\varphi([x,y]) & = \varphi_V(\iota(B(x + Z(L),y + Z(L)))) & \text{(definition of $B, \varphi, \iota$)}\\ 
+ & = \iota'(\varphi_U(B(x + Z(L),y + Z(L)))) & \text{(by \eqref{eqn:iso-condition-inj})} \\
+ & = \iota'(B'(\varphi_W(\pi(x)), \varphi_W(\pi(y)))) & \text{(by \eqref{eqn:iso-condition-bracket})} \\
+ & = [\varphi_W(\pi(x)), \varphi_W(\pi(y))] & \text{(by definition of $B',\iota'$)} \\
+ & = [\pi'(\varphi(x)), \pi'(\varphi(y))] & \text{(by \eqref{eqn:iso-condition-surj} and def'n of $\varphi$)} \\
+ & = [\varphi(x) + Z(L'), \varphi(y) + Z(L')] & \text{(by definition of $\pi'$)} \\
+ & = [\varphi(x), \varphi(y)] & \text{(since $[Z(L'),*] = [*, Z(L')] = 0$.)}.
+\end{align*}
+
+This completes the proof of Lemma~\ref{lem:iso-Lie-ring}.
+\end{proof}
+
+
+\begin{lemma} \label{lem:Lie-ring-to-TI}
+There is a polynomial-time algorithm, which, given a nilpotent $p$-Lie ring $L$ of class 2 and exponent $p^e$ (by Cayley tables or by basis and structure coefficients), produces a tensor $T_L$ in $(L \oplus L \oplus L/Z(L) \oplus L/Z(L) \oplus \Z/p^e) \otimes (L \oplus L \oplus L/Z(L) \oplus L/Z(L) \oplus \Z/p^e)  \otimes (\Z/p^e \oplus Z(L) \oplus Z(L))$ such that $L \cong L'$ if and only if there are $X_1 \in \aut(Z(L))$, $X_2 \in \aut(L_+)$ (automorphism of the underlying Abelian group of $L$), and $X_3 \in \aut(L/Z(L))$ such that
+\begin{equation} \label{eqn:Lie-ring-to-TI}
+(X_2 \oplus X_2^{-1} \oplus X_3^{-1} \oplus X_3 \oplus 1, (X_2 \oplus X_2^{-1} \oplus X_3^{-1} \oplus X_3 \oplus 1)^t, 1 \oplus X_1 \oplus X_1^{-1}) \circ T_L = T_{L'}.
+\end{equation}
+Furthermore, each frontal slice of the tensors $T_L, T_{L'}$ is an alternating matrix.
+\end{lemma}
+
+\begin{proof}
+View $T_L$ as a block tensor, as indicated by the shape $(L \oplus L \oplus L/Z(L) \oplus L/Z(L) \oplus \Z/p^e) \otimes (L \oplus L \oplus L/Z(L) \oplus L/Z(L) \oplus \Z/p^e)  \otimes (\Z/p^e \oplus Z(L) \oplus Z(L))$; that is, there are $75$ blocks arranged in a $5 \times 5 \times 3$ fashion, and e.g. the (1,1,1) block is $L \otimes L \otimes \Z/p^e$, and the (3,3,2) block is $L/Z(L) \otimes L/Z(L) \otimes Z(L)$, and the (5,2,3) block is $\Z/p^e \otimes L \otimes Z(L)$. Throughout, choose a basis for $L$, a basis of $Z(L)$, and a basis of $L/Z(L)$. 
+\begin{itemize}
+\item Let $\tB \colon L / Z(L) \otimes L / Z(L) \to Z(L)$ be the commutator map of $L$; we place $\tB$, written in the chosen bases, in the (3,3,2) block. 
+
+\item Let $M_\pi$ be the matrix corresponding to the projection map $\pi \colon L \to L/Z(L)$ (again, in the chosen bases); we place $M_{\pi}$ in the (4,2,1) block, and $-M_{\pi}^t$ in the (2,4,1) block. 
+
+\item Let $M_{\iota}$ be the matrix corresponding to the inclusion map $\iota \colon Z(L) \to L$; we place $M_{\iota}$ in the (5,1,3) block and $-M_{\iota}^t$ in the (1,5,3) block.
+\end{itemize}
+
+Now we show that this tensor $T_L$ has the desired property, namely that $L \cong L'$ if and only if $T_L$ and $T_{L'}$ are isomorphic by a transformation as in the statement of the lemma.
+
+($\Rightarrow$) Suppose $L \cong L'$. By Lemma~\ref{lem:iso-Lie-ring}, there are isomorphisms $\varphi_U \colon Z(L) \to Z(L')$, $\varphi_V \colon L \to L'$, and $\varphi_W \colon L/Z(L) \to L' / Z(L')$ satisfying equations \eqref{eqn:iso-condition-inj}--\eqref{eqn:iso-condition-bracket}. Let $X_1 = \varphi_U$, $X_2 = \varphi_V$, and $X_3 = \varphi_W$. We claim that $X_1, X_2, X_3$ satisfy \eqref{eqn:Lie-ring-to-TI}.
+\begin{itemize}
+\item Consider the action on $\tB$ in the (3,3,2) block of $T_L$. This is acted on by $\tB \mapsto X_3^{-1} \tB^{X_1} X_3^{-T}$, where here the exponent $\tB^{X_1}$ means that $X_1$ is used to take linear combinations of frontal slices of $\tB$. In terms of the bilinear form, this has the effect of replacing $B(x,y)$ by $X_1 B(X_3^{-1} x, X_3^{-1} y) = \varphi_U(B(\varphi_W^{-1}(x), \varphi_W^{-1}(y))$. By \eqref{eqn:iso-condition-bracket}, this is equal to $B'(x,y)$, which agrees with the (3,3,2) block of $T_{L'}$.
+
+\item Consider the action on $M_{\pi}$ in the (1,4,1) block.  This transforms into $M_\pi \mapsto X_3 M_\pi X_2^{-T}$. But this is the same as $\varphi_W \circ \pi \circ \varphi_V^{-1}$, which by \eqref{eqn:iso-condition-surj} is equal to $\pi'$, hence making the (1,4,1) block into $M_{\pi'}$, the (1,4,1) block of $T_{L'}$. In the (4,1,1) block, the same equation occurs just with everything transposed and negated, resulting in $-M_{\pi'}$, again agreeing with the (4,1,1) block of $T_{L'}$.
+
+\item Similarly, in the (5,1,3) block, we have $M_{\iota} \mapsto X_2 M_{\iota} X_1^{-1}$, corresponding to $\varphi_V \circ \iota \circ \varphi_U^{-1}$, and by \eqref{eqn:iso-condition-inj}, this is equal to $\iota'$, hence the resulting matrix equals $M_{\iota'}$, which is precisely the (5,1,3) block of $T_{L'}$. As in the previous case, the (1,5,3) block is simply the negative transpose in both $T_L$ and $T_{L'}$.
+\end{itemize}
+
+($\Leftarrow$) Given invertible $X_1, X_2, X_3$ satisfying \eqref{eqn:Lie-ring-to-TI}, define $\varphi_U = X_1, \varphi_V = X_2, \varphi_W = X_3$. Reading the preceding argument in reverse shows that $\varphi_U, \varphi_V, \varphi_W$ satisfy \eqref{eqn:iso-condition-inj}--\eqref{eqn:iso-condition-bracket}, and therefore by Lemma~\ref{lem:iso-Lie-ring}, we have that $L \cong L'$. This completes the proof of Lemma~\ref{lem:Lie-ring-to-TI}.
+\end{proof}
+
+Deciding if two tensors as in Lemma~\ref{lem:Lie-ring-to-TI} are equivalent under the action specified there is an instance of \algprobm{Partitioned \& Linked Alternating Matrix Space Isometry} over $\Z/p^e \Z$, but where the tensors need not be homocyclic (the modules need not be free). The latter problem is the same as \algprobm{Alternating Matrix Space Isometry} except that the matrices doing the isometry must have a block form (specified as part of the input; this is why it is called ``partitioned''), and certain blocks of the matrices doing the isometry are required to be equal, inverses, or transposes of one another (why it is called ``linked''). In \cite{TI4}, over fields gadgets were presented that reduces the latter problem to \algprobm{Alternating Matrix Space Isometry}. We claim that those same gadgets work in our setting, and the only key adaptation we need is Lemma~\ref{lem:invertible} and Remark~\ref{rem:TI4}, which allows us to reduce to (ordinary, non-partitioned, non-linked, but still not necessarily homocyclic)  \algprobm{Alternating Matrix Space Isometry} over $\Z/p^e \Z$. 
+
+Finally, we reduce to \algprobm{Alternating Matrix Space Isometry} over free (equivalently, homocyclic) $\Z/p^e \Z$-modules. 
+
+\begin{definition}\label{def:tensor_from_group}
+Let $G$ and $H$ be two Abelian $p$-groups for some odd prime $p$, 
+$f: G \times G \rightarrow H$ be a bilinear map, and $\tA$ be the tensor in $G \otimes G\otimes H$ with respect to $f_\tA$. 
+Let $e$ be an integer such that the largest order of elements in both $G$ and $H$ is at most $p^e$. 
+Suppose $G$ is isomorphic to 
+\[\bigoplus_{\ell = 1}^{e} \left(\Z / p^{\ell } \Z\right)^{\alpha_\ell},\]
+and $H$ is isomorphic to 
+\[\bigoplus_{\ell = 1}^{e} \left(\Z / p^{\ell } \Z\right)^{\beta_\ell}.\]
+Let $n = \sum_{\ell = 1}^{e} \alpha_\ell$ and $m = \sum_{\ell = 1}^{e} \beta_\ell $. 
+An $n \times n \times m$ tensor $\tB = (b_{i, j, k})$ over $\Z / p^e \Z$ is a tensor derived from $\tA$ if there exist
+$c_1, \dots, c_n \in G$ and $d_1, \dots, d_m \in H$ satisfying the following conditions:
+\begin{enumerate}
+\item $c_1, \dots, c_n$ generate $G$ and for each $1 \leq \ell \leq e$, $c_{j}$ is of order $p^\ell$ for any $(\sum_{i = 1}^{\ell - 1} \alpha_i) + 1 \leq j \leq \sum_{i = 1}^{\ell} \alpha_i$. (Equivalently, the $c_i$ are a basis for $G$ viewed as a $\Z/p^e \Z$-module.)
+\item $d_1, \dots, d_m$ generate $H$ and for each $1 \leq \ell \leq e$, $d_{j}$ is of order $p^\ell$ for any $(\sum_{i = 1}^{\ell - 1} \beta_i) + 1 \leq j \leq \sum_{i = 1}^{\ell} \beta_i$. (Equivalently, the $d_i$ are a basis for $H$ viewed as a $\Z/p^e \Z$-module.)
+\item For any $1 \leq i, j \leq n, 1 \leq k \leq m$, $b_{i, j, k} = f_\tA(c_i, c_j, d_k)\cdot p^{e - t_k}$, where $t_k$ is the integer such that the order of $d_k$ is $p^{t_k}$.%\ynote{I am a bit confused here: why the padded $p$ power is in terms of $d_k$, but not relying on $c_j$?}
+\end{enumerate}
+
+
+
+%Suppose $[G, G]$ is isomorphic to 
+%\[\bigoplus_{\ell = 1}^{e} \left(\Z / p^{\ell } \Z\right)^{\alpha_\ell},\]
+%and $G / Z(G)$ is isomorphic to 
+%\[\bigoplus_{\ell = 1}^{e} \left(\Z / p^{\ell } \Z\right)^{\beta_\ell}.\]
+%Let $m = \sum_{\ell = 1}^{e} \alpha_\ell$ and $n = \sum_{\ell = 1}^{e} \beta_\ell $. 
+
+
+
+%and $e$ be the smallest integer such that the largest order of elements in both $[G, G]$ and $G / Z(G)$ is at most $p^e$. 
+%Suppose $[G, G]$ is isomorphic to 
+%\[\bigoplus_{\ell = 1}^{e} \left(\Z / p^{\ell } \Z\right)^{\alpha_\ell},\]
+%and $G / Z(G)$ is isomorphic to 
+%\[\bigoplus_{\ell = 1}^{e} \left(\Z / p^{\ell } \Z\right)^{\beta_\ell}.\]
+%Let $m = \sum_{\ell = 1}^{e} \alpha_\ell$ and $n = \sum_{\ell = 1}^{e} \beta_\ell $. 
+
+%An $n \times n \times m$ tensor $\tA = (a_{i, j, k})$ over $\Z / p^e \Z$ is a tensor derived from $G$ if there exist
+%$c_1, \dots, c_n \in G / Z(G)$ and $d_1, \dots, d_m$ satisfying the following conditions:
+%\begin{enumerate}
+%\item $c_1, \dots, c_n$ generate $G / Z(G)$ and for each $1 \leq \ell \leq e$, $c_{j}$ is of order $p^\ell$ for any $(\sum_{i = 1}^{\ell - 1} \beta_i) + 1 \leq j \leq \sum_{i = 1}^{\ell} \beta_i$. 
+%\item $d_1, \dots, d_m$ generate $[G, G]$ and for each $1 \leq \ell \leq e$, $d_{j}$ is of order $p^\ell$ for any $(\sum_{i = 1}^{\ell - 1} \alpha_i) + 1 \leq j \leq \sum_{i = 1}^{\ell} \alpha_i$. 
+%\item For any $1 \leq i, j \leq n$, $[c_i, c_j] = \prod_{k = 1}^md_k^{a_{i, j, k}} \cdot p^{e - t}$, where $t$ is the integer such that the order of $d_k$ is $p^t$. 
+%\end{enumerate}
+\end{definition}
+
+
+
+\begin{definition}\label{def:matrix_from_group}
+Let $G$ and $H$ be two Abelian $p$-groups for some odd prime $p$, 
+$f: G \rightarrow H$ be a linear map, and  
+$A$ be a matrix in $G \otimes H$ with respect to $f$. 
+Let $e$ be an integer such that the largest order of elements in both $G$ and $H$ is at most $p^e$. 
+Suppose $G$ is isomorphic to 
+\[\bigoplus_{\ell = 1}^{e} \left(\Z / p^{\ell } \Z\right)^{\alpha_\ell},\]
+and $H$ is isomorphic to 
+\[\bigoplus_{\ell = 1}^{e} \left(\Z / p^{\ell } \Z\right)^{\beta_\ell}.\]
+Let $n = \sum_{\ell = 1}^{e} \alpha_\ell$ and $m = \sum_{\ell = 1}^{e} \beta_\ell $. 
+An $n \times m$ matrix  $B = (b_{i, j})$ over $\Z / p^e \Z$ is a matrix derived from $A$ if there exist
+$c_1, \dots, c_n \in G$ and $d_1, \dots, d_m \in H$ satisfying the following conditions:
+\begin{enumerate}
+\item $c_1, \dots, c_n$ generate $G$ and for each $1 \leq \ell \leq e$, $c_{j}$ is of order $p^\ell$ for any $(\sum_{i = 1}^{\ell - 1} \alpha_i) + 1 \leq j \leq \sum_{i = 1}^{\ell} \alpha_i$. 
+\item $d_1, \dots, d_m$ generate $H$ and for each $1 \leq \ell \leq e$, $d_{j}$ is of order $p^\ell$ for any $(\sum_{i = 1}^{\ell - 1} \beta_i) + 1 \leq j \leq \sum_{i = 1}^{\ell} \beta_i$. 
+\item For any $1 \leq i, j \leq n, 1 \leq k \leq m$, $b_{i, j} = f_A(c_i, d_j)\cdot p^{e - t}$, where $t$ is the integer such that the order of $d_j$ is $p^t$. 
+\end{enumerate}
+
+
+
+%Suppose $[G, G]$ is isomorphic to 
+%\[\bigoplus_{\ell = 1}^{e} \left(\Z / p^{\ell } \Z\right)^{\alpha_\ell},\]
+%and $G / Z(G)$ is isomorphic to 
+%\[\bigoplus_{\ell = 1}^{e} \left(\Z / p^{\ell } \Z\right)^{\beta_\ell}.\]
+%Let $m = \sum_{\ell = 1}^{e} \alpha_\ell$ and $n = \sum_{\ell = 1}^{e} \beta_\ell $. 
+
+
+
+%and $e$ be the smallest integer such that the largest order of elements in both $[G, G]$ and $G / Z(G)$ is at most $p^e$. 
+%Suppose $[G, G]$ is isomorphic to 
+%\[\bigoplus_{\ell = 1}^{e} \left(\Z / p^{\ell } \Z\right)^{\alpha_\ell},\]
+%and $G / Z(G)$ is isomorphic to 
+%\[\bigoplus_{\ell = 1}^{e} \left(\Z / p^{\ell } \Z\right)^{\beta_\ell}.\]
+%Let $m = \sum_{\ell = 1}^{e} \alpha_\ell$ and $n = \sum_{\ell = 1}^{e} \beta_\ell $. 
+
+%An $n \times n \times m$ tensor $\tA = (a_{i, j, k})$ over $\Z / p^e \Z$ is a tensor derived from $G$ if there exist
+%$c_1, \dots, c_n \in G / Z(G)$ and $d_1, \dots, d_m$ satisfying the following conditions:
+%\begin{enumerate}
+%\item $c_1, \dots, c_n$ generate $G / Z(G)$ and for each $1 \leq \ell \leq e$, $c_{j}$ is of order $p^\ell$ for any $(\sum_{i = 1}^{\ell - 1} \beta_i) + 1 \leq j \leq \sum_{i = 1}^{\ell} \beta_i$. 
+%\item $d_1, \dots, d_m$ generate $[G, G]$ and for each $1 \leq \ell \leq e$, $d_{j}$ is of order $p^\ell$ for any $(\sum_{i = 1}^{\ell - 1} \alpha_i) + 1 \leq j \leq \sum_{i = 1}^{\ell} \alpha_i$. 
+%\item For any $1 \leq i, j \leq n$, $[c_i, c_j] = \prod_{k = 1}^md_k^{a_{i, j, k}} \cdot p^{e - t}$, where $t$ is the integer such that the order of $d_k$ is $p^t$. 
+%\end{enumerate}
+\end{definition}
+
+
+\begin{lemma}\label{lem:reduction_to_homocyclic}
+Let $G, H, G', H'$ be four Abelian $p$-groups such that $G \cong G'$ and $H \cong H'$. Then we have 
+\begin{enumerate}
+\item Let $\tA, \tA'$ be two tensors in $G \otimes G  \otimes H$ and $G' \otimes G' \otimes H'$, and 
+$\tB$ and $\tB'$ be two tensors over $\Z / p^e \Z$ for some integer $e$ derived from $\tA$ and $\tA'$ respectively. 
+Then there are $X_G \in \aut(G)$ and $Y_H \in \aut(H)$ such that 
+$\tA' = (X_G, X_G^t, Y_H) \circ \tA$ 
+%$\tA$ and $\tA'$ are isomorphic under actions in the automorphisms of $G$ and $H$ 
+if and only if there are invertible matrices $X \in \GL(n, \Z / p^e \Z)$ and $Y \in \GL(m, \Z / p^e \Z)$ such that $\tB' = (X, X^t, Y) \circ \tB$, where $n$ is the size of a basis for $G$ and $m$ is the size of a basis for $H$. 
+%their derived tensors are isomorphic under the actions in $\GL(n, \Z / p^3 \Z) \times \GL(n, \Z / p^3 \Z)$.
+\item Let $A, A'$ be two matrices in $G  \otimes H$ and $G' \otimes H'$, and 
+$B$ and $B'$ be two matrices over $\Z / p^e \Z$ for some integer $e$ derived from $B$ and $B'$ respectively. 
+Then there are $X_G \in \aut(G)$ and $Y_H \in \aut(H)$ such that 
+$A' = X_G A Y_H$ %~\xnote{I do not know if the notations used here is fine.}
+%$\tA$ and $\tA'$ are isomorphic under actions in the automorphisms of $G$ and $H$ 
+if and only if there are invertible matrices $X \in \GL(n, \Z / p^e \Z)$ and $Y \in \GL(m, \Z / p^e \Z)$ such that $B'= X  B Y$, where $n$ is the size of a basis for $G$ and $m$ is the size of a basis for $H$. 
+%their derived tensors are isomorphic under the actions in $\GL(n, \Z / p^3 \Z) \times \GL(n, \Z / p^3 \Z)$.
+
+\end{enumerate}
+\end{lemma}
+\begin{proof}
+%Let $\tB$ and $\tB'$ are tensors derived 
+By Definition~\ref{def:tensor_from_group}, the $\tB$ and $\tB'$ are of dimension $n \times n \times m$. 
+Let $c_{\tA, 1}, \dots, c_{\tA, n}, d_{\tA, 1}, \dots, d_{\tA, m}$ and $c_{\tA', 1}, \dots, c_{\tA', n}, d_{\tA', 1}, \dots, d_{\tA', m}$ be the elements used to obtain $\tB$ and $\tB'$  following Definition~\ref{def:tensor_from_group} respectively. 
+
+%\ynote{The proof below seems to miss some argument for why the padded $p$ powers as in Definition~\ref{def:tensor_from_group} do not ``matter.''}
+We first show that if $\tA$ and $\tA'$ are isomorphic, then there are $X$ and $Y$ such that $\tB' = (X, X^t, Y)\circ \tB$. 
+Since $\tA$ and $\tA'$ are isomorphic, %there are automorphism $A_G \in \aut(G)$ and $A_H \in \aut(H)$ such that $(A_G, A_G^t, A_H) \circ \tA = \tA'$. 
+%Hence, 
+ there are $x_{i, j} \in \Z / p^e \Z$ such that $X_G(c_{\tA, i}) = \sum_{j = 1}^n {x_{i, j}} c_{\tA, j}$ %\ynote{One of $c_{\tA, i}$ and $c_{\tA, j}$ should have $\tA'$ in the subscript?} 
+ for every $1 \leq i \leq n$. %, and $x_{i, j}'$ such that $c_{\tA, i} = \prod_{j = 1}^n c_{\tB, j}^{x_{i, j}'}$ for every $1 \leq i, j \leq n$. 
+ Let $X = (x_{i, j})$. % and $X' = (x_{i, j}')$. 
+ $X$ is in $\GL(n, \Z / p^e \Z)$. % because 
+%Both $X$ and $X'$ are invertible matrices because $X X' = I$. 
+Similarly, there are $y_{i, j} \in \Z / p^e \Z$ such that $Y_H(d_{\tA, i}) = \sum_{j = 1}^m y_{i, j} d_{\tA, j}$ for every $1 \leq i \leq m$. %, and $x_{i, j}'$ such that $c_{\tA, i} = \prod_{j = 1}^n c_{\tB, j}^{x_{i, j}'}$ for every $1 \leq i, j \leq n$. 
+ Let $Y_0 = (y_{i, j})$. % and $X' = (x_{i, j}')$. 
+ $Y_0$ is in $\GL(n, \Z / p^e \Z)$. % because 
+%Similarly, both $\{d_{\tA, 1}, \dots, d_{\tA, m}\}$ and $\{d_{\tB, 1}, \dots, d_{\tB, m}\}$ are generating sets of $H$, there are $y_{i, j}$ such that $d_{\tB, i} = \prod_{j = 1}^m d_{\tA, j}^{y_{i, j}}$ for every $1 \leq i, j \leq m$, and $y_{i, j}'$ such that $d_{\tA, i} = \prod_{j = 1}^n d_{\tB, j}^{y_{i, j}'}$ for every $1 \leq i, j \leq m$. 
+%Let $Y = (y_{i, j})$ and $Y' = (y_{i, j}')$. 
+%Both $Y$ and $Y'$ are invertible matrices because $Y Y' = I$. 
+It is easy to verify that $\tB' = (X, X^t, Y_0^{-1}) \circ \tB$. 
+
+Now we show that if there are invertible $X$ and $Y$ such that $\tB' = (X, X^t, Y)\circ \tB$, then $\tA$ and $\tA'$ are isomorphic. 
+Denote $X = (x_{i, j})$ and $Y' = Y^{-1} = (y_{i, j}')$. 
+Let $X_G$ be the linear function for $G$ such that $X_G(c_{\tA, i}) = \sum_{j = 1}^{n} x_{i, j} c_{\tA, j}$, and 
+$Y_H$ be the linear function for $H$ such that $Y_H(d_{\tA, i}) = \sum_{j = 1}^{m} y'_{i, j} d_{\tA, j}$. 
+One can verify that both $X_G$ and $Y_H$ are automorphisms for $G$ and $H$ respectively, and $\tA' = (X_G, X_G^t, Y_H)$. 
+
+The proof for the second case of the lemma is similar to the first case. 
+This completes the proof of Lemma~\ref{lem:reduction_to_homocyclic}.
+\end{proof}
+
+\begin{definition}
+Let $G_1, \dots, G_k, H_1, \dots, H_\ell$ be a sequence of Abelian $p$-groups. 
+Let $\tA$ be a tensor in %\ynote{Was: over} 
+$(G_1 \oplus \dots \oplus G_k) \otimes (G_1 \oplus \dots \oplus G_k)  \otimes (H_1 \oplus \dots \oplus H_\ell)$ such that each non-zero subtensor on $G_i \otimes G_{j} \otimes H_u$ satisfies one of the following conditions:
+\begin{enumerate}
+\item $i = i'$ and the subtensor encodes a bilinear map. 
+\item One of $G_i, G_j, H_u$ is isomorphic to 1, and the subtensor encodes a linear map. 
+\end{enumerate}
+The derived tensor over $\Z / p^e \Z$ for $\tA$ is obtained by replacing each non-zero sub-tensor by its derived tensor. 
+\end{definition}
+
+\begin{corollary}
+Let $G_1, \dots, G_k, H_1, \dots, H_\ell$ and $G_1', \dots, G_k', H_1', \dots, H_\ell'$ be two sequences of Abelian $p$-groups such that $G_i \cong G_i'$ for every $1\leq i\leq k$ and $H_j \cong H_j'$ for every $1 \leq j \leq \ell$. 
+Let $\tA$ and $\tA'$ be tensors in $(G_1 \oplus \dots \oplus G_k) \otimes (G_1 \oplus \dots \oplus G_k)  \otimes (H_1 \oplus \dots \oplus H_\ell)$ and  $(G_1' \oplus \dots \oplus G_k') \otimes (G_1' \oplus \dots \oplus G_k')  \otimes (H_1' \oplus \dots \oplus H_\ell')$ such that for each non-zero subtensor on $G_i \otimes G_{j} \otimes H_u$ (or $G_i' \otimes G_{j}' \otimes H_u'$) satisfying one of the following conditions:
+\begin{enumerate}
+\item $i = i'$ and the subtensor encodes a bilinear map. 
+\item One of $G_i, G_j, H_u$ (or $G_i', G_j', H_u'$) is isomorphic to 1, and the subtensor encodes a linear map. 
+\end{enumerate}
+Then the two tensors are isomorphic if and only if their derived tensors over $\Z / p^e \Z$ are isomorphic.  
+\end{corollary}
+
+The dimension of the tensor obtained and the complex parameter is obtained by the construction of the tensor.%\ynote{Some estimation on the parameter bounds would be needed here?}
+
+This completes the proof of Theorem~\ref{thm:GpI-to-AMSI}.
+\end{proof}
+
+
+
+\input{reduction.tex}
+
+\input{tuples.tex}

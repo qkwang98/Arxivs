@@ -1,0 +1,336 @@
+\section{Simply-typed \WLOG: further details}
+\applabel{simply-typed wlog details}
+
+In this Appendix, we provide further details to \secref{wlog construction}.
+Our first proof obligation is a comment we immediately before \exampleref{tree example}:
+
+\begin{lemma}[well-known]\lemmalabel{action exponential}
+  Let $\A$ and $\B$ be $\G$-actions. The exponential $\A \to \B$ in $\Action\G$ is given by the set of functions between their carriers:
+  \begin{gather*}
+  \carrier{\A \to \B}\definedby \carrier\A \to \carrier\B
+  \qquad
+  (g \act[\A \to \B] f) \definedby \fun a g \act[\B] f(\inv g\act[\A]a)
+  \\
+  \eval : (\A \to \B) \times \A \equito \B
+  \qquad
+  \eval \pair fa \definedby f\,a
+  \end{gather*}
+\end{lemma}
+\begin{proof}
+  We indeed have an action. Unit preservation:
+  \[
+  (\unit[\G] \act[\A \to \B] f)a
+  = \unit[\G]\act[\B] f(\inv{\unit[\G]}\act a) = f\,a
+  \implies
+  \unit[\G] \act[\A \to \B] f = f
+  \]
+  Action preservation:
+  \begin{align*}
+  (g \act[\A \to \B] h \act[\A\to\B] f)a
+  &=
+  g \act[\B] (h \act[\A\to\B] f)(\inv g \act[\A] a)
+  =
+  g \act[\B] (h \act[\B] f(\inv h \act[\A] (\inv g \act[\A] a)))
+  \\&=
+  (g \mul[\G] h) \act[\B] f\parent{\inv*{\smash{g \mul[\G] h}}\act[\A] a}
+  =
+  \parent{(g \mul[\G] h) \act[\A \to \B] f} a
+  \\&\implies
+  (g \act[\A \to \B] h \act[\A\to\B] f) = (g \mul[\G] h) \act[\A \to \B] f
+  \end{align*}
+
+  Evaluation is equivariant. Calculate:
+  \begin{align*}
+  \eval(g \act[(\A\to\B)\times \A] \pair fa)
+  &=
+  \eval\pair{g\act[\A\to\B] f}{g\act[\A] a}
+  =
+  (g\act[\A\to\B]f)\,(g\act[\A] a)
+  \\&=
+  g \act[\B] (f(\inv g \act[A] (g \act[\A] a)))
+  =
+  g \act[\B] (f\,a)
+  =
+  g \act[\B] \eval\pair fa
+  \tag*{\qedhere}
+  \end{align*}
+
+  Given any equivariant map $h : \C \times \A \equito \B$, its curried
+  map is also equivariant:
+  \begin{align*}
+    (g \act[\A \To \B] \curry h c)a
+    &=
+    g \act[\B] \curry h (c; \inv g \act[\A] a)
+    =
+    g \act[\B] h (c, \inv g \act[\A] a)
+    \explain={equivariance}
+    h (g \act[\C] c, g \act \inv g \act[\A] a)
+    \\&=
+    h (g \act[\C] c, a)
+    =
+    (\curry h (g \act[\C]c) a
+    \\&\implies\quad
+    g \act[\A \to \B] \curry h c = \curry h (g \act[\C] c)
+  \end{align*}
+  and so $\curry h : \C \equito (\A \to \B)$. The curried function
+  lifts $h$ along evaluation. Now if we have an equivariant map $g :
+  \C \equito (\A \to \B)$ that lifts $h$ along evaluation, then by the
+  set-theoretic argument, it coincides with $\curry h$.
+\end{proof}
+
+Next, we characterise the canonical elements of
+canonisers of the form $\carrier \A \times \carrier \B \xto{\projection_1}\A \xto\canoniser \carrier\G$:
+
+\begin{proof}[of \lemmaref{projection canoniser}]%
+  Take an arbitrary canonical element $(\canoniser \compose \projection_1) \seq{a, b}
+  \act \seq{a, b} \in \Canon{\parent{\canoniser \compose
+  \projection_1}}$. We then have
+  \[
+    (\canoniser \compose \projection_1) \seq{a, b} \act \seq{a, b}
+    = \canoniser a \act \seq{a, b}
+    = \seq{\canoniser a \act a, \canoniser a \act b}
+    \in \Canon\canoniser \times \carrier\B
+  \]
+  Conversely, given an arbitrary pair $\seq{\canoniser a \act a, b} \in
+  \Canon\canoniser \times \carrier\B$, let $b' = \inv*{\canoniser a} \act b$.
+  We then have:
+  \[
+    \seq{\canoniser a \act a, b}
+    = \seq{\canoniser a \act a, (\canoniser a \mul \inv*{\canoniser a}) \act b}
+    = \canoniser a \act \seq{a, b'}
+    = ((\canoniser \compose \projection_1) \seq{a, b'}) \act \seq{a, b'}
+    \in \Canon{\parent{\canoniser \compose \projection_1}}
+  \]
+  Therefore $\Canon{\parent{\canoniser \compose
+  \projection_1}} = \Canon\canoniser \times \carrier\B$.
+\end{proof}
+
+Next, we proof the main equivariance theorem for the \WLOG{} construction:
+\begin{proof}[of \theoremref{wlog-construction}]%
+  Let us first show that $\wlg(c, f)$ is equivariant. Take arbitrary
+  $g \in \carrier\G$ and $a \in \carrier\A$. By definition and by the
+  group and action axioms, we can rewrite:
+  \begin{align*}
+    \wlg(c, f)(g \act a)
+    &=
+    \inv{c (g \act a)} \act f(c (g \act a) \act (g \act a)) \\
+    &=
+    \inv{c (g \act a)} \act f(c (g \act a) \act (g \act \inv{(c a)} \act c a \act a)) \\
+    &=
+    \inv{c (g \act a)} \act f\big((c (g \act a) \mul g \mul \inv{(c a)}) \act (c a \act a)\big) \\
+    \intertext{
+      Since both $c a \act a$ and $c (g \act a) \act (g \act a)$ belong to $\Canon{\canoniser}$, equivariance of $f$ allows us to rewrite:
+    }
+    &=
+    \inv{c (g \act a)} \act \big((c (g \act a) \mul g \mul \inv{(c a)}\big) \act f(c a \act a)) \\
+    &=
+    g \act (\inv{(c a)} \act f(c a \act a)) \\
+    &=
+    g \act \wlg(c, f)\,a
+  \end{align*}
+  as desired.
+
+  Next, let us show that $\wlg(c, f)$ extends $f$. Take an arbitrary
+  canonical element $a \in \Canon\canoniser$. Since $c a \act a$
+  also lies in $\in \Canon\canoniser$, the action axioms imply:
+  \[
+    \wlg(c, f)\,a
+    =
+    \inv{(c a)} \act f(c a \act a)
+    \explain={$f$ is equivariant}
+    \inv{(c a)} \act c a \act f a
+    =
+    f a
+  \]
+
+  Finally, take an arbitrary $\phi : \A \equito \B$ that extends $f$
+  along $\Canon\canoniser\subset\carrier\A$. Then, for an arbitrary
+  $a \in \carrier\A$, we have
+  \[
+    \phi a
+    =
+    \phi (\inv{(c a)} \act c a \act a)
+    \explain={$\phi$ equivariant}
+    \inv{(c a)} \act \phi (c a \act a)
+    \explain={$\phi$ extends $f$}
+    \inv{(c a)} \act f (c a \act a)
+    \explain={by definition}
+    \wlg(c, f)\,a
+  \]
+  as desired.
+\end{proof}
+
+The order of the next few results
+differs from the order in which they appear in the main text.
+They concern the characterisation of
+strictly equivariant and immediate canonisers from
+\subsecref{wlog-construction}.
+Strict equivariance seem to be a more natural concept to the
+audience when we present this work, so the main text starts there.
+Here we first characterise immediate canonisers, and use this
+characterisation as part of the proof. This order make it easier to
+see that we avoid circular reasoning.
+
+We start with immediate canonisers as every strictly equivariant
+canoniser is also immediate:
+\begin{proof}[of \propositionref{strictly equivariant canonisers are immediate}]%
+  Calculate:
+  \[
+  \canoniser(\canoniser a \mul a)
+  \explain={equivariance}
+  \canoniser a \mul \inv*{\canoniser a}
+  =
+  \unit
+  \]
+  as desired.
+\end{proof}
+
+We characterise immediate canonisers
+via the condition $\Canon\canoniser =
+\inv\canoniser[\unit]$:
+
+\begin{proof}[of \propositionref{immediate canonical is kernel}]%
+  Take an arbitrary $\canoniser a \act a \in \Canon\canoniser$. Since
+  $\canoniser$ is immediate, we have $\canoniser \parent{\canoniser a \act a}
+  = \unit$, and so $\canoniser a \act a \in \inv{\canoniser}[\unit]$,
+  thus $\Canon\canoniser \subseteq \inv{\canoniser}[\unit]$. The
+  converse inclusion always holds. Indeed, if $a \in \inv{\canoniser}[\unit]$,
+  then $\canoniser a = \unit$ and so $a = \canoniser a \act a \in
+  \Canon\canoniser$.
+
+  Conversely, let us show that $\canoniser$ is immediate and take an
+  arbitrary $a \in \carrier\A$. We have $\canoniser a \act a \in
+  \Canon\canoniser$ by definition, thus $\canoniser a \act a \in
+  \inv{\canoniser}[\unit]$ by assumption, and so
+  $\canoniser(\canoniser a \act a) = \unit$ as required.
+\end{proof}
+
+
+
+The next result characterises strict equivariance of a canoniser via the
+equivariance of every core function. The proof uses the concept of
+stabilisers that we introduce in \subsecref{equivariant canonisers}.
+The proof is dependently-typed in nature, and it is best understood in
+the context of \secref{dependent types} and \subsecref{equivariant
+  canonisers} in particular. However, we make the proof self-contained
+and re-introduce the concepts that are relevant for it.
+
+\begin{proof}[of \theoremref{all core functions are partially equivariant}]%
+  First, take a strictly equivariant canoniser $\canoniser :
+  \carrier\A \to \carrier\G$, and let $\B$ be an arbitrary action. We
+  need to show that every core function $f : \Canon\canoniser \to
+  \carrier\B$ is equivariant. Take $a, g\act a \in
+  \Canon\canoniser$. Since $\canoniser$ is strictly equivariant,
+  by \propositionref{strictly equivariant canonisers are
+  immediate}, it is an immediate canoniser. So by \propositionref{immediate canonical is kernel}, $\canoniser a = \unit =
+  \canoniser (g \act a)$, therefore:
+  \[
+    \inv g = \canoniser a \mul \inv g
+    \explain*={$\canoniser$ strictly equivariant}
+    \canoniser\parent{g \act a}
+    = \unit
+  \]
+  and equivariance holds vacuously.
+
+  Conversely, assume that every core function is equivariant, and let us show that $\canoniser$ is strictly equivariant.
+  Recall that for every $a \in \carrier\A$, we define the stabiliser sub-group of $a$ as the set of symmetries that fix $a$:
+  \[
+    \stabilise a \definedby \set{s \in \carrier\G \suchthat s \act a = a}
+  \]
+  Take the following action over the
+  the set of dependent pairs consisting of an
+  element in $\carrier\A$ and one
+  of its stabilising symmetries:
+  \[
+    \carrier\B \definedby (a : \carrier\A) \times \stabilise a
+    \qquad
+    g \act \pair as \definedby \pair{g \act a}{s \mul \inv g}
+  \]
+  Indeed, this definition is well-typed because:
+  \[
+    (s \mul \inv g)\mul (g \act a)
+    =
+    s \act (\inv g \mul g) \act a
+    =
+    s \act a
+    =
+    a
+  \]
+  It is also an action, since:
+  \begin{gather*}
+    \unit \act \pair as =
+    \pair{\unit \act a}{s \act \inv\unit} =
+    \pair as
+    \\
+    g \act h \act \pair as
+    =
+    \pair{g \act h \act a}{s \mul \inv h \mul \inv g}
+    =
+    \pair{(g \mul h) \act a}{s \mul \inv*{g \mul h }}
+    =
+    (g\mul h)\act \pair as
+  \end{gather*}
+  Define:
+  \[
+    f : \Canon\canoniser \to \carrier\B
+    \qquad
+    f a \definedby \pair a\unit
+  \]
+  By our assumption, its \WLOG extension is equivariant: $\wlg(c,f) :
+  \A \equito \B$. Note that this map is given by:
+  \[
+    \wlg(f,c)a = \inv*{\canoniser a} \act f\parent{\canoniser a\mul a}
+    = \inv*{\canoniser a} \act \pair{\canoniser a\mul a}\unit
+    = \pair{a}{\inv*{\inv*{\canoniser a}}}
+    = \pair{a}{\canoniser a}
+  \]
+  Now take any $a \in \carrier\A$ and $g \in
+  \carrier\G$, and calculate:
+  \begin{align*}
+    \pair{g\act a}{\canoniser\parent{g\act a}}
+    =
+    \wlg(c,f)(g\act a)
+    =
+    g\act \wlg(c,f)a
+    =
+    g\act \pair{a}{\canoniser a}
+    =
+    \pair{g \act a}{\parent{\canoniser a}\mul \inv g}
+  \end{align*}
+  Comparing the two second components, we have
+  \(
+    \canoniser\parent{g \act a} = (\canoniser a)\mul \inv g
+  \) and the canoniser is strictly equivariant.
+\end{proof}
+
+The next result shows that actions that admit strictly equivariant
+canonisers must be semi-regular, which makes this condition too strong
+for some actions:
+
+\begin{proof}[of \lemmaref{semi-regularity}]%
+  Assume $g \act a = a$. By equivariance of the canoniser, we thus have
+  $\canoniser a = \canoniser\parent{g \act a} = \canoniser a \mul \inv g$ and by cancelling
+  $\canoniser a$ on the left, we get $\unit = g$.
+\end{proof}
+
+The final result concerns inheriting strict equivariance and
+immediateness from a canoniser:
+
+\begin{proof}[of \lemmaref{equivariance of projection canonisers}]%
+  To show strict equivariance, we have that the projection is an equivariant map $\projection_1 : \A \times \B
+  \equito \A$, and equivariant maps compose.
+%
+  For immediateness, we calculate
+    \begin{align*}
+    \canoniser\compose\projection_1\parent{(\canoniser\compose\projection_1{\pair ab})\mul{\pair ab}}
+    &=
+    \canoniser\compose\projection_1\parent{\canoniser a\mul{\pair ab}}
+    =
+    \canoniser\compose\projection_1\parent{\pair {\canoniser a\mul a}{\canoniser a\mul b}}
+    \\&=
+    \canoniser\parent{\canoniser{a} \mul a}
+    =
+    \unit
+    \end{align*}
+    and so $\canoniser \compose \projection_1$ is immediate when $\canoniser$ is.
+\end{proof}

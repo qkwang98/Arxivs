@@ -1,0 +1,289 @@
+% !TEX root = TI5.tex
+%\ynote{Added; please check.}
+\section{Introduction}
+
+%This paper is a continuation of the development of the Tensor Isomorphism complexity class in a series of papers \cite{TI1,TI2,TI3,TI4}. The focus of this paper is on the Tensor Isomorphism problem over commutative, associative, and unital rings. 
+
+We study the problem of testing tensor isomorphism over commutative rings, significantly generalizing previous work that focused on tensors over fields. Tensors include vectors, matrices, and 3-dimensional and higher-dimensional arrays. Two 3-tensors $T_{ijk}, T'_{ijk}$ over a field are isomorphic if they become equal after a change of basis in each of their three directions, that is, if there exist invertible matrices $A,B,C$ such that
+\[
+T_{ijk} = \sum_{i',j',k'} A_{ii'} B_{jj'} C_{kk'} T'_{i'j'k'} \quad (\forall i,j,k).
+\]
+Over more general rings, we will need to refine our notion of what it means for tensors to be isomorphic, generalizing the above equation. 
+
+Tensors over commutative rings naturally appear in number theory, computability, geometry, mathematical physics, group theory, and cryptography. In particular, the algorithmic question of testing tensor isomorphism is of great interest in these contexts. To motivate our study, we first examine the connections to these various fields.
+
+\subsection{Motivations}\label{subsec:motivation}
+
+\paragraph{Number theory: Bhargava's higher composition laws.} Gauss's composition law for binary quadratic forms over $\Z$ is the first historical example of studying the class group in algebraic number theory. In the celebrated works \cite{Bhargava,higher-2,higher-3,higher-4}, Bhargava discovered new composition laws for higher degree forms that go beyond class groups.
+Bhargava's starting point is the examination of $2\times 2\times 2$ tensors over $\Z$, which leads to a novel and visual description of Gauss's composition law. He proves a correspondence between $\GL(2, \Z)$-orbits on $\Z^2\otimes\Z^2\otimes\Z^2$ and isomorphism classes of certain ideal class triples in quadratic rings. 
+
+
+\paragraph{Geometry and mathematical physics: classifying Calabi--Yau threefolds.} Calabi--Yau threefolds, that is Calabi--Yau manifolds of complex dimension 3, % \jnote{Was: ``in $\C^3$'', but I don't think that's right. Abstractly they are complex-3D, but I don't think they are contained in $\C^3$.},  
+are of great interest in the study of geometry and mathematical physics \cite{Yau78,Calabi_Yau-1,Calabi_Yau-2,Calabi_Yau-3}. A key question in this context is to classify and bound the number of Calabi--Yau threefolds due to its implications to string theory \cite{Rei87,CY-count,CCFHL24}, and Yau has long conjectured that the number should be finite (see e.g. \cite{HYY24}). 
+
+To connect the classification of Calabi--Yau threefolds with tensors over $\Z$, the classic theorem of Wall for K\"ahler manifolds is crucial \cite{Wall66}. Wall's theorem implies that the topological type of Calabi--Yau threefolds is determined by (1) Hodge numbers $h^{1,1}$, $h^{1,2}\in \Z^+$, (2) the triple intersection numbers $C_{i,j,k}\in\N$ for $i, j, k\in [h^{1,1}] = \{1,2,\dotsc,h^{1,1}\}$, which form a symmetric tensor, and (3) the second Chern class, which is a vector in $\N^{h^{1,1}}$. It is known \cite{CY-count,CCFHL24} that Calabi--Yau threefolds with the same Hodge numbers are diffeomorphic if and only if the triple intersection numbers and the second Chern class vectors are in the same orbit under $\GL(n, \Z)$. Therefore, isomorphism of the integer 3-tensors with coordinates $C_{i,j,k}$ is a crucial step in classifying such manifolds.
+
+
+
+
+Recently, machine learning methods have been applied to the classification of Calabi--Yau manifolds via Wall's theorem \cite{JTT22,HYY24}. In \cite{JTT22}, it was noted that ``there is no known algorithm to check this equivalence in finite time.'' However, as we now explain, such a finite-time algorithm does exist, although its complexity has not been analyzed and it may not be efficient in practice. %despite that it may not be effective in practice. 
+
+%Note that by the above results of Grunewald--Segal \cite{GS80-1}, the problem is decidable. In the following, we will demonstrate its polynomial-time equivalence with several problems about algebras and multilinear forms. 
+
+
+\paragraph{Computability: arithmetic group actions and the work of Grunewald \& Segal.} In a pair of articles \cite{GS80-1,GS80-2}, Grunewald and Segal showed that several problems about arithmetic group actions are decidable in finite time. A main result in \cite{GS80-1} is the decidability of the following problem. Let $\rho$ be a rational action of $\GL(n, \Z)$ on a vector space $\C^m$. Given $u, v\in \C^m$, the \emph{orbit problem} asks whether there exists $T\in \GL(n, \Z)$ such that $\rho(T)\circ u=v$. 
+
+
+
+Grunewald and Segal mentioned several applications of their solution to the orbit problem. 
+\begin{itemize}
+	\item (Matrix tuple conjugacy problem.) Let $(A_1, \dots, A_m), (B_1, \dots, B_m)\in \M(n, \Q)^m$. Decide if there exists $T\in\GL(n, \Z)$ such that $\forall i\in[m]$, $TA_iT^{-1}=B_i$. 
+	
+	Over fields, this is a classical problem in computer algebra known as the module isomorphism problem, for which polynomial-time algorithms exist~\cite{CIK97,BL08}.
+	
+	\item (Form tuple equivalence problem.) Let $(f_1, \dots, f_m), (g_1, \dots, g_m)\in\Q[x_1, \dots, x_n]$ be homogeneous polynomials (a.k.a. forms). Decide if there exists $T\in \GL(n, \Z)$ such that $\forall i\in[m]$, $f_i\circ T=g_i$. 
+	
+		For single forms, this is a classical problem (generalizing equivalence of binary quadratic forms as in Gauss' work mentioned above), which has been studied by C. Jordan, H. Poincar\'e, and C. L. Siegel; see \cite{GS-overview}.
+
+	\item (Algebra isomorphism problem.) Let $\phi, \psi:\Z^n\times\Z^n\to\Z^n$ be two $\Z$-bilinear maps. Decide if there exists $T\in\GL(n, \Z)$, such that $\forall u, v\in \Z^n$, $\phi(T(u), T(v))=T(\psi(u, v))$. 
+	\item (Multilinear form isomorphism problem.) Let $\phi, \psi:\Z^n\times\Z^n\times\dots\times \Z^n\to \Q$ be two multilinear forms. Decide if there exists $T\in\GL(n, \Z)$, such that $\phi\circ T=\psi$. 
+\end{itemize}
+
+
+\paragraph{Group theory: finite nilpotent groups.}
+The finite group isomorphism problem is to determine whether two finite groups are isomorphic. When the groups are given by their Cayley (multiplication) tables, this problem is one of the few natural problems in $\cc{NP}$ for which no polynomial-time algorithm is known, and which is not believed to be $\cc{NP}$-complete (otherwise $\cc{PH}$ collapses to the second level).
+
+Research on group isomorphism in theoretical computer science began in the 1970s. The first algorithm for group isomorphism had a running time of $N^{\log N + O(1)}$, where $N$ denotes the order of the groups~\cite{Mil78, FN}\footnote{Miller attributes the result to Tarjan.}. Despite extensive study, the current best algorithm for group isomorphism has a running time of $N^{(1/4) \log N + O(1)}$~\cite{Ros13} (see \cite[Sec.~2.2]{LeGallRosenbaum}).
+The recent celebrated work by Babai on quasipolynomial-time algorithms for graph isomorphism~\cite{babai2016graph} has further highlighted the importance of the group isomorphism problem. That is, group isomorphism has become a bottleneck for the $n^{o(\log n)}$ time algorithm for graph isomorphism for graphs with $n$ vertices, as group isomorphism reduces to graph isomorphism \cite{KST93}.
+
+Class-2 nilpotent groups have long been recognized as the most challenging case for the group isomorphism problem. Despite significant efforts, the best-known algorithms for this class are not asymptotically better than for general groups. %have a running time of $N^{(1/4) \log N  + O(1)}$~\cite{Ros13}. 
+
+
+
+
+Recently, progress has been made on special cases of class-2 nilpotent groups. In \cite{Sun23}, an algorithm with a running time of $N^{O((\log N)^{5 / 6})}$ was proposed for $p$-groups of nilpotent class 2 and exponent $p$ (meaning that every non-identity element has order $p$), for odd primes $p$. In \cite{IMQSZ24}, an algorithm with a running time of $N^{O(\sqrt{\log N})}$ was introduced for $p$-groups of Frattini class 2,  whose group elements are of exponent at most $p^2$.\footnote{A $p$-group $G$ is of \emph{Frattini class $2$}, if there exists $H\leq G$, such that $H$ is central, and both $H$ and $G/H$ are elementary abelian. 
+Note, however, that $p$-groups of Frattini class $2$ do not even contain all $p$-groups of class $2$ and exponent $p^2$.} However, for the more general class of class-2 nilpotent groups---even those of odd order---no algorithm with a running time of $N^{o(\log N)}$ was known prior to our paper.
+
+\paragraph{Cryptography: lattice isomorphism.} While we will be mostly focusing on 3-tensors, 2-tensors (or matrices) over commutative rings already pose a nice challenge with possible applications in cryptography. 
+
+Let $A$ and $B$ be two $n\times n$ matrices over $\Q$. The \algprobm{Lattice Isomorphism Problem} asks whether there exists an $n\times n$ unimodular matrix $T$---that is, a matrix with integer entries and determinant being $\pm 1$---such that $T^tAT=B$. Haviv and Regev \cite{HR14} showed that this problem is in the complexity class Statistical Zero Knowledge ($\cc{SZK}$), and admits an algorithm in time $n^{O(n)}\cdot \poly(s)$, where $s$ is the input size. This group action has recently received considerable attention in post-quantum cryptography \cite{DW22,DG23,BBCK24}. In particular, a digital signature scheme called Hawk \cite{Hawk} based on lattice isomorphism has been implemented 
+and has recently advanced to the second round of the call for post-quantum digital signature schemes by the U.S. National Institute of Standards and Technology (NIST) \cite{NIST-report}.
+
+
+%\knote{I might be able to help write something here if I know what you're thinking of} \ynote{Thanks Kate. I have been thinking about lattice isomorphism which has been used as a cryptographic group action to support e.g. the digital signature scheme Hawk. If you have some time please feel free to write here. Thanks!}
+
+%We will show that some (special cases of) these problems are actually polynomial-time equivalent. 
+
+
+\subsection{Tensors over commutative rings: some intriguing phenomena}\label{subsec:intriguing}
+
+In this section, we walk through some intriguing phenomena for tensors over commutative rings, especially when compared with tensors of fields. While some basic ring theory will be needed to state and prove our results, in this introduction, we shall only assume some familiarity with two commutative rings: the ring of integers $\Z$, and the modulo ring $\Z/m\Z$ where $m\in\N$.
+
+%\paragraph{Set up.} Let $\rng$ be a commutative ring. Let $\F$ be a field. 
+
+
+
+\paragraph{Rank notions.} To start with, consider matrices, or $2$-tensors. 
+For matrices over fields, the rank notion has several equivalent interpretations, via its row span, column span, left kernel, right kernel, non-zero minors, and decompositions into sum of rank-$1$ matrices. We also have that an $n\times n$ matrix over a field $\F$ is full-rank (invertible), if its determinant is non-zero.
+
+For matrices over rings, these notions do not coincide in general. Consider $\rng=\Z/6\Z$ and the matrix $\begin{bmatrix}
+	4 & 0 \\
+	0 & 3
+\end{bmatrix}$ over $\rng$. Its image is spanned by $(4, 0)$ and $(0, 3)$. Its left-kernel is spanned by $(3, 0)$ and $(0, 2)$. Furthermore, it can be decomposed as $\begin{bmatrix}
+	2\\3\end{bmatrix}\begin{bmatrix}
+	2 & 3
+\end{bmatrix}$. This suggests that several natural ways to formulate a rank notion for matrices over commutative rings are not equivalent.
+
+As another example, over $\Z$, the matrix $A=\begin{bmatrix}
+	1 & 0 \\
+	0 & 2
+\end{bmatrix}$ might be considered to have full rank from several perspectives. However, as a linear map from $\Z^2$ to $\Z^2$, $A$ is not surjective, and it does not admit an inverse. Indeed, over a commutative ring $\rng$, an $n\times n$ matrix is invertible if and only if its determinant is a \emph{unit} in $\rng$, that is an element in $\rng$ admitting a multiplicative inverse. Note that $\det(A)=2$ which does not have an inverse in $\Z$.
+
+In this work, we need to identify a suitable notion of ranks when dealing with matrices over certain $\rng$. It turns out that the notion of \emph{inner ranks} \cite{Coh85}, based on decomposition into a sum of rank-$1$, matrices works well for our purpose; see Section~\ref{subsec:rank-notion}.
+
+\paragraph{Modules: free or not.} The ring-theoretic correspondence of vector spaces over $\F$ is modules over $\rng$. While vector spaces over $\F$ are determined up to isomorphism solely by their dimension, modules over $\rng$ can be much more abundant and complicated. 
+
+First, the so-called free modules are in closer analogy with vector spaces, as they are isomorphic to $\rng^n$, the module of length-$n$ vectors over $\rng$. However, there exist modules for which the notion of basis in a vector space does not behave well. Consider $\rng=\Z/4\Z=\{0, 1, 2, 3\}$. Then $2\Z/4\Z=\{0, 2\}$ is a module under the natural multiplication from $\Z/4\Z$, but it does not come with a basis because $2$ in $2\Z/4\Z$ is not ``independent'', since a linear combination with non-zero coefficient results in zero, namely: $2\times 2=0\mod 4$. 
+
+As a result, in some settings we will need to formulate isomorphism problems for elements of tensor product of modules. The $3$-dimensional array formulation is just for isomorphism problems of tensor products of \emph{free} modules. Isomorphism of tensor products of (possibly) non-free modules will be crucial for our results on finite group isomorphism.
+
+\paragraph{Equivalence of matrices.} Let $S$ and $T$ be $m\times n$ matrices over $\rng$. We say that $S$ and $T$ are (left-right) equivalent, if there exists an $m\times m$ and $n\times n$ invertible matrices $P$ and $Q$, such that $S=PTQ^t$. When $\rng=\F$ is a field, $S$ and $T$ are equivalent if and only if they are of the same rank. When $\rng$ is a general commutative ring, equivalence of $S$ and $T$ is generally more complicated. For example, for $\rng=\Z$, the two matrices $S=\begin{bmatrix}
+	1 & 0 \\
+	0 & 1
+\end{bmatrix}$ and $T=\begin{bmatrix}
+	1 & 0 \\
+	0 & 2
+\end{bmatrix}$ are not equivalent, despite that their row spans are both free modules of rank $2$. Of course, over $\Z$ and more generally over principal ideal rings, equivalence classes of matrices are determined by their Smith Normal Forms. We shall make use of Smith Normal Form for some rings, but some of our results extend to rings over which Smith Normal Forms do not exist \cite{Sta16}.
+
+\subsection{Our main results}
+
+In this paper we study isomorphism problems of tensors over commutative rings from a  complexity-theoretic viewpoint. We first introduce a complexity class for tensor isomorphism over commutative rings. We then develop algorithms for $2\times 2\times 2$ free tensor isomorphism over $\Z$, and for testing isomorphism of class-$2$ finite nilpotent groups of odd order (with no restriction on their exponent). 
+
+\paragraph{Tensor Isomorphism complexity class.} Over fields, the \TIlong complexity class was developed in a series of recent works \cite{TI1,TI2,TI3,TI4,GQT}. Over commutative rings, as discussed in Section~\ref{subsec:intriguing}, to define a \TIlong problem, we need to specify the (family of) modules under consideration. 
+
+We first define the Free-Module Tensor Isomorphism complexity class. For a commutative ring $\rng$, let $\rng^n$ be the free module consisting of length-$n$ row vectors over $\rng$. That is, $\rng^n=\{(a_1, \dots, a_n)\mid a_i\in \rng\}$. Let $\GL(n, \rng)$ be the group of invertible matrices over $\rng$; recall that an $n\times n$ matrix $T$ over $\rng$ is \emph{invertible} if $\det(T)$ is a unit (i.e. invertible) in $\rng$. 
+
+Let $U=\rng^n$, $V=\rng^m$, and $W=\rng^\ell$. The tensor product space $U\otimes V\otimes W$ consists of $\ell\times m\times n$ cubes of elements from $\rng$. That is, $\tA\in U\otimes V\otimes W$ is $\tA=(a_{i,j,k})$ where $i\in[\ell]$, $j\in[m]$, $k\in[n]$ and $a_{i,j,k}\in \rng$. Given $L=(\alpha_{i,i'}), R=(\beta_{j,j'}), T=(\gamma_{k,k'})$, $(L, R, T)$ sends $\tA$ to $\tA'=(a'_{i',j',k'})$ where 
+\begin{equation}\label{eq:action}
+	a'_{i',j',k'}=\sum_{i,j,k}\alpha_{i',i}\beta_{j',j}\gamma_{k',k}a_{i,j,k}.
+\end{equation}
+The \emph{Free Module 3-Tensor Isomorphism} problem asks, given $\tA$ and $\tB\in U\otimes V\otimes W$, whether there exists $(L, R, T)\in \GL(U)\times\GL(V)\times\GL(W)$ sending $\tA$ to $\tB$.
+%A natural action of  naturally def admits a natural action of $\GL(U)\times \GL(V)\times \GL(W)$. That is, $L=(\alpha_{i,i'}), R=(\beta_{j,j'}), T=(\gamma_{k,k'})\in \GL(
+
+%A 3-tensor over $\rng$ is a 3-dimensional array of elements from $\rng$. 
+%Two 3-tensors over $\rng$ $\tA=(a_{i,j,k})$ and $\tB=(b_{i,j,k})$ are isomorphic if there exist three invertible matrices $L=(\alpha_{i,i'}), R=(\beta_{j,j'}), T=(\gamma_{k,k'})$, such that for any $i, j, k$, $a_{i,j,k}=\sum_{i',j',k'}\alpha_{i,i'}\beta_{j,j'}\gamma_{k,k'}b_{i',j',k'}$. 
+
+%We use $\T(\ell\times m\times n, \rng)$ to denote the $\rng$-space of $3$-tensors over $\rng$. For $\tA\in \T(\ell\times m\times n, \rng)$, it can be viewed as an $\ell\times m\times n$ cubic of numbers from $\rng$. Given $\tA=(a_{i,j,k}), \tB=(b_{i,j,k})\in \T(\ell\times m\times n, \rng)$, the free $3$-tensor isomorphism problm asks to decide if there exist $L=(\ell_{i,i'})\in\GL(\ell, \rng)$, $R=(r_{j,j'})\in\GL(m, \rng)$, and $T=(t_{k,k'})\in \GL(n, \rng)$, such that $a_{i,j,k}=\sum_{i'\in[\ell], j'\in[m], k'\in[n]}\ell_{i,i'}r_{j,j'}t_{k,k'}b_{i',j',k'}$. We then introduce the following complexity class. 
+\begin{definition}\label{def:freeTI}
+	Let $\rng$ be a commutative ring. The Free Module 3-Tensor Isomorphism complexity class $\ThreeFTI_\rng$ consists of problems that are polynomial-time reducible to the Free 3-Tensor isomorphism problem over $\rng$.
+\end{definition}
+
+More generally, for three modules $A, B, C$ over a commutative ring $\rng$, the corresponding \TIlong problem asks, given $s, t\in A\otimes B\otimes C$, whether there exist module isomorphisms $\alpha:A\to A$, $\beta:B\to B$, and $\gamma\in C\to C$, such that $(\alpha, \beta, \gamma)$ sends $s$ to $t$. 
+\begin{definition}\label{def:TI}
+Let $\bar A$, $\bar B$, and $\bar C$ be three families of modules over $\rng$. The $(\bar A, \bar B, \bar C)$-$\TI_\rng$ complexity class consists of these problems polynomial-time reducible to the $(A, B, C)$-$\TI_\rng$ problem for some $A\in \bar A$, $B\in \bar B$, and $C\in \bar C$.
+
+If $\bar A=\bar B=\bar C$ is the set of all $\rng$-modules, then it is called the $\ThreeTI_\rng$ class for short. 
+\end{definition}
+
+Note that the $\ThreeFTI_\rng$ complexity class is $(\bar A, \bar B, \bar C)$-$\TI_\rng$ where $\bar A=\bar B=\bar C$ is the family of free modules. 
+
+\paragraph{Tensor Isomorphism complete problems: five actions.} After introducing the $\ThreeTI_\rng$ and $\ThreeFTI_\rng$ complexity classes, we present complete problems for these classes. For convenience, we focus on $\ThreeFTI_{\Z}$ and $\ThreeTI_{\Z/p^e\Z}$ in the introduction.
+
+To introduce these problems, we need the following definition. Let $\T(\ell\times m\times n, \rng)$ be the set of $3$-way arrays of size $\ell\times m\times n$ over $\rng$. Note that unlike $U\otimes V\otimes W$, $\T(\ell\times m\times n, \rng)$ does not have a group action implicitly associated with it. Indeed, some natural actions on $\T(\ell\times m\times n, \rng)$ are as follows.
+\begin{definition}\label{def:5action}
+	Let $U=\rng^\ell$, $V=\rng^m$, and $W=\rng^n$. 
+	\begin{enumerate}
+		\item Given $\tA\in\T(\ell\times m\times n, \rng)$, $(R, S, T)\in\GL(\ell, \rng)\times\GL(m,\rng)\times\GL(n,\rng)$ %\jnote{Maybe we should change the matrix $R$ here to $P$ everywhere? So it doesn't clash with the name of the ring} 
+		sends $\tA=(a_{i,j,k})$ to $\tA'=(a_{i,j,k}')$ as defined in Equation~\ref{eq:action}. This corresponds to the natural action of $\GL(U)\times\GL(V)\times\GL(W)$ on $U\otimes V\otimes W$.
+		\item Given $\tA\in\T(\ell\times \ell\times m, \rng)$, $(S, T)\in\GL(\ell, \rng)\times\GL(m, \rng)$ sends $\tA$ to $\tA'$ by $(S, S, T)$ on $\tA$ as defined in Equation~\ref{eq:action}. This corresponds to the natural action of $\GL(U)\times\GL(W)$ on $U\otimes U\otimes W$. 
+		\item Given $\tA\in\T(\ell\times \ell\times m, \rng)$, $(S, T)\in\GL(\ell, \rng)\times\GL(m, \rng)$ sends $\tA$ to $\tA'$ by $(S, S^{-t}, T)$ on $\tA$ as defined in Equation~\ref{eq:action}. Here $S^{-t}$ denotes the transpose inverse of $S$. This corresponds to the natural action of $\GL(U)\times\GL(W)$ on $U\otimes U^*\otimes W$, where $U^* := \Hom_R(U, R)$ denotes the dual module of $U$. 
+		\item Given $\tA\in\T(\ell\times \ell\times \ell, \rng)$, $S\in\GL(\ell, \rng)$ sends $\tA$ to $\tA'$ by $(S, S, S)$ on $\tA$ as defined in Equation~\ref{eq:action}. This corresponds to the natural action of $\GL(U)$ on $U\otimes U\otimes U$.
+		\item Given $\tA\in\T(\ell\times \ell\times \ell, \rng)$, $S\in\GL(\ell, \rng)$ sends $\tA$ to $\tA'$ by $(S, S, S^{-t})$ on $\tA$ as defined in Equation~\ref{eq:action}. This corresponds to the natural action of $\GL(U)$ on $U\otimes U\otimes U^*$. Note that in this case $\tA$ can be viewed as recording the structure constants of some (possibly non-associative) algebra. 
+	\end{enumerate}
+\end{definition}
+
+We also need the following notions for $3$-way arrays. Let $\tA\in\T(\ell\times m\times n, \F)$. The \emph{length} of $\tA$ is defined as $\ell+m+n$.
+The \emph{frontal slices} of $\tA$ are $\{A_1, \dots, A_n\}\subseteq\M(\ell\times m, \F)$, where $A_k(i,j)=a_{i,j,k}$.
+Let $\tA\in\T(n\times n\times n, \F)$. Then $\tA$ is \emph{symmetric} if for any $\sigma\in\S_3$, $\tA(i,j,k)=\tA(\sigma(i), \sigma(j), \sigma(k))$, and $\tA$ is \emph{anti-symmetric} if for any $\sigma\in\S_3$, $\tA(i,j,k)=\sgn(\sigma)\tA(\sigma(i), \sigma(j), \sigma(k))$. 
+
+Our first result is about $\ThreeFTI_\rng$ where $\rng=\Z$. 
+\begin{theorem}\label{thm:Z-equivalence}
+	Let $\rng=\Z$. For $i, j\in[5]$, $i\neq j$, let $\tA$ and $\tB$ two $3$-way arrays of total length $L$ whose sizes admit the $i$th action defined in Definition~\ref{def:5action}. Then there exists a polynomial-time computable function $f$ that takes $\tA$ and $\tB$ and outputs $3$-way arrays $f(\tA)$ and $f(\tB)$, such that $\tA$ and $\tB$ are in the same orbit under the $i$th action if and only if $f(\tA)$ and $f(\tB)$ are in the same orbit under the $j$th action.
+	
+	Furthermore, the above holds even with the following additional structural restrictions:
+	\begin{enumerate}
+		\item For $j=2$, i.e. the action of $\GL(U)\times \GL(W)$ on $U\otimes U\otimes W$, the frontal slices of $f(\tA)$ and $f(\tB)$ are symmetric (or skew-symmetric). 
+		\item For $j=4$, i.e. the action of $\GL(U)$ on $U\otimes U\otimes U$, $f(\tA)$ and $f(\tB)$ are symmetric (or anti-symmetric) $3$-way arrays. 
+		\item For $j=5$, i.e. the action of $\GL(U)$ on $U\otimes U\otimes U^*$, $f(\tA)$ and $f(\tB)$ record the structure constants of associative or Lie algebras. 
+	\end{enumerate}
+\end{theorem}
+
+We then have the following result on the complexity of some natural algorithmic problems over $\Z$, some of which were considered in \cite{GS-overview}. Note that in the following, we may consider tensors over $\Q$ but with actions from $\GL(n, \Z)$. The complexity class $\ThreeFTI_\Z$ can be generalised to take into this account naturally.
+\begin{corollary}\label{cor:TIZ-complete}
+	The following problems are $\ThreeFTI_\Z$-complete. 
+	\begin{itemize}
+		\item Matrix space conjugacy problem: let $(A_1, \dots, A_m), (B_1, \dots, B_m)\in \M(n, \Q)^m$. Decide if there exists $T\in\GL(n, \Z)$ and $S=(s_{i,j})\in\GL(m, \Z)$, such that $\forall i\in[m]$, $TA_iT^{-1}=\sum_{j\in[m]}s_{i,j}B_j$. 
+		\item Algebra isomorphism: given $\Z$-linear forms $\phi, \psi:\Z^n\times\Z^n\to\Z^n$, decide if there exists $T\in\GL(n, \Z)$, such that $\forall u, v\in \Z^n$, $\phi(T(u), T(v))=T(\psi(u, v))$. 
+		\item Trilinear form isomorphism: let $\phi, \psi:\Z^n\times\Z^n\times\Z^n\to \Q$ be two symmetric trilinear forms. Decide if there exists $T\in\GL(n, \Z)$, such that $\phi\circ T=\psi$. 
+		\item Inhomogeneous trilinear form isomorphism: let $\phi, \psi:\Z^n\times\Z^n\times \Z^n\to \N$ be two trilinear forms, and $f, g:\Z^n\to \N$ be two $\Z$-linear forms. Decide if there exists $T\in\GL(n, \Z)$, such that $\phi\circ T=\psi$ and $f\circ T=g$.
+	\end{itemize}
+\end{corollary}
+\ynote{Added here:}Note that inhomogeneous trilinear form isomorphism naturally arises from the Calabi--Yau threefold homeomorphism problem as discussed in Section~\ref{subsec:motivation}.
+
+Our second result is about $\ThreeTI_\rng$ where $\rng=\Z/p^e\Z$ where $p$ is prime. Let $U$ be a $\Z/p^e\Z$ module. As $\Z/p^e\Z$ is a local ring (=unique maximal ideal), the rank of $U$ is well-defined as the size of a minimal generating set of $A$. As $\Z/p^e\Z$ is a principal ideal ring (all ideals are generated by single elements), $U$ is isomorphic to a direct sum of cyclic modules (=modules generated by a single element). This means that in algorithms, $U$ can be viewed as consisting of vectors where each coordinate is from $\Z/p^k\Z$ for some $k\in \{1, \dots, e\}$. The automorphism group of $U$ can be represented in a matrix format \cite{Ranum, HillarRhea}. 
+
+%\ynote{Please check.} 
+These indicate that we can compute with $\Z/p^e\Z$-modules, their automorphism groups, and tensor products, in a manner not very different from the free module setting; see Section~\ref{sec:PIR} for more details. In particular, for three $\Z/p^e\Z$-modules $U$, $V$, and $W$, let $\ell=\rk(U)$, $m=\rk(V)$, and $\ell=\rk(W)$. Then $U\otimes V\otimes W$ can be recorded as a $3$-way array of size $\ell\times m\times n$, and three tuples of integers $(a_1, \dots, a_\ell)$, $(b_1, \dots, b_m)$, $(c_1, \dots, c_n)$. Then we can define five actions on such $3$-way arrays as in Definition~\ref{def:5action}.
+
+For applications to group isomorphism, the following parameter is important. Let $U$, $V$, and $W$ be three finite modules over $\Z/p^e\Z$. We define the ``complex parameter'' of $U\otimes V\otimes W$ as $\log_p(|U|\cdot |V|\cdot |W|)$.
+%\ynote{It looks to me that the complex parameter here and that used in section 5 do not match (there it would be the $log$ of this one).}\xnote{Yes, there should be a log here.}
+%\ynote{I am skipping formulating this part due to the problem with complex parameters.}
+\begin{theorem}\label{thm:ptoe-equivalence}
+	Let $\rng=\Z/p^e\Z$. Let $U, V, W$ be finite $\Z/p^e\Z$-modules. %\jnote{I think for simplicity in the intro we don't need to say this, since we already said all modules are direct sums of cylcic etc} % with decompositions into direct sums of cyclic modules. 
+	For $i, j\in[5]$, $i\neq j$, let $\tA$ and $\tB$ two $3$-way arrays in $U \otimes V \otimes W$, %of in accordance with the decompositions of $U$, $V$, and $W$, 
+	with complex parameters $L$. Then there exists a polynomial-time computable function $f$ that takes $\tA$ and $\tB$ and outputs $3$-way arrays $f(\tA)$ and $f(\tB)$, such that (1) the complex parameters of $f(\tA)$ and $f(\tB)$ are upper bounded by $L^{O(1)}$,
+%	\ynote{Need to check if it is linear length in this setting.}, 
+	and (2) $\tA$ and $\tB$ are in the same orbit under the $i$th action if and only if $f(\tA)$ and $f(\tB)$ are in the same orbit under the $j$th action.
+	
+	Furthermore, the above holds even with the following additional structural restrictions:
+	\begin{enumerate}
+		\item For $j=2$, i.e. the action of $\GL(U)\times \GL(W)$ on $U\otimes U\otimes W$, the frontal slices of $f(\tA)$ and $f(\tB)$ are symmetric (or skew-symmetric). 
+		\item For $j=4$, i.e. the action of $\GL(U)$ on $U\otimes U\otimes U$, $f(\tA)$ and $f(\tB)$ are symmetric (or anti-symmetric) $3$-way arrays. 
+		\item For $j=5$, i.e. the action of $\GL(U)$ on $U\otimes U\otimes U^*$, $f(\tA)$ and $f(\tB)$ record the structure constants of associative or Lie algebras. 
+	\end{enumerate}
+\end{theorem}
+
+\paragraph{$2\times 2\times 2$ free tensor isomorphism over $\Z$.} 
+\newcommand{\disc}{\operatorname{disc}}
+\newcommand{\Cl}{\operatorname{Cl}}
+We study testing isomorphism of tensors of free modules over $\Z$. By the results of Grunewald and Segal on arithmetic group actions\cite{GS80-1}, this problem is decidable. The algorithms in \cite{GS80-1} relies on Tarski's decidability of elementary theory over $\R$, so it is unlikely to be in NP \cite{BKR84,Gri88}. On the other hand, as mentioned in Section~\ref{subsec:motivation}, $\Z^2 \otimes \Z^2 \otimes \Z^2$ isomorphism was studied by Bhargava \cite{Bhargava}, so this gives hope that better complexity results can be obtained for testing isomorphism of tensors in $\Z^2 \otimes \Z^2 \otimes \Z^2$. This is indeed the case; the following result relies crucially on Bhargava's work \cite{Bhargava}.
+	
+	\begin{theorem}
+		\label{thm:tensorZ}
+		\algprobm{Tensor Isomorphism} for $\Z^2 \otimes \Z^2 \otimes \Z^2$ is polynomial-time equivalent to the \algprobm{Principality Decision Problem} for real quadratic fields. In particular, it is in $\cc{BQP}$.
+	\end{theorem}
+
+Let us briefly review the \algprobm{Principality Decision Problem}. In a number field order $\rng$, this problem is to determine, given an ideal $I$ of $\rng$ (by providing an integral basis), whether $I$ is principal.  This is the decisional portion of the \algprobm{Principal Ideal Problem} or the \algprobm{Principality Testing Problem}; see \cite[Chapter 16]{JacobsonWilliams}.  It is a subroutine of the most important algorithmic number theory problems for number fields, including class group and unit group computations.  It is also important to the security of cryptography based on ideal lattices.  In fact, there are reductions from $\gamma$-SVP (Shortest Vector Problem) to the Principal Ideal Problem for cyclotomic fields due to Cramer, Ducas, and Wesolowski \cite{CramerDucasWesolowski}.
+
+Here we deal with the \algprobm{Principal Ideal Problem} for real quadratic number field orders.  This is the basis for the cryptographic scheme of Buchmann and Williams and others \cite{BuchmannWilliams, crypto1, crypto2}.  The best known unconditional classical methods in the maximal order are exponential \cite[Chapter 16]{JacobsonWilliams}, with some conditional subexponential algorithms \cite[Theorem 13.24]{JacobsonWilliams}.  For non-maximal orders, we additionally need to factor the discriminant and solve discrete logarithm problems in the prime fields for primes dividing the conductor; see \cite{BiasseFiekerJacobson} (which leaves us in the same position: unconditionally exponential, conditionally subexponential).  However, it can be solved by a polynomial-time quantum algorithm \cite{Hallgren}, which was later generalized to arbitrary number fields \cite{BiasseSong}.
+
+%Deciding if an ideal is principal in real quadratic fields has so far resisted the development of a deterministic polynomial-time algorithm, although it does admit a quantum polynomial-time algorithm \cite{Hallgren}.  This is despite a large body of literature, partly motivated by the dependence of certain cryptosystems on computations in the class group of quadratic fields \cite{crypto1, crypto2}.  In particular, the only unconditional (non-quantum) algorithms for principality decision in real quadratic fields have runtime exponential in $\log \Delta$; conditional sub-exponential algorithms also exist.  See \cite[Chapter 16]{JacobsonWilliams} for further details.
+
+%The main result of this section is:
+
+
+\paragraph{Class-$2$ nilpotent group isomorphism.}
+A group $G$ is class-2 nilpotent if $G / Z(G)$ is Abelian, where $Z(G)$ denotes the center of $G$, the set of elements that commute with every element of $G$. %$[[G, G], G]$ only contains the identity element, where $[G, H]$ denotes the group generated by $xyx^{-1}y^{-1}$ for all $x \in G, y \in H$.
+As our main application of the \TIlong complexity classes over $\Z/p^e\Z$, we give the first $N^{o(\log N)}$ time algorithm for testing isomorphism of two class-2 nilpotent groups of odd orders, where $N$ is the order of the two groups.
+
+
+\begin{theorem}\label{thm:tensor_isomorphism_main}
+There exists an algorithm that determines the isomorphism of two nilpotent class-2 groups of odd order in time $N^{O((\log N)^{8/9})}$, where $N$ is the order of the two groups.
+\end{theorem}
+
+\subsection{Comments on previous works and techniques}\label{sec:issue}
+
+\paragraph{Equivalence between five actions on $3$-way arrays.} The equivalence of the actions in Definition~\ref{def:5action} was shown over fields in \cite{FGS19,TI1,GQT,TI4}, with two types of gadgets having been designed to achieve this. The first type of gadget was first introduced in \cite{FGS19} and further developed in \cite{TI1,GQT}. For convenience, we call this gadget the Furtorny--Grochow--Sergeichuk gadget, or FGS gadget for short. The second type of gadget was introduced in \cite{TI4}, and we call such gadget the Grochow--Qiao gadget, or GQ gadget for short. 
+
+To use the FGS gadget in the commutative ring setting, one problem arises, namely it relies on the Krull--Schmidt theorem for quiver representations in the correctness proof \cite{FGS19}. Indeed, to use it in the orthogonal and unitary group setting, a version of Krull-Schmidt theorem for orthogonal and unitary representations of quivers was required \cite{TI3}, and such a result was shown by Sergeichuk \cite{Ser98}. However, over commutative rings, Krull--Schmidt type results are only known for certain families of commutative rings \cite{Krull-Schmidt}.
+
+To use the GQ gadget in the commutative ring setting, there is an issue caused by the so-called non-degeneracy assumption, which is closely related to some distinctions between fields and commutative rings seen in Section~\ref{subsec:intriguing}. 
+More specifically, consider the field setting. If $A \in \M(m \times n, \F)$ with $m \leq n$ is full-rank (i.e., $\rk(A) = m$), then $TA = 0$ if and only if $T =0$, for any $m \times m$ matrix $T$. Furthermore, if $A$ is not full rank, we can efficiently compute $A' \in \M(r \times n)$ such that the rowspan of $A$ and $A'$ are the same, but $A'$ is now full rank. Similarly, for equivalence of matrices under left-and-right column operations, the orbits over fields are completely determined by rank; if $A,B$ are two matrices, and we build $A',B'$ as in the preceding, then $A$ and $B$ are equivalent if and only if $A',B'$ are equivalent, but $A',B'$ are now full rank. Being full rank is a kind of ``non-degeneracy'' assumption, and over fields, reduced row echelon form generally lets us reduce from the general case to the non-degenerate case. 
+%and let $A, B\in\M(m\times m, \F)$. Suppose we are interested in whether there exists $T,S\in\GL(m, \F)$, such that $TAS^t=B$. Note that $A$ and $B$ are equivalent in this sense if and only if $\rk(A)=\rk(B)$. Furthermore, if $\rk(A)=\rk(B)=r<m$, we can compute $A', B'\in\M(r\times m, \F)$ whose rows form a basis of the row span of $A$ and $B$, respectively. Then $A$ and $B$ are equivalent if and only if $A'$ and $B'$ are equivalent. 
+
+In contrast, if $A, B\in \M(m\times n, \rng)$ where $\rng$ is a commutative ring, the above procedure fails due to the lack of some basic notions such as ranks and the relation between kernels and bases. For example, the inner ranks (see Section~\ref{subsec:rank-notion})of $A=\begin{bmatrix}
+	2 & 0 & 0 \\
+	0 & 2 & 0 
+\end{bmatrix}$ and $B=\begin{bmatrix}
+	3 & 0 & 0 \\
+	0 & 3 & 0
+\end{bmatrix}$ over $\Z/6\Z$ are both $2$, but they are not equivalent. We also note that $\ker(A)$ is non-zero, while the submodule spanned by the rows of $A$ is not cyclic (i.e. not generated by $1$ element). Several reductions in \cite{TI1,GQT} make use such non-degeneracy assumptions. 
+
+By a new combination of the FGS and GQ gadgets, we are able to avoid the need for such non-degeneracy assumptions, to generalize the reductions to a much wider class of commutative rings.
+
+\paragraph{From isomorphism of $\Z^2\otimes\Z^2\otimes\Z^2$ to principal decision.} For a reduction from $\Z^2\otimes\Z^2\otimes\Z^2$ isomorphism to the \algprobm{Principal Ideal Decision} problem, we make use of a well-known invariant called discriminants. We first show that if the tensors are of square discriminants (which are considered a ``degenerate'' case in the setting of number theory), isomorphism can be decided in polynomial time (Lemma~\ref{lem:tensorZ}). For the case of non-square discriminant, which is the more interesting and complicated setting from a number theoretic viewpoint, we use Bhargava's correspondence between isomorphism classes of $\Z^2\otimes\Z^2\otimes\Z^2$ and the so-called balanced triples of oriented ideals in a quadratic number field order. This correspondence can be made constructive and paves the way to the \algprobm{Principal Ideal Decision} problem. 
+
+\paragraph{Isomorphism testing for nilpotent class-2 groups.} 
+Our $N^{O((\log N)^{8/9})}$-time algorithm for testing isomorphism of nilpotent class-2 groups of odd order first applies Bear's correspondence~\cite{Bae38, khukhro,naik} to reduce the group isomorphism problem to a Lie-ring isomorphism problem. In Section~\ref{sec:group_iso_to_tensor_iso}, we then generalize reductions from \cite{TI4} to work over $\Z/p^e \Z$-Lie rings---even in the non-free-module case---and by a small trick we then reduce from Lie rings whose underlying Abelian group is arbitrary odd order, to Lie rings whose underlying Abelian group is a free $\Z/p^e \Z$-module, that is, of the form $(\Z/p^e \Z)^n$ for some $n$. 
+
+Next, we generalize recent work on tensor isomorphism over a finite field $\mathbb{F}_p$~\cite{Sun23,IMQSZ24} to tensor isomorphism over a finite ring $\mathbb{Z} / p^e \mathbb{Z}$. One challenge in this generalization is to ensure that the algorithm's efficiency depends not only on the tensor's dimension. For instance, let $G \cong (\oplus_{i = 1}^{n-1} \Z/p\Z) \oplus \Z / p^e\Z$, $H \cong (\oplus_{i = 1}^{m-1} \Z / p \Z)\oplus \Z/p^e\Z$, $G' \cong \oplus_{i = 1}^{n} \Z/p\Z$, and $H' \cong \oplus_{i = 1}^{m} \Z/p\Z$. Although two tensors encoding bilinear maps $G \times G \rightarrow H$ and $G' \times G' \rightarrow H'$  share the same dimension, the complexity of isomorphism testing differs. This is because the bilinear map $G' \times G' \rightarrow H'$ encodes more information than $G \times G \rightarrow H$.
+For the purpose of group isomorphism, it requires a running time that reflects the underlying complexity of the bilinear map encoded. This complication is the cause of the $8/9$ in the exponent in Theorem~\ref{thm:tensor_isomorphism_main}, compared to the $5/6$ \cite{Sun23} and $1/2$ \cite{IMQSZ24} of previous work.
+
+
+%Next, we generalize the recent work on tensor isomorphism over a finite field $\F_p$~\cite{} to tensor isomorphism over a finite ring $\Z / p^e \Z$.
+%One of the difficulties of this generalization is that the efficiency of the algorithm should not just depend on the dimension of the tensor. 
+%For example, suppose $G \cong p^{n - 1}\oplus p^e$, $H \cong p^{m - 1}\oplus p^e$, $G' \cong (p^e)^n$, and $H' \cong (p^e)^m$. 
+%Two tensors, one encoding a bilinear map  $G \times G \rightarrow H$ and another encoding a bilinear map  $G' \times G' \rightarrow H'$, have the same dimension. 
+%But the complexity of isomorphism testing for two tensors encoding two bilinear maps $G \times G \rightarrow H$ is different to the complexity of isomorphism testing for two tensors encoding a bilinear map  $G' \times G' \rightarrow H'$, because the bilinear map $G' \times G' \rightarrow H'$ encodes more information the bilinear map $G \times G \rightarrow H$.  
+%An efficient group isomorphism algorithm require an algorithm with running time depending on this complexity of the bilinear map. 
+
+
+In our solution, we handle matrix slices of the tensor based on their orders under matrix addition. 
+We divide the tensor into multiple parts to decouple the correlation between matrices of high and low orders. 
+For the high-order matrices, we enumerate a few matrices to establish the correspondence between high-order matrices in the two tensors. 
+For the low-order matrices, we follow the strategy from the previous work over finite fields~\cite{Sun23,IMQSZ24}.
+To achieve the latter, we extend the individualization and refinement technique, as well as the low-rank matrix characterization method from over finite fields~\cite{Sun23,IMQSZ24}, to finite rings. This generalization combines various measures of matrices over rings, rather than relying solely on inner rank. For example, in~\cite{Sun23}, the low-rank characterization critically depends on the fact that over a finite field, for a matrix $X$ and a row vector $x$, if $x$ is not in the row-span of $X$, then the rank of $\begin{bmatrix} X \\ x \end{bmatrix}$ is greater than the rank of $X$. However, over a ring, the rank of $\begin{bmatrix} X \\ x \end{bmatrix}$ may be the same as the rank of $X$. Therefore, in our approach, we sometimes use the number of distinct elements in the row-span of a matrix to track progress instead of inner rank.
+
+As in \cite{Sun23, IMQSZ24}, we ultimately reduce to the \algprobm{Matrix Tuple Isometry} problem, but now over $\Z/p^e \Z$ instead of over a finite field of odd order. Solving this problem in polynomial time over odd order fields was one of the main results of Ivanyos \& Qiao \cite{IQ19}. We generalize their result to work over $\Z/p^e \Z$, and in fact over arbitrary finite local principal ideal rings of odd characteristic, which may have further applications to codes over such rings. The first part of the generalization requires using Smith Normal Form to reduce to the non-degenerate case (while this does not work over arbitrary commutative rings, it does work over $\Z/p^e \Z$ and finite PIRs). We then prove several algebraic lemmas about $\Z/p^e \Z$ that allow us to generalize their techniques to our setting. Finally, in the end the problem is reduced to a certain problem in semisimple $*$-algebras, and such algebras are algebras over a finite field, even if the algebras we started with were over $\Z/p^e \Z$ (or a finite local PIR). Thus, at that point, we can apply some of the results of \cite{IQ19} directly.
+
+We note that for even-order nilpotent groups, not only is the group-theoretic situation itself more complicated, but it even remains open to just do the last step---solve \algprobm{Matrix Tuple Isometry}---over \emph{fields} of characteristic 2 (let alone rings) in polynomial time.

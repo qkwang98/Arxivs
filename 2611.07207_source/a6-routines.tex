@@ -1,0 +1,385 @@
+\section{Circuit Normalization Routines}
+%
+\label{App:Routines}
+
+This section introduces the algorithms used in~\cref{Sect:Completeness}.
+The first sub-section establishes the correctness of $\Drop( -, - )$ along with its relevant helper functions.
+The second sub-section establishes the correctness of $\Expand( -, - )$ along with its relevant helper functions.
+Both cases rely on an oracle function $\Diag( U ) = ( P, \Lambda )$ which returns a diagonalization of $U$.
+In particular, if $U \in \Core( n, n )$ and $( P, \Lambda ) = \Diag( U )$, then $P \in \Core( n, n )$ and $\Lambda \in \Core( n, n )$ with $\Lambda$ in diagonal form and $\sem{U}_H = \sem{P^\dagger \circ \Lambda \circ P}_H$.
+We note that $\Diag( - )$ need not be computable, and is best thought of as a choice function.
+For the interested reader, the underlying choices are elucidated in the proofs of the following theorems.
+
+\begin{remark}
+    In this section, we think of each diagonal form $\Lambda$ as a sequence of lambda generators.
+    This means that the prefixes of $\Lambda$ are also sequences of lambda generators.
+    We write $|\Lambda|$ for the number of lambda generators in $\Lambda$.
+    If $\Lambda \in \Core( n, n )$ is the prefix of a diagonal form, then $|\Lambda| \in \{ 0, 1, \ldots, 2^n \}$.
+\end{remark}
+
+\begin{proposition}[\cite{BarencoBennett1995,Clement2024Minimal}]
+    \label{Prop:Full}
+    Let $\mathcal{C}$ be a prop category and $F: \mathcal{C} \to \CatUnitary$ a symmetric monoidal functor such that $\Ob( F )( 1 ) = \mathbb{C}^2$.
+    Then $F$ is full if and only if the following conditions hold.
+    \begin{enumerate}
+    \item For each $\alpha \in (-\pi, \pi]$, there exists a $U \in \mathcal{C}( 0, 0 )$ such that $F( U ) = e^{i\alpha}$.
+    \item For each $\alpha \in (-\pi, \pi]$, there exists a $U \in \mathcal{C}( 1, 1 )$ such that $F( U ) = \exp( i \ket{1}\bra{1} \alpha )$.
+    \item There exists a $U \in \mathcal{C}( 1, 1 )$ such that $F( U ) = H$.
+    \item There exists a $U \in \mathcal{C}( 2, 2 )$ such that $F( U ) = \ket{0} \bra{0} \otimes \mathbb{I}_2 + \ket{1} \bra{1} \otimes X$.
+    \end{enumerate}
+\end{proposition}
+
+\begin{lemma}
+    \label{Lem:Universal}
+    The functor $\sem{-}_H$ is full when restricted to $\Core$.
+\end{lemma}
+
+\begin{proof}
+    By construction, $\sem{-}_H$ is a prop functor such that $\Ob( \sem{-}_H )( 1 ) = \mathbb{C}^2$.
+    Then to show that $\sem{-}_H$ is full, it suffices to show that the conditions of \cref{Prop:Full} hold.
+    \begin{enumerate}
+    \item Let $\alpha \in ( -\pi, \pi ]$.
+          Since $\Log( \sem{\scalebox{0.65}{\circimg{tikz-cache/completeness__phase.pdf}}}_H ) = \Log( e^{i\pi} ) = i\pi$, then $\sem{\scalebox{0.65}{\circimg{tikz-cache/completeness__universal_phase.pdf}}}_H = e^{i(\alpha/\pi)\pi} = e^{i\alpha}$.
+          Since $\alpha$ was arbitrary, then for each $\alpha \in ( -\pi, \pi ]$, there exists $U \in \Core( 0, 0 )$ such that $\sem{U}_H = e^{i\alpha}$.
+    \item Let $\alpha \in ( -\pi, \pi ]$.
+          Since $\Log( \sem{\scalebox{0.65}{\circimg{tikz-cache/completeness__z.pdf}}}_H ) = i \ket{1} \bra{1} \pi$, then the following equation holds.
+          \begin{equation*}
+              \sem*{\scalebox{0.65}{\circimg{tikz-cache/completeness__universal_cphase.pdf}}}_H
+              =
+              \exp( i ( \alpha / \pi ) \ket{1} \bra{1} \pi )
+              =
+              \exp( i \ket{1} \bra{1} \alpha )
+          \end{equation*}
+          Since $\alpha$ was arbitrary, then for each $\alpha \in ( -\pi, \pi ]$, there exists $U \in \Core( 1, 1 )$ such that $\sem{U}_H = \exp( i \ket{1} \bra{1} \alpha )$.
+    \item Since $\sem{\scalebox{0.65}{\circimg{tikz-cache/completeness__had.pdf}}}_H = H$, then there exists a $U \in \Core( 1, 1 )$ such that $\sem{U}_H = H$.
+    \item Clearly $\sem{\scalebox{0.65}{\circimg{tikz-cache/completeness__not.pdf}}}_H = X^1 = X$.
+          Then by \cref{Thm:GenCtrlNF}, the following equation holds.
+          \begin{equation*}
+              \sem*{\scalebox{0.65}{\circimg{tikz-cache/completeness__cnot.pdf}}}_H
+              =
+              Z \odot X
+              =
+              \ket{0} \bra{0} \otimes \mathbb{I}_2
+              +
+              \ket{1} \bra{1} \otimes X
+          \end{equation*}
+          Then there exists a $U \in \Core( 2, 2 )$ such that $\sem{U} = I \otimes X$.
+    \end{enumerate}
+    Then $\sem{-}_H$ is full by \cref{Prop:Full}.
+\end{proof}
+
+\begin{theorem}
+    \label{Thm:Diag}
+    There exists a function $\Diag: \Mor( \CatHQC ) \to \Mor( \Core ) \times \Mor( \Core )$ such that for each $U \in \Mor( \CatHQC )$, if $( P, \Lambda ) = \Diag( U )$, then $\sem{U}_H = \sem{P^\dagger \circ \Lambda \circ P}_H$ with $\Lambda$ in diagonal form.
+    If $U \in \Mor( \Core )$, then $U \approx_E P^\dagger \circ \Lambda \circ P$.
+\end{theorem}
+
+\begin{proof}
+    Let $U \in \CatHQC( n, n )$.
+    Since $\sem{U}_H$ is unitary (and therefore normal), then by the spectral decomposition theorem there exists a unitary matrix $M \in \CatUnitary( 2^n, 2^n )$ and a diagonal matrix $D \in \CatUnitary( 2^n, 2^n )$ such that $\sem{U}_H = M^\dagger D M$.
+    Since $\sem{-}_H$ is full by \cref{Lem:Universal}, there exists a choice of circuit $P \in \Core( n, n )$ such that $\sem{P}_H = M$.
+    Since $D$ is diagonal, then for each choice of bijection $f: \{ 1, 2, \ldots, 2^n \} \to \{ 0, 1 \}^n$, there exists a unique diagonal form $\Lambda \in \Core( n, n )$ such that $\sem{\Lambda}_H = D$.
+    Then there exists some pair of circuits $( P, \Lambda ) \in \Mor( \Core ) \times \Mor( \Core )$ such that $\sem{U}_H = \sem{P^\dagger \circ \Lambda \circ P}_H$.
+    Since $U$ was arbitrary, then for each $U \in \Mor( \CatHQC )$, there exists some $( P, \Lambda ) \in \Mor( \Core ) \times \Mor( \Core)$ such that $\sem{U}_H = \sem{P^\dagger \circ \Lambda \circ P}_H$ with $\Lambda$ in diagonal form.
+    Then $\Diag: \Mor( \CatHQC ) \to \Mor( \Core ) \times \Mor( \Core )$ exists.
+    Next, assume that $U \in \Core( n, n )$ and let $( P, \Lambda ) = \Diag( U )$.
+    Then by assumption $\sem{U}_H = \sem{P^\dagger \circ \Lambda \circ P}_H$.
+    Since $P \in \Core( n, n )$ and $\Lambda \in \Core( n, n )$, then $P^\dagger \circ \Lambda \circ P \in \Core( n, n )$.
+    Since $( \Sigma_{\Core}, E )$ is complete with respect to the semantic interpretation $\sem{-}_H$ by \cref{Thm:CoreComplete}, then $U \approx_E P^\dagger \circ \Lambda \circ P$.
+    Since $U$ was arbitrary, then this completes the proof.
+\end{proof}
+
+\subsection{The Drop Routine}
+
+\input{code/DiagDrop}
+\input{code/Drop}
+
+The special case of diagonal circuits is handled first by~\cref{Alg:DiagDrop}.
+The algorithm iterates over each lambda generator in the diagonal form $\Lambda$, and then performs the necessary rewrites to reduce the circuit $( \Lambda \exparr \alpha )$ to $\Core$.
+This is then used by~\cref{Alg:Drop} to handle all powers in $\CoreExt[n]$, through subcircuit diagonalization.
+Of course, the correctness of $\Drop_{n+1}( -, - )$ relies on the correctness of $\Reduce_n( - )$.
+
+\begin{lemma}
+    \label{Lem:DiagDrop}
+    If $\Lambda \in \Core( k, k )$ in diagonal form and $\alpha \in \mathbb{R}$, then $\DiagDrop( -, - )$ terminates when applied to $( \Lambda, \alpha )$ with $\DiagDrop( \Lambda, \alpha ) \in \Core( k, k )$ and $( \Lambda \exparr \alpha ) \approx_E \DiagDrop( \Lambda, \alpha )$.
+\end{lemma}
+
+\begin{proof}
+    The proof follows by induction on $|\Lambda|$ where $\Lambda$ is a prefix of a diagonal form.
+    \begin{itemize}
+    \item \textbf{Base Case}.
+          If $|\Lambda| = 0$, then the first line is reached and $1_k$ is returned.
+          In other words, $\DiagDrop( -, - )$ terminates when applied to $( \Lambda, \alpha )$ and $\DiagDrop( \Lambda, \alpha ) = 1_k \in \Core( k, k )$.
+          Since $|\Lambda| = 0$, then $\Lambda = 1_k$.
+          Then $( \Lambda \exparr \alpha ) = ( 1_k \exparr \alpha ) \approx_E 1_k = \DiagDrop( \Lambda, \alpha )$ by $\HqcPowIdem$.
+    \item \textbf{Inductive Hypothesis}.
+          For some $\ell \in \mathbb{N}$, if $\Lambda$ is a diagonal form prefix with $|\Lambda| = \ell$, then $\DiagDrop( -, - )$ terminates when applied to $( \Lambda, \alpha )$ with $\DiagDrop( \Lambda, \alpha ) \in \Core( k, k )$ and $( \Lambda \exparr \alpha ) \approx_E \DiagDrop( \Lambda, \alpha )$.
+    \item \textbf{Inductive Step}.
+          Assume that for some $\ell \in \mathbb{N}$, if $\Lambda$ is a diagonal form prefix with $|\Lambda| = \ell$, then $\DiagDrop( -, - )$ terminates when applied to $( \Lambda, \alpha )$ with $\DiagDrop( \Lambda, \alpha ) \in \Core( k, k )$ and $( \Lambda \exparr \alpha ) \approx_E \DiagDrop( \Lambda, \alpha )$.
+          Let $\Lambda$ be a diagonal form prefix with $|\Lambda| = \ell + 1$.
+          Since $|\Lambda| = \ell + 1 > 0$, then the if-condition on the first line fails, and the program continues to line two.
+          Then after executing line two, $\lambda( x, \beta )$ is assigned to the last symbol in $\Lambda$ and $\Lambda'$ is assigned to the rest of $\Lambda$.
+          This means that $\Lambda'$ is also a prefix of a diagonal form with $|\Lambda'| = \ell$.
+          Then by the the inductive hypothesis, the third line terminates with $U \gets \DiagDrop( \Lambda', \alpha )$, $U \in \Core( k, k )$, and $(\text{A1}): ( \Lambda' \exparr \alpha ) \approx_E U$.
+          Then the fourth line is reached, at which point $U \circ \lambda( x, \alpha\beta )$ is returned.
+          In other words, $\Diag( -, - )$ terminates when applied to $ ( \Lambda, \alpha )$ and $\DiagDrop( \Lambda, \alpha ) = U \circ \lambda( x, \alpha\beta ) \in \Core( k, k )$.
+          Moreover, the following derivation holds.
+          \begin{equation*}
+            \scalebox{0.65}{\circimg{tikz-cache/completeness__diagdrop_1.pdf}}
+            \overset{\HqcPowExpand}{\approx}
+            \scalebox{0.65}{\circimg{tikz-cache/completeness__diagdrop_2.pdf}}
+            \overunderset{\HqcPowCong}{\text{(A1)}}{\approx}
+            \scalebox{0.65}{\circimg{tikz-cache/completeness__diagdrop_3.pdf}}
+          \end{equation*}
+          Then $( \Lambda \exparr \alpha ) \approx_E \DiagDrop( \Lambda, \alpha )$ and the inductive step holds.
+    \end{itemize}
+    It follows by the principle of induction that if $\Lambda \in \Core( k, k )$ is a diagonal form prefix and $\alpha \in \mathbb{R}$, then $\DiagDrop( -, - )$ terminates when applied to $( \Lambda, \alpha )$ with $\DiagDrop( \Lambda, \alpha ) \in \Core( k, k )$ and $( \Lambda \exparr \alpha ) \approx_E \DiagDrop( \Lambda, \alpha )$.
+    Since every diagonal form is a prefix of itself, then this completes the proof.
+\end{proof}
+
+\begin{theorem}
+    \label{Thm:DropDef}
+    If $U \in \CoreExt[n]( k, k )$, $\alpha \in \mathbb{R}$, and $\Reduce_n( - )$ terminates when applied to $U$, then $\Drop_{n+1}( -, - )$ terminates when applied to $( U, \alpha )$ with $\Drop_{n+1}( U, \alpha ) \in \Core( k, k )$.
+    Moreover, if $U \approx_E \Reduce_n( U )$, then $( U \exparr \alpha ) \approx_E \Drop_{n+1}( U, \alpha )$
+\end{theorem}
+
+\begin{proof}
+    Let $U \in \CoreExt[n]( k, k )$ and $\alpha \in \mathbb{R}$.
+    Assume that $\Reduce_n( - )$ terminates when applied to $U$.
+    Then by assumption, the first line terminates and $V \gets \Reduce_n( U )$ with $V \in \Core( k, k )$.
+    Then by \cref{Thm:Diag}, the second line terminates and $( P, \Lambda ) \gets \Diag( V )$ with $P \in \Core( k, k )$ and $\Lambda \in \Core( k, k )$ in diagonal form with $V \approx_E P^\dagger \circ \Lambda \circ P$.
+    Since $\Lambda$ is in diagonal form, then by \cref{Lem:DiagDrop} the third line also terminates and $W \gets \DiagDrop( \Lambda, \alpha )$ with $W \in \Core( k, k )$ and $(\text{A1}): ( \Lambda \exparr \alpha ) \approx_E W$.
+    Then the fourth line is reached, at which point $P^\dagger \circ W \circ P$ is returned. 
+    In other words, $\Drop( -, - )$ terminates when applied to $( U, \alpha )$ and $\Drop( U, \alpha ) = P^\ddagger \circ W \circ P$.
+    Since $P^\ddagger \in \Core( k, k )$, then $\Drop( U, \alpha ) \in \Core( k, k )$.
+    Now assume that $U \approx_E \Reduce_n( U ) = V$.
+    Since $V \approx_E P^\dagger \circ \Lambda \circ P$ as well, then $(\text{A2}): U \approx_E P^\dagger \circ \Lambda \circ P$ by the transitivity of $( \approx_E )$.
+    Then by \cref{Lem:CoreDag}, $(\text{A3}): P^\ddagger \approx_E P^\dagger$, and the following derivation holds.
+    \begin{align*}
+        \scalebox{0.65}{\circimg{tikz-cache/completeness__drop_1.pdf}}
+        \overunderset{\HqcPowCong}{\text{(A2)}}{\approx}
+        \scalebox{0.65}{\circimg{tikz-cache/completeness__drop_3.pdf}}
+        \overset{\HqcPowDag}{\approx}
+        \scalebox{0.65}{\circimg{tikz-cache/completeness__drop_4.pdf}}
+        \overunderset{\HqcPowCong}{\text{(A1)}}{\approx}
+        \scalebox{0.65}{\circimg{tikz-cache/completeness__drop_5.pdf}}
+        \overunderset{\HqcPowCong}{\text{(A3)}}{\approx}
+        \scalebox{0.65}{\circimg{tikz-cache/completeness__drop_5.pdf}}
+    \end{align*}
+    In conclusion, $( U \exparr \alpha ) \approx_E P^\ddagger \circ W \circ P = \Drop( U, \alpha )$.
+\end{proof}
+
+\subsection{The Expand Routine}
+
+\input{code/LambdaExpand}
+\input{code/DiagExpand}
+\input{code/Expand}
+
+First, ~\cref{Alg:LambdaExpand} is introduced to handle diagonal circuits controlled by lambda generators.
+This algorithm iterates over each lambda generator in the diagonal form $\Gamma$, and then performs the necessary rewrites to reduce the circuit $\lambda( x, \alpha ) \odot \Gamma$ to $\Core$.
+This is then used by ~\cref{Alg:DiagExpand} to handle the slightly more general case of diagonal circuits controlled by diagonal circuits.
+This algorithm iterates over each lambda generator in the diagonal form $\Lambda$, and the performs the necessary rewrites to reduce the circuit $\Lambda \odot \Gamma$ to $\Core$.
+This is then used by~\cref{Alg:Expand} to handle all generalized controls in $\CoreExt[n]$, through subcircuit diagonalization.
+This algorithm iterates over each subcircuit in the control tower.
+Of course, the correctness of $\Expand_{n+1}( - )$ relies on the correctness of $\Reduce_n( - )$.
+
+\begin{lemma}
+    \label{Lem:LambdaExpand}
+    If $x \in \{ 0, 1 \}^n$, $\alpha \in (-\pi, \pi]$, and $\Gamma$ is in diagonal form, then $\LambdaExpand( -, -, - )$ terminates when applied to the tuple $( x, \alpha, \Gamma )$ with $\LambdaExpand( x, \alpha, \Gamma ) \in \Core( n + m, n + m )$ and $\lambda( x, \alpha ) \odot \Gamma \approx_E \LambdaExpand( x, \alpha, \Gamma )$ where $m = \dom( \Lambda )$.
+\end{lemma}
+
+\begin{proof}
+    Let $x \in \{ 0, 1 \}^n$ and $\alpha \in (-\pi, \pi]$.
+    The proof follows by induction on $|\Gamma|$ where $\Gamma$ is a prefix of a diagonal form.
+    \begin{itemize}
+    \item \textbf{Base Case}.
+          Let $\Gamma \in \Core( m, m )$.
+          If $|\Gamma| = 0$, then the first line is reached and $1_{n+m}$ is returned.
+          In other words, $\LambdaExpand( -, -, - )$ terminates when applied to $( x, \alpha, \Gamma )$ and $\LambdaExpand( x, \alpha, \Gamma ) = 1_{n+m} \in \Core( n + m, n + m )$.
+          Since $|\Gamma| = 0$, then $\Gamma = 1_m$.
+          It follows by $\HqcCtrlId$ that $\lambda( x, \alpha ) \odot \Gamma = \lambda( x, \alpha ) \odot 1_m \approx_E 1_{n+m} = \LambdaExpand( x, \alpha, \Gamma )$.
+    \item \textbf{Inductive Hypothesis}.
+          For some $\ell \in \mathbb{N}$, if $\Gamma \in \Core( m, m )$ is a diagonal form prefix and $|\Gamma| = \ell$, then $\LambdaExpand( -, -, - )$ terminates when applied to $( x, \alpha, \Gamma )$ with $\LambdaExpand( x, \alpha, \Gamma ) \in \Core( n + m, n + m )$ and $\lambda( x, \alpha ) \odot \Gamma \approx_E \LambdaExpand( x, \alpha, \Gamma )$.
+    \item \textbf{Inductive Step}.
+          Assume that for some $\ell \in \mathbb{N}$, if $\Gamma \in \Core( m, m )$ is a diagonal form prefix and $|\Gamma| = \ell$, then $\LambdaExpand( -, -, - )$ terminates when applied to $( x, \alpha, \Gamma )$ with $\LambdaExpand( x, \alpha, \Gamma ) \in \Core( n + m, n + m )$ and $\lambda( x, \alpha ) \odot \Gamma \approx_E \LambdaExpand( x, \alpha, \Gamma )$.
+          Let $\Gamma \in \Core( m, m )$ such that $\Gamma$ is the prefix of a diagonal form with $|\Gamma| = \ell + 1$.
+          Since $|\Gamma| = \ell + 1 > 0$, then the if-condition on the first line fails, and the program continues to line two.
+          Then after executing line two, $\lambda( y, \beta )$ is assigned to the last symbol in $\Gamma$ and $\Gamma'$ is assigned to the rest of $\Gamma$.
+          This means that $\Gamma'$ is a prefix of a diagonal form with $|\Gamma'| = \ell$ and $|y| = m$.
+          Then by the inductive hypothesis, the third line terminates and $U \gets \LambdaExpand( x, \alpha, \Gamma' )$ with $U \in \Core( n + m, n + m )$ and $(\text{A1}): \lambda( x, \alpha ) \odot \Gamma' \approx_E U$.
+          Then the fourth line is reached, at which point $U \circ \lambda( xy, \alpha\beta / \pi )$ is returned.
+          Since $|x| = n$ and $|y| = m$, then $|xy| = n + m$, and therefore $\lambda( xy, \alpha\beta / \pi ) \in \Core( n + m, n + m )$.
+          Since $U \circ \lambda( xy, \alpha\beta / \pi )$ was returned, then $\LambdaExpand( -, -, - )$ terminates when applied to $( x, \alpha, \Gamma )$ with $\LambdaExpand( x, \alpha, \Gamma ) \in \Core( n + m, n + m )$.
+          Moreover, the following derivation holds.
+          \begin{align*}
+              \scalebox{0.65}{\circimg{tikz-cache/completeness__lexpand_1.pdf}}
+              \overset{\HqcCtrlSwap}{\approx}&
+              \scalebox{0.65}{\circimg{tikz-cache/completeness__lexpand_2.pdf}}
+              \overset{\HqcCtrlExpand}{\approx}
+              \scalebox{0.65}{\circimg{tikz-cache/completeness__lexpand_3.pdf}}
+              \\
+              =\;\;\;&
+              \scalebox{0.65}{\circimg{tikz-cache/completeness__lexpand_4.pdf}}
+              \overset{\HqcCtrlSwap}{\approx}
+              \scalebox{0.65}{\circimg{tikz-cache/completeness__lexpand_5.pdf}}
+              \\
+              \overset{\HqcCtrlMerge}{\approx}&
+              \scalebox{0.65}{\circimg{tikz-cache/completeness__lexpand_6.pdf}}
+              \overset{\HqcCtrlSwap}{\approx}
+              \scalebox{0.65}{\circimg{tikz-cache/completeness__lexpand_7.pdf}}
+              \\
+              &\overunderset{\HQCCtrlCong}{(\text{A1})}{\approx}
+              \scalebox{0.65}{\circimg{tikz-cache/completeness__lexpand_8.pdf}}
+          \end{align*}
+          Then $\lambda( x, \alpha ) \odot \Gamma \approx_E U \odot \lambda( xy, \alpha\beta / \pi ) = \LambdaExpand( x, \alpha, \Gamma )$ and the inductive step holds.
+    \end{itemize}
+    It follows by the principle of induction that if $\Gamma \in \Core( m, m )$ is a diagonal form prefix, then $\LambdaExpand( -, -, - )$ terminates when applied to $( x, \alpha, \Gamma )$ with $\LambdaExpand( x, \alpha, \Gamma ) \in \Core( n + m, n + m )$ and $\lambda( x, \alpha ) \odot \Gamma \approx_E \LambdaExpand( x, \alpha, \Gamma )$.
+    Since every diagonal form is a prefix of itself, then this establishes that the proof holds for a fixed $x$ and $\alpha$.
+    Since $x$ and $\alpha$ were arbitrary, then this completes the proof.
+\end{proof}
+
+\begin{lemma}
+    \label{Lem:DiagExpand}
+    If $\Lambda$ and $\Gamma$ are both in diagonal form, then $\DiagExpand( -, - )$ terminates when applied to $( \Lambda, \Gamma )$ with $\DiagExpand( \Lambda, \Gamma ) \in \Core( k, k )$ and $\Lambda \odot \Gamma \approx_E \DiagExpand( \Lambda, \Gamma )$ where $k = \dom( \Lambda ) + \dom( \Gamma )$.
+\end{lemma}
+
+\begin{proof}
+    Let $\Gamma \in \Core( m, m )$ in diagonal form and for a given $n \in \mathbb{N}$ write $k = n + m$.
+    The proof follows by induction on $|\Lambda|$ where $\Lambda$ is a prefix of a diagonal form.
+    \begin{itemize}
+    \item \textbf{Base Case}.
+          Let $\Lambda \in \Core( n, n )$.
+          If $|\Lambda| = 0$, then the first line is reached and $1_{n+m}$ is returned.
+          In other words, $\DiagExpand( -, - )$ terminates when applied to $( \Lambda, \Gamma )$ and $\DiagExpand( \Lambda, \Gamma ) = 1_{n+m} \in \Core( k, k )$.
+          Since $|\Lambda| = 0$, then $\Lambda = 1_n$ and the following derivation holds.
+          \begin{equation*}
+              \scalebox{0.65}{\circimg{tikz-cache/completeness__dexpand_base_1.pdf}}
+              \overset{\HqcCtrlSwap}{\approx}
+              \scalebox{0.65}{\circimg{tikz-cache/completeness__dexpand_base_2.pdf}}
+              \overset{\HqcCtrlId}{\approx}
+              \scalebox{0.65}{\circimg{tikz-cache/completeness__dexpand_base_3.pdf}}
+              =
+              \scalebox{0.65}{\circimg{tikz-cache/completeness__dexpand_base_4.pdf}}
+          \end{equation*}
+          Then $\Lambda \odot \Gamma = 1_n \odot \Gamma \approx_E 1_{n+m} = \DiagExpand( \Lambda, \Gamma )$.
+    \item \textbf{Inductive Hypothesis}.
+          For some $\ell \in \mathbb{N}$, if $\Lambda \in \Core( n, n )$ is a diagonal form prefix and $|\Lambda| = \ell$, then $\DiagExpand( -, - )$ terminates when applied to $( \Lambda, \Gamma )$ with $\DiagExpand( \Lambda, \Gamma ) \in \Core( k, k )$ and $\Lambda \odot \Gamma \approx_E \DiagExpand( \Lambda, \Gamma )$.
+    \item \textbf{Inductive Step}.
+          Assume that for some $\ell \in \mathbb{N}$, if $\Lambda \in \Core( n, n )$ is a diagonal form prefix and $|\Lambda| = \ell$, then $\DiagExpand( -, - )$ terminates when applied to $( \Lambda, \Gamma )$ with $\Lambda \odot \Gamma \approx_E \DiagExpand( \Lambda, \Gamma )$ and $\DiagExpand( \Lambda, \Gamma ) \in \Core( k, k )$.
+          Let $\Lambda \in \Core( n, n )$ such that $\Lambda$ is the prefix of a diagonal form with $|\Lambda| = \ell + 1$.
+          Since $|\Lambda| = \ell + 1 > 0$, then the if-condition on the first line fails, and the program continues to line two.
+          Then after executing line two, $\lambda( x, \alpha )$ is assigned to the last symbol in $\Lambda$ and $\Lambda'$ is assigned to the rest of $\Lambda$.
+          This means that $\Lambda'$ is a prefix of a diagonal form with $|\Lambda'| = \ell$.
+          Then by the inductive hypothesis, the third line terminates and $U \gets \DiagExpand( \Lambda', \Gamma )$ with $(\text{A1}): \Lambda' \odot \Gamma \approx_E U$ and $U \in \Core( k, k )$.
+          Then by \cref{Lem:LambdaExpand}, the fourth line terminates and $V \gets \LambdaExpand( x, \alpha, \Gamma )$ with $V \in \Core( k, k )$ and $(\text{A2}): \lambda( x, \alpha ) \odot \Gamma \approx_E V$.
+          Then the fourth line is reached, at which point $U \circ V$ is returned.
+          That is, $\DiagExpand( -, - )$ terminates when applied to $( \Lambda, \Gamma )$ with $\DiagExpand( \Lambda, \Gamma ) = U \circ V \in \Core( k, k )$.
+          Moreover, the following derivation holds.
+          \begin{equation*}
+              \scalebox{0.65}{\circimg{tikz-cache/completeness__dexpand_ind_1.pdf}}
+              \overset{\HqcCtrlExpand}{\approx}
+              \scalebox{0.65}{\circimg{tikz-cache/completeness__dexpand_ind_2.pdf}}
+              \overunderset{\HQCCtrlCong}{(\text{A1})}{\approx}
+              \scalebox{0.65}{\circimg{tikz-cache/completeness__dexpand_ind_3.pdf}}
+              \overunderset{\HQCCtrlCong}{(\text{A2})}{\approx}
+              \scalebox{0.65}{\circimg{tikz-cache/completeness__dexpand_ind_4.pdf}}
+          \end{equation*}
+          Then $\Lambda \odot \Gamma \approx_E U \circ V \approx_E \DiagExpand( \Lambda, \Gamma )$ and the inductive step holds.
+    \end{itemize}
+    It follows by the principle of induction that if $\Lambda \in \Core( n, n )$ is a diagonal form prefix, then $\DiagExpand( -, - )$ terminates when applied to $( \Lambda, \Gamma )$ such that $\Lambda \odot \Gamma \approx_E \DiagExpand( \Lambda, \Gamma )$ and $\DiagExpand( \Lambda, \Gamma ) \in \Core( k, k )$.
+    Since every diagonal form is a prefix of itself, then this establishes the proof for a fixed $\Gamma$.
+    Since $\Gamma$ were arbitrary, then this completes the proof.
+\end{proof}
+
+\begin{theorem}
+    \label{Thm:ExpandDef}
+    Assume that $\Reduce_n( - )$ terminates when applied to each $U \in \Mor( \CoreExt[n] )$.
+    If $T \in \Tower( \CoreExt[n] ) \cap \CoreExt[n + 1]( k, k )$, then $\Expand_{n+1}( - )$ terminates when applied to $T$ with $\Expand_{n+1}( U ) \in \Core( k, k )$.
+    Moreover, if $U \approx_E \Reduce_n( U )$ for all $U \in \Mor( \CoreExt[n] )$, then $T \approx_E \Expand_{n+1}( T )$.
+\end{theorem}
+
+\begin{proof}
+    Let $T \in \Tower( \CoreExt[n] )$ with $|T| \ge 1$.
+    The proof follows by induction on $|T|$.
+    \begin{itemize}
+    \item \textbf{Base Case}.
+          Let $T \in \Tower( \CoreExt[n] )$ with $k = \dom( T )$ and $|T| = 1$.
+          By assumption, the first line terminates and $U \gets \Reduce_n( T_1 )$.
+          Since $|T| = 1$, then the if-condition on the second line will succeed and $\Expand_n( - )$ will return $U$.
+          In other words, $\Expand_{n+1}( - )$ terminates when applied to $T$ with $\Expand_{n+1}( T ) = U$.
+          Moreover, since $|T| = 1$, then $T = T_1$ with $k = \dom( T_1 )$.
+          This means that $\Expand_{n+1}( T ) = U \in \Core( k, k )$.
+    \item \textbf{Inductive Hypothesis}.
+          For some strictly positive integer $\ell$, if $T \in \Tower( \CoreExt[n] )$ with $\dom( T ) = k$ and $|T| = \ell$, then $\Expand_{n+1}( - )$ terminates when applied to $T$ with $\Expand_{n+1}( T ) \in \Core( k, k )$.
+    \item \textbf{Inductive Step}.
+          Assume that for some strictly positive integer $\ell$, if $T \in \Tower( \CoreExt[n] )$ with $\dom( T ) = k$ and $|T| = \ell$, then $\Expand_{n+1}( - )$ terminates when applied to $T$ with $\Expand_{n+1}( T ) \in \Core( k, k )$.
+          Let $T \in \Tower( \CoreExt[n] )$ with $|T| = \ell + 1$ and $k = \dom( T )$.
+          Then there exists some $T' \in \Tower( \CoreExt[n] )$ with $|T'| = \ell > 0$ and $T = T_1 \odot T'$.
+          Now consider applying $\Expand_{n+1}( - )$ to $T$ and let $k' = \dom( T' )$.
+          By assumption, the first line terminates and $U \gets \Reduce_n( T_1 )$ with $U \in \Core( k - k', k - k' )$.
+          Since $|T| = \ell + 1 > 1$, then the if-condition on the second line fails, and the program continues to line three. 
+          Then by \cref{Thm:Diag}, the third line terminates and $( P, \Lambda ) \gets \Diag( U )$ with $P \in \Core( k - k', k - k' )$ and $\Lambda \in \Core( k - k', k - k' )$ in diagonal form.
+          Since $|T'| = \ell > 0$, then by the inductive hypothesis the fourth line terminates and $V \gets \Expand_{n+1}( T' )$ with $V \in \Core( k', k' )$.
+          Then by \cref{Thm:Diag}, the fifth line terminates and $( Q, \Gamma ) \gets \Diag( V )$ with $P \in \Core( k', k' )$ and $\Lambda \in \Core( k', k' )$ in diagonal form.
+          Then by \cref{Lem:DiagExpand}, the sixth line terminates and $W \gets \DiagExpand( \Lambda, \Gamma )$ with $W \in \Core( k, k )$.
+          Then the seventh line is reached, at which point $( P^\ddagger \boxtimes Q^\ddagger ) \circ W \circ ( P \boxtimes Q )$ is returned.
+          That is, $\Expand_{n+1}( - )$ terminates when applied to $T$ with $\Expand_{n+1}( T ) = ( P^\ddagger \boxtimes Q^\ddagger ) \circ W \circ ( P \boxtimes Q )$.
+          Since $( P^\ddagger \boxtimes Q^\ddagger ) = ( P \boxtimes Q )^\ddagger \in \Core( k, k )$ by definition, then $\Expand_{n+1}( T ) \in \Core( k, k )$.
+          Then the inductive step holds.
+    \end{itemize}
+    Then by the principle of induction, if $T \in \Tower( \CoreExt[n] )$ with $\dom( T ) = k$, then $\Expand_{n+1}( - )$ terminates when applied to $T$ with $\Expand_{n+1}( T ) \in \Core( k, k )$.
+    Next, if $U \approx_E \Reduce_n( U )$ for each $U \in \Mor( \CoreExt[n] )$, then it follows by induction on $|T|$ that $T \approx_E \Expand_{n+1}( T )$.
+    \begin{itemize}
+    \item \textbf{Base Case}.
+          Let $T \in \Tower( \CoreExt[n] )$ and $|T| = 1$.
+          By the start of this proof, $\Expand_{n+1}( - )$ terminates when applied to $T$.
+          Then by the second assumption, $U \gets \Reduce_n( T_1 )$ after the first line with $T_1 \approx_E U$.
+          Since $|T| = 1$, then the if-condition on the second line succeeds and $\Expand_n( - )$ is return $U$.
+          This means that $T = T_1 \approx_E \Reduce_n( T_1 ) = \Expand_{n+1}( T )$.
+    \item \textbf{Inductive Hypothesis}.
+          For some strictly positive integer $\ell$, if $T \in \Tower( \CoreExt[n] )$, then $T \approx_E \Expand_{n+1}( T )$.
+    \item \textbf{Inductive Step}.
+          Assume that for some strictly positive integer $\ell$, if $T \in \Tower( \CoreExt[n] )$ with $|T| = \ell$, then $T \approx_E \Expand_{n+1}( T )$.
+          Let $T \in \Tower( \CoreExt[n] )$ with $|T| = \ell + 1$.
+          Then there exists some $T' \in \Tower( \CoreExt[n] )$ with $|T| = \ell$ and $T = T_1 \odot T'$.
+          Now consider applying $\Expand_{n+1}( - )$ to $T$.
+          From the start of this proof, $\Expand_{n+1}( - )$ terminates when applied to $T$.
+          By assumption, $U \gets \Reduce_n( T_1 )$ after the first line with $T_1 \approx_E U$.
+          Since $|T| = \ell + 1 > 1$, then the if-condition on the second line fails, and the program continues to line three. 
+          Then by \cref{Thm:Diag}, $( P, \Lambda ) \gets \Diag( U )$ after the third line with $U \approx_E P^\dagger \circ \Lambda \circ P$.
+          Since $T_1 \approx_E U$, then $(\text{A1}): T_1 \approx_E P^\dagger \circ \Lambda \circ P$ by the transitivity of $( \approx_E )$.
+          Since $|T'| = \ell$, then by the inductive hypothesis, $V \gets \Expand_{n+1}( T' )$ after the fourth line with $T' \approx_E V$.
+          Then by \cref{Thm:Diag}, $( Q, \Gamma ) \gets \Diag( V )$ after the fifth line with $V \approx_E Q^\dagger \circ \Gamma \circ Q$.
+          Since $T' \approx_E V$, then $(\text{A2}): T' \approx_E Q^\dagger \circ \Gamma \circ Q$ by the transitivity of $( \approx_E )$.
+          Then by \cref{Lem:DiagExpand}, $W \gets \DiagExpand( \Lambda, \Gamma )$ after the sixth line with $(\text{A3}): \Lambda \odot \Gamma \approx_E W$.
+          Then the seventh line is reached, at which point $( P^\ddagger \boxtimes Q^\ddagger ) \circ W \circ ( P \boxtimes Q )$ is returned.
+          Since $( P^\ddagger \boxtimes Q^\ddagger ) = ( P \boxtimes Q )^\ddagger$ by definition, then by \cref{Lem:CoreDag}, $(\text{A4}): ( P^\dagger \boxtimes Q^\dagger ) = ( P \boxtimes Q )^\dagger \approx_E ( P \boxtimes Q )^\ddagger = ( P^\ddagger \boxtimes Q^\ddagger )$.
+          Then the following derivation holds.
+          \begin{align*}
+              \scalebox{0.65}{\circimg{tikz-cache/completeness__expand_1.pdf}}
+              \overunderset{\HQCCtrlCong}{\text{(A2)}}{\approx}&
+              \scalebox{0.65}{\circimg{tikz-cache/completeness__expand_3.pdf}}
+              \overset{\HqcCtrlDag}{\approx}
+              \scalebox{0.65}{\circimg{tikz-cache/completeness__expand_4.pdf}}
+              \overset{\HqcCtrlSwap}{\approx}
+              \scalebox{0.65}{\circimg{tikz-cache/completeness__expand_5.pdf}}
+              \\
+              \overunderset{\HQCCtrlCong}{\text{(A1)}}{\approx}&
+              \scalebox{0.65}{\circimg{tikz-cache/completeness__expand_7.pdf}}
+              \overset{\HqcCtrlDag}{\approx}
+              \scalebox{0.65}{\circimg{tikz-cache/completeness__expand_8.pdf}}
+              \\
+              =\;\;\;&
+              \scalebox{0.65}{\circimg{tikz-cache/completeness__expand_9.pdf}}
+              \overset{\HqcCtrlSwap}{\approx}
+              \scalebox{0.65}{\circimg{tikz-cache/completeness__expand_10.pdf}}
+              \overunderset{\HQCCtrlCong}{\text{(A3)}}{\approx}
+              \scalebox{0.65}{\circimg{tikz-cache/completeness__expand_11.pdf}}
+              \\
+              \overunderset{\HQCCtrlCong}{\text{(A4)}}{\approx}&
+              \scalebox{0.65}{\circimg{tikz-cache/completeness__expand_12.pdf}}
+          \end{align*}
+          Then $T \approx_E ( P^\ddagger \boxtimes Q^\ddagger ) \circ W \circ ( P \boxtimes Q ) = \Expand_{n+1}( T )$ and the inductive step holds.
+    \end{itemize}
+    Then by the principle of induction, if $T \in \Tower( \CoreExt[n] )$, then $T \approx_E \Expand_{n+1}( T )$.
+\end{proof}

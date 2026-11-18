@@ -1,0 +1,1333 @@
+
+\section{The General Case: Model Checking for FO}\label{sec: full FO}
+
+\body{
+    Notice that our algorithm for $\exists$-FO used only four ingredients: (1) an induced-object construction, (2) projections to the bags (which behaves functorially), (3) pullbacks for combining compatible local states, and (4) a parameter-dependent bound on the number of states over each bag. In this section, we will carefully generalize each of these ingredients. Assignments will be replaced by \textit{strategies}, hypotheses by \textit{hypotheticals}, and induced hypotheses by \textit{induced hypotheticals}. The corresponding projection operations and pullback constructions will be developed alongside them. This is summarized in Table~\ref{tab:existential-to-full-fo}.
+}
+
+\begin{table}[htbp]
+\centering
+\caption{Dictionary between the dynamic programs for $\exists$-FO and full FO.}
+\label{tab:existential-to-full-fo}
+
+\begingroup
+\setlength{\arrayrulewidth}{1.2pt}
+\setlength{\tabcolsep}{1em}
+\renewcommand{\arraystretch}{1.35}
+
+\begin{tabular}{|c|c|}
+\hline
+\textbf{$\exists$-FO} & \textbf{Full FO}\\
+\hline
+assignment $\beta$ & strategy $S$\\
+\hline
+hypothesis $\nu$ & hypothetical $\mathbb H$\\
+\hline
+induced hypothesis $\beta[G]$ & induced hypothetical $S[G]$\\
+\hline
+underlying assignment of $\nu$ & underlying strategy $U(\mathbb H)$\\
+\hline
+projection of hypotheses & projection of hypotheticals\\
+\hline
+compatible assignments & compatible underlying strategies\\
+\hline
+pullbacks in $\mathbf{Hyp}_{\ell}^{\sigma}$ &
+pullbacks in $\cat{HTh}_{m}^{\sigma}$\\
+\hline
+supported hypotheses & supported hypotheticals\\
+\hline
+tables of hypotheses & tables of reduced hypotheticals\\
+\hline
+$\operatorname{head}(\nu)\models\phi$ &
+all hypotheses of $0$-hypotheticals satisfy $\psi$\\
+\hline
+\end{tabular}
+
+\endgroup
+\end{table}
+
+\body{
+    Once these generalizations have been established, the algorithmic result for full FO will fall out: we will be able to lift the algorithm of Theorem~\ref{thm:exists-fo} almost verbatim, using the dictionary in Table~\ref{tab:existential-to-full-fo}, to obtain an algorithm for full FO model checking. This is the following theorem (c.f.~Paragraph~\ref{para: explicit bounds} for the monstrous, but explicit bound depending only on $w$, $|\phi|$ and $b$).
+}
+
+\begin{theorem}[Theorem~\ref{thm: FO model checking on codecompositions}, restated]
+    Let $\sigma$ be a fixed finite relational signature. There is an algorithm that, given an FO formula $\phi$ and a tree co-decomposition $\Ta$ of width at most $w$ with $b$ bags, decides whether $\lim\Ta\models\phi$ in time $f_\sigma(w,|\phi|)\cdot b$ for some computable function $f_\sigma$. 
+\end{theorem}
+
+
+\subsection{From Assignments to Strategies: A First Pass}\label{sec: from assignments to strategies}
+
+\body{
+    When moving from $\exists$-FO to full first-order logic, assignments no longer suffice. In the existential fragment, we need only choose points that satisfy the formula. However, in full first-order logic, existential choices may depend on the values chosen for earlier universally quantified variables. To deal with this dependence, we introduce \emph{strategies}. We point out that, although we favour our application-specific notation, what we define below can also be described as Skolemization.  
+}
+
+\begin{definition}
+    A formula $\phi$ is in \define{$\forall\exists$-alternating prenex normal form} if there is a quantifier-free formula $\psi$ such that $\phi$ is written as: 
+    $\phi = \forall x_1\exists y_1\cdots\forall x_\ell\exists y_\ell\, \psi(\vec{x},\vec{y}).$
+\end{definition}
+
+\body{
+    For an $\ell$-variable formula $\phi$, we think of the quantifier prefix of $\phi$ as a game consisting of $\ell$ rounds and two players: universal and existential. In round $i$, the universal player chooses a value for $x_i$, after which the existential player chooses a response for $y_i$. A strategy with $m$ rounds remaining must specify an existential response, together with a strategy for the remaining $m-1$ rounds, for every possible universal choice.}
+\body{
+    It will be necessary later to project strategies along homomorphisms of structures. In this case, it might be that the moves of the players ``stack up'' on one another. To see what we mean by this, consider an epimorphism $f \colon H \twoheadrightarrow G$ and suppose, for the sake of example, that we are dealing with a formula with only two quantifiers in the form $\forall x \exists y \psi(x,y)$. A strategy on $H$ consists of a function $s \colon \pts{H} \to \pts{H}$ which represents the fact that for each point $x \in \pts{H}$ played by the universal player, the existential player responds with the point~$s(x)$. Now suppose we want to use this strategy to generate a strategy on $G$; what would this look like? Well, from the perspective of a point $w \in \pts{G}$, the strategy $s$ on $H$ is \textit{nondeterministic}: there are potentially many points $\{x_1, x_2 \dots\} \in f^{-1}(w)$ which project to $w$ under $f$, so how should we build a strategy on $G$ starting from a strategy $s$ on $H$? The solution is to think of $w$ as having many different \textit{personalities}: $w$ could behave like $x_1$ or it could behave like $x_2$, or $x_3$, and so on. Given any choice of such a personality then it is easy to know what a strategy on $G$ should be: let's say that $w$ `behaves' like $x_1$. Then, if the universal player picks $w$, the existential player picks $f(s(x_1))$. Packaging this intuition in a different language, one should think of personalities as \textit{sections} of the map $f$ (i.e. maps $ \sigma \colon G \hookrightarrow H$ such that $f \circ \sigma = \mathsf{id}_G$). Any such section determines a strategy for $G$ from the strategy on $H$, as in the following diagram. 
+    \[\begin{tikzcd}
+	H && H \\
+	G && G
+	\arrow["s", from=1-1, to=1-3]
+	\arrow["f", two heads, from=1-1, to=2-1]
+	\arrow["f", two heads, from=1-3, to=2-3]
+	\arrow["\sigma", shift left=3, color={rgb,255:red,92;green,92;blue,214}, curve={height=-6pt}, hook', from=2-1, to=1-1]
+	\arrow["{f \circ s \circ \sigma}", color={rgb,255:red,92;green,92;blue,214}, dotted, from=2-1, to=2-3]
+\end{tikzcd}\]
+In what follows, we will refer to this behavior as a \emph{nondeterministic response}.
+}\label{para: personalities}
+
+\body{
+    We will need to fix some notation before defining the set of strategies on a structure $G$: denote \define{disjoint unions} (i.e. coproducts) by $\Sigma$, \define{cartesian products} (i.e. categorical products) by $\Pi$ and the \define{powerset operator} on $X$ either by $\Pa(X)$ or by $2^X$. Given a partial assignment $\beta \colon [k] \to \pts{G}$ for some $k < \ell$ and a point $x \in \pts{G}$, write $\beta \cdot x$ to denote \define{continuation of $\beta$ by $x$}, meaning the assignment obtained by {extending} the partial assignment $\beta$ so as to send the next point (the point with index $k+1$) to $x$: \[(\beta\cdot x) \colon i \mapsto \begin{cases} \beta(i) &\text{if } i \in [k]\\ x &\text{otherwise}. \end{cases}\]
+
+    \begin{comment}
+    Restating this diagrammatically, $\beta \cdot x$ is the unique arrow making the following commute (it is a coproduct in the slice over $\pts{G}$). 
+    \[\begin{tikzcd}
+	{[1]} && \\
+	{[k+1] \cong [1] + [k]} && {\pts{G}} \\
+	{[k]}
+	\arrow[hook, from=1-1, to=2-1]
+	\arrow["x", from=1-1, to=2-3]
+	\arrow["{\beta \cdot x}", from=2-1, to=2-3]
+	\arrow[hook, from=3-1, to=2-1]
+	\arrow["\beta"', from=3-1, to=2-3]
+    \end{tikzcd} 
+     \]
+     \end{comment}
+}
+
+\begin{definition}
+    Given a partial assignment $\beta \colon [2(\ell - m)] \to \pts{G}$, then we recursively define $\operatorname{Strat}(G, \beta)$, the set of \define{$m$-strategies} relative to $\beta$ as follows:
+    \[
+\operatorname{Strat}_m(G,\beta)
+:=
+\begin{cases}
+    \{\beta\} & \text{if } m=0, \\[1ex]
+    \underbrace{
+    \prod_{x\in\pts{G}}
+        \underbrace{
+        \Pa\left(
+            \sum_{y\in\pts{G}}
+            \underbrace{
+                \operatorname{Strat}_{m-1}(G,\beta\cdot x\cdot y)
+            }_{\substack{\text{continuations of the}\\
+                         \text{assignment }\beta\cdot x\cdot y}}
+        \right)
+        }_{\text{nondeterministic response to }x}
+    }_{\text{strategy from the assignment }\beta}
+    & \text{otherwise.}
+\end{cases}
+\]
+    Another way of thinking of the case where $m > 0$ is to see $\operatorname{Strat}_m(G, \beta)$ as the set of functions taking points $x$ in $G$ to non-empty subsets of $\sum_{y \in \pts{G}} \operatorname{Strat}_{m-1}(G, \beta \cdot x \cdot y)$. An \define{$m$-strategy relative to $\beta$} is an element of~$\operatorname{Strat}_m(G, \beta)$.
+\end{definition}    
+
+\begin{example}
+    Given an assignment $\beta \colon [\ell] \to \pts{G}$, there is a single $0$-strategy relative to $\beta$, namely $\beta$ itself.
+\end{example}
+
+\subsection{From Hypotheses to Hypotheticals: A First Pass}
+
+\body{
+    We generalized assignments to strategies in Section~\ref{sec: from assignments to strategies}. Now we will generalize hypotheses. Recall that a hypothesis is roughly a way of decorating an assignment $\beta$ with local relational data that is ``seen'' by $\beta$ (c.f. \cref{def: hypothesis}). Now we wish to perfrom the same decoration on strategies. However, this will generate considerably more data. Recall from Paragraph~\ref{para: personalities} that we needed to keep track of the various potential personalities of each point: this forced us to define $\operatorname{Strat}_m(G, \beta)$ in terms of \textit{nondeterminstic responses}. Obviously, we will have to decorate each such response with a hypothesis; but there is more: to perform dynamic programming, we need to associate to each assignment generated by a strategy to a \textit{set} of hypotheses representing the local `guesses' at what the `correct' hypothesis ought to be. This is all deliberately vague, so as to convey intuition, but note that, despite being much easier, we already did something similar in the $\exists$FO case (c.f. Lemma~\ref{lemma: limits of hypotheses} and Paragraph~\ref{para: set of supported hypotheses for dyn prog}). Stating all of this formally, yields the definition of \textit{hypotheticals}.
+}
+\begin{definition}\label{def: hypothetical}
+    Let $\operatorname{Hyp}(G,\beta)$ denote the set of hypotheses on $G$ with underlying assignment $\beta$.
+    Given a partial assignment $\beta \colon [2(\ell - m)] \to \pts{G}$, then we recursively define the set of \define{potential hypotheticals} $\operatorname{HTh}(G, \beta)$ as follows:
+    \begin{equation}\label{eqn: hypothetical}
+        \operatorname{HTh}_m(G, \beta) := \begin{cases}
+            2^{\operatorname{Hyp}(G, \beta)} &\text{if } m = 0, \\
+            \prod_{x \in \pts{G}} \Pa(\Pa(\sum_{y \in \pts{G}} \operatorname{HTh}_{m-1}(G, \beta \cdot x \cdot y))) &\text{otherwise.}
+        \end{cases}
+    \end{equation}
+\end{definition}
+
+\body{
+    Equation~\ref{eqn: hypothetical} can be a little hard to parse at first sight, so we restate it with the following annotations:
+    \begin{equation}\label{eqn: hypothetical annotated}
+    \operatorname{HTh}_m(G,\beta)
+    :=
+    \begin{cases}
+        \underbrace{
+            2^{\operatorname{Hyp}(G,\beta)}
+        }_{\text{sets of hypotheses extending }\beta}
+        & \text{if } m=0,\vspace{1.2em}
+        \\ 
+        \underbrace{
+        \prod_{x\in\pts{G}}
+            \underbrace{
+            2^{
+                \underbrace{
+                2^{
+                    \sum_{y\in\pts{G}}
+                    \underbrace{
+                        \operatorname{HTh}_{m-1}
+                        (G,\beta\cdot x\cdot y)
+                    }_{\substack{\text{continuations from the}\\
+                                 \text{assignment }\beta\cdot x\cdot y}}
+                }
+                }_{\text{non-determinisitic response for personality of }x}
+            }
+            }_{\text{responses for the different personalities of }x}
+        }_{\text{potential hypothetical from }\beta}
+        & \text{otherwise.}
+    \end{cases}
+\end{equation}
+}
+
+\begin{example}
+    We can view a $1$-hypothetical as a function $f:\pts{G}\to2^{2^{\pts{G}}}$ along with, for each pair $(x,y\in P\in f(x))$, a set of hypotheses with $(x,y)$ as their underlying assignment.
+\end{example}
+
+\body{
+    A hypothetical is said to be \define{induced} if all of the hypotheses it contains are induced.
+}
+\begin{lemma}
+    Let $G$ be a structure and $\phi = \forall x_1 \exists y_1 \ldots\forall x_\ell\exists y_\ell \psi(\vec{x},\vec{y})$ a formula in $\forall\exists$-alternating prenex normal form. Then $G\models\phi$ if and only if there is an induced $\ell$-hypothetical all whose hypotheses satisfy~$\psi$.
+\end{lemma}
+\begin{proof}
+    Let $\mathbb{H}$ be an induced $\ell$-hypothetical all whose hypotheses satisfy~$\psi$. For each $\ell$-assignment $\beta$ in (the underlying strategy) of $\mathbb{H}$, there is exactly one hypothesis that corresponds to it, namely $\beta[G]$. By definition, $\beta[G]$ records exactly the relations between the points in $G$ specified by $\beta$.
+\end{proof}
+
+\subsection{Categories of Strategies and Hypotheticals}
+
+\body{In the previous sections, strategies and hypotheticals were introduced set-theoretically. This was useful for getting a handle on the objects we were defining. However, it quickly becomes a headache when we begin to manipulate them recursively. In this section, we recast both constructions categorically. To do so, we will need to assume some further familiarity with categories; specifically, notions such as \textit{adjunctions} (in particular, \textit{unit}, \textit{counit}), \textit{limit-preserving} and \textit{categories of functors}. All of these can be found, for example, in Riehl~\cite{Riehl2016} or Awodey~\cite{Awodey2010}. Without being too explicit, we make some use of the machinery of (op)fibrations, which can be in Jacobs~\cite{JacobsCLTT}). We do this for four reasons which we will outline below.} 
+
+\subsubsection{A Categorical Apology}
+
+\body{The first advantage of promoting from sets of strategies and hypotheticals to categories thereof is that we can express these recursively-defined constructions using standard categorical operations such as products, sums, and categories of families. We do this so that we do not have to reinvent the wheel: the behaviour of these operations with respect to limits and functors is already well understood and can be found in standard texts. As a case in point, throughout this section we will often draw upon Jacobs' textbook~\cite{JacobsCLTT}. In practical terms, besides allowing us to draw upon known results, the categorical framing means that almost all the constructions in this section no longer have to be defined by hand through several layers of nested data, but instead arise canonically from the corresponding categorical operations.}
+
+\body{The second advantage concerns the relationship between underlying and induced constructions. In our warmup, where we showed how to perform $\exists$-FO model checking in FPT-time, we pointed out two obvious facts: every hypothesis has an underlying assignment and every assignment gives rise to a canonical induced hypothesis. Furthermore, we used relationships between these two constructions, together with a universal property of induced hypotheses (c.f.~Prop.~\ref{prop: Universal property of induced hypotheses}), to simplify our arguments. Here, we wish to extend this approach: it will turn out to be very useful to establish a correspondence between underlying strategies and induced hypotheticals, and this correspondence will be expressed by an \textit{adjunction} (see Awodey~\cite{Awodey2010} or Riehl~\cite{Riehl2016} for the definition) between the corresponding categories. As usual, the benefit of having an adjunction is that it provides canonical comparison maps precisely where the set-theoretic presentation would otherwise require repeated bookkeeping.}
+
+\body{The third advantage is closely related. In the previous sections, essentially all of our constructions could be made explicitly. In the present setting the relevant constructions are organized only up to isomorphism\footnote{For the category theorist, the keyword to keep in mind is: \textit{pseudofunctor}. This, and our reference to Jacobs and fibered constructions should already alert the category theorist to the kinds of manipulations we will be employing.}. If we were to organize this data combinatorially, we would be have to keep track of all these isomorphisms by hand. In contrast, the categorical formulation, and in particular the adjunctions introduced below, gives us a systematic way of handling these comparison isomorphisms rather than constructing and checking them separately at every stage of the recursion.}
+
+\body{The fourth and final advantage (perhaps the most important one) is that the categorical presentation is very useful when it comes to proving that the relevant categories admit pullbacks. This is the key property that allows us to present our algorithm for full FO-model checking in essentially the same form as we did in the case of $\exists$-FO: if the objects are defined in the right way, then both the proof and the resulting algorithm become canonical.}
+
+\begin{intuition}
+    It might be useful to the reader to keep the following in mind throughout the rest of this section: although one can define categories of strategies and hypotheticals -- we think of these as \textit{fibers} -- over each fixed structure $G$ -- we think of this as the \textit{base}, these categories will need to be \textit{compared with each other}; all at the same time; as if they lived in a larger, ambient category\footnote{A useful analogy to keep in mind is that of modules over rings: over any ring $R$, we can define a category $\cat{Mod}(R)$ of modules over $R$; however we wish to allow compare modules over \textit{different} rings and let them comunicate via appropriate morphisms.}. In keeping with standard category-theoretic terminology, we call these the \textit{total category of strategies} and the \textit{total category of hypotheticals}. Although we won't use it explicitly, in the back of minds and on our scratch paper we know that the canonical way of ``assembling these local categories into one, total category'' is via what is known as a \textit{Grothendieck construction}. The practical upshot of this perspective is that our proofs will often proceed by calling upon standard results from fibered category theory~\cite{JacobsCLTT, StreicherFibredCategories} and combining these with the recursive structures of strategies and hypotheticals.
+\end{intuition}
+
+
+\subsubsection{Families and Reduced Families}
+
+\body{
+    The definitions of strategies and hypotheticals rely on the following operations on sets: products, coproducts (disjoint unions) and powersets. When passing from sets to categories, products and coproducts are still well-defined, but some choices need to be made about how to represent powersets. We opt for \textit{families}, which we define below and which can basically be thought of as indexed sequences, since they behave nicely when combined with our other constructions and since all the properties we will require of them are already well established facts in fibered category theory (c.f.~Jacobs~\cite{JacobsCLTT}). 
+}
+
+\begin{definition}\label{def: C-families}
+    Let $\cat{C}$ be a category. For a set $S$, write $S^*$ for the
+    discrete category whose set of objects is~$S$ (that is to say: $S^*$ is the category whose objects are the points of $S$ and whose only morphisms are the identities). The category $\cat{Fam}(\cat{C})$ is the full\footnote{A full subcategory of a category includes all the objects of the subcategory and all morphisms between those objects.} subcategory of the category $\cat{Diag}(\cat{C})$ consisting of diagrams of the form $F\colon S^*\to\cat{C}$. We call such a diagram an \define{$S$-indexed family in $\cat{C}$} and usually denote it by $(F_s)_{s\in S}.$ A \define{morphism of indexed families} $(F_s)_{s\in S} \to (G_t)_{t\in T}$ consists of a pair $(u^* \colon S^* \to T^*, \eta\colon F\to G\circ u^*)$ where $u^*$ is a functor and $\eta$ is a natural transformation as in the following diagram. 
+    \[
+    \begin{tikzcd}[column sep=large,row sep=large]
+        S^*
+            \arrow[rr,"F"]
+            \arrow[dr,"u^*"']
+        &&
+        \cat{C}
+        \\
+        &
+        T^*
+            \arrow[ur,"G"']
+        &
+    \end{tikzcd}
+    \qquad
+    \eta\colon F\to G\circ u^*.
+    \]
+    Composition and identities are inherited from the category of diagrams, namely identities are of the form $(id_S, (id_{S(s)})_{s\in S})$ and composition is defined by $(v,\theta)\circ(u,\eta) := \left( v\circ u,\, \bigl(\theta_{u(s)}\circ\eta_s\bigr)_{s\in S} \right).$
+\end{definition}
+
+\body{
+    Spelling out \cref{def: C-families}: a morphism of $\cat{C}$-families $(F_s)_{s\in S} \to (G_t)_{t\in T}$ consists of a \textit{function of sets} $u\colon S\to T$ together with an $S$-indexed family of morphisms in $\cat{C}$ of the form $(\eta_s\colon F_s\to G_{u(s)})_{s\in S}.$ Furthermore, it is useful to be be explicit and observe that we allow $S=\varnothing$, so that $\cat{Fam}(\cat{C})$ contains the empty family. 
+}
+
+\begin{definition}\label{def: reduced families}
+    For a a small category $\cat{C}$, any subset $A\subseteq\operatorname{Ob}(\cat{C})$ induces the canonical diagram
+    \begin{align*}
+        \iota_A\colon A^* &\to\cat{C} \\
+        a &\mapsto a.
+    \end{align*}
+    We call any such diagram a \define{reduced family in $\cat{C}$}. We write $\cat{Fam}_{\mathrm{red}}(\cat{C})$ for the full subcategory of $\cat{Fam}(\cat{C})$ consisting of \define{reduced families}. 
+\end{definition}
+
+\body{
+    With an eye towards our intended algorithmic goals, we need to account for a subtlety: we do not want to work with arbitrary families, since there are too many of these. Instead we want to work with \textit{reduced families}, since $\operatorname{Ob} \bigl(\cat{Fam}_{\mathrm{red}}(\cat{C})\bigr) \cong 2^{\operatorname{Ob}(\cat{C})}$ where $\cat{Fam}_{\mathrm{red}}(\cat{C})$. Having said that, however, it is far easier to use arbitrary families to \textit{prove} our theorems and then only worry about reduced families when we eventually get into the weeds of the algorithmics (specifically to prove our running-time bounds). 
+}
+
+\body{
+    Categories of families, being categories of diagrams, are particularly well-behaved.
+}
+
+\begin{proposition}\label{prop:fam-pullbacks}
+    If $\cat{C}$ is a category with pullbacks, then $\cat{Fam}(\cat{C})$ has pullbacks. 
+\end{proposition}
+\begin{proof}
+    Although this is standard and can be found in any introductory text in category theory, we include the proof to build intuition. We will show that, when viewed as a full subcategory of $\cat{Diag}(\cat{C})$, $\cat{Fam}(\cat{C})$ is closed under pullbacks. This implies that the inclusion $\cat{Fam}(\cat{C}) \hookrightarrow \cat{Diag}(\cat{C})$ creates pullbacks and hence the result follows.
+    
+    To that end, consider a cospan $(S^*,F) \xrightarrow{(u,\varphi)} (R^*,L) \xleftarrow{(v,\psi)} (T^*,G)$ in $\cat{Fam}(\cat{C})$. As Peschke and Tholen show~\cite[Proposition~2.5 and Remark~2.8]{PeschkeTholenDiagrams}, pullbacks in $\cat{Diag}(\cat{C})$ are computed by first taking the pullback of the indexing categories and then taking the corresponding pointwise pullbacks in $\cat{C}$. Thus the desired pullback diagram is given by
+    \begin{align*}
+        F \times_L G \colon S^* \times_{R^*} T^* &\to \cat{C} \\
+        (s,t) &\mapsto F(s)\times_{L(u(s))}G(t),
+    \end{align*}
+    where the pullback $F(s)\times_{L(u(s))}G(t)$ is taken over the components $\varphi_s\colon F(s)\to L(u(s))$ and $\psi_t\colon G(t)\to L(v(t))$. The fact that the discrete category functor $(-)^* \colon \cat{Set} \to \cat{Cat}$ is right adjoint~\cite[Remark 8.3.5]{riehl2014categoricalhomotopytheory}, and hence preserves limits~\cite{Riehl2016}, implies that $S^*\times_{R^*}T^* \cong (S\times_R T)^*$ and hence $F \times_L G$ is discrete (i.e. a family) as desired. 
+\end{proof}
+
+\body{We will use the following standard fact repeatedly in our proofs. It can be found, for instance, in Rosicky~\cite[Section~2]{AdamekRosickyFreeCompletions}. It will allow us to turn a summation into a product, which turns out to be the most convenient form to work with. 
+}
+
+\begin{proposition}\label{prop: fam of sum is product of fam}
+    Let $(\cat{C}_i)_{i\in I}$ be a family of categories. There is a canonical equivalence
+    \[
+        \cat{Fam}\left(\sum_{i\in I}\cat{C}_i\right)
+        \simeq
+        \prod_{i\in I}\cat{Fam}(\cat{C}_i).
+    \]
+    
+\end{proposition}
+
+\subsubsection{A Second Pass at Strategies and Hypotheticals: Promotion to Categories}
+
+\body{
+    We can now recast the definitions of strategies and hypotheticals in terms of categories of families. We proceed in two steps. First, we define the corresponding \emph{diagrammatic} categories. For the same reasons as pointed out above, these categories will contain too many objects: our categories of families retain indexing data, whereas our original set-theoretic definitions do not distinguish between different enumerations of the same family. We will therefore later restrict attention to reduced families and show that, on objects, the resulting definitions recover the set-theoretic notions introduced above.
+}
+
+\begin{definition}\label{def: diagrammatic strategies}
+    Given a partial assignment $\beta\colon[2(\ell-m)]\to\pts{G},$ define the \define{category of diagrammatic $m$-strategies relative to $\beta$ on $G$} recursively as follows:
+    \begin{equation}\label{eqn: diagrammatic strategies}
+    \cat{Strat}_m(G,\beta) :=
+    \begin{cases}
+        \underbrace{
+            \mathbf{1}
+        }_{\text{the $0$-strategy }\beta}
+        &\text{if }m=0,\\[5.5ex]
+        \underbrace{
+        \prod_{x\in\pts{G}}
+            \underbrace{
+            \cat{Fam}\left(
+                \sum_{y\in\pts{G}}
+                \underbrace{
+                    \cat{Strat}_{m-1}(G,\beta\cdot x\cdot y)
+                }_{\substack{\text{continuations from the}\\
+                             \text{assignment }\beta\cdot x\cdot y}}
+            \right)
+            }_{\text{family of responses to }x}
+        }_{\text{diagrammatic strategy from }\beta}
+        &\text{otherwise.}
+    \end{cases}
+    \end{equation}
+\end{definition}
+
+\body{
+    The definition of diagrammatic hypotheticals is obtained by replacing the base case by families of hypotheses and, recursively, allowing a family of possible ``personalities'' for each move $x$. 
+}
+
+\begin{definition}\label{def: diagrammatic hypotheticals}
+    Given a partial assignment $\beta\colon[2(\ell-m)]\to\pts{G},$ define the \define{category of diagrammatic $m$-hypotheticals relative to $\beta$ on $G$} recursively as follows:
+    \begin{equation}\label{eqn: diagrammatic hypotheticals}
+    \cat{HTh}_m(G,\beta) :=
+    \begin{cases}
+        \underbrace{
+            \cat{Fam}\bigl(\cat{Hyp}(G,\beta)\bigr)
+        }_{\text{families of hypotheses with underlying assignment }\beta}
+        &\text{if }m=0,\\[5.5ex]
+        \underbrace{
+        \prod_{x\in\pts{G}}
+            \underbrace{
+            \cat{Fam}\left(
+                \underbrace{
+                \cat{Fam}\left(
+                    \sum_{y\in\pts{G}}
+                    \underbrace{
+                        \cat{HTh}_{m-1}(G,\beta\cdot x\cdot y)
+                    }_{\substack{\text{continuations from the}\\
+                                 \text{ assignment }\beta\cdot x\cdot y}}
+                \right)
+                }_{\text{response of one personality of }x}
+            \right)
+            }_{\text{family of personalities of }x}
+        }_{\text{diagrammatic hypothetical from }\beta}
+        &\text{otherwise.}
+    \end{cases}
+    \end{equation}
+\end{definition}
+
+\subsubsection{Comparison With the Set-Theoretic Definitions}
+
+\body{
+    As a sanity check, we would like to be sure that, if we only use reduced families, then the sets of objects of our categories of strategies and hypotheticals are isomorphic to our earlier set-theoretic definitions. To reïterate, note that only difference is how we take the families: do we keep track of all possible enumerations of indexes (families), or do we just retain one canonnical family per subset (reduced families)?
+}
+
+\begin{definition}\label{def: reduced diagrammatic strategies and reduced diagrammatic hypotheticals}
+    Given a partial assignment $\beta\colon[2(\ell-m)]\to\pts{G}$, define the category of \define{reduced diagrammatic $m$-strategies relative to $\beta$} recursively as follows:
+    \begin{equation}\label{eqn: reduced diagrammatic strategies}
+        \cat{Strat}^{\mathrm{red}}_m(G,\beta)
+        := \begin{cases}
+            \mathbf{1} &\text{if } m = 0,\\
+            \displaystyle
+            \prod_{x\in\pts{G}}
+            \cat{Fam}_{\mathrm{red}}
+            \left(
+                \sum_{y\in\pts{G}}
+                \cat{Strat}^{\mathrm{red}}_{m-1}
+                (G,\beta\cdot x\cdot y)
+            \right)
+            &\text{otherwise.}
+        \end{cases}
+    \end{equation}
+    Similarly, we define the category of \define{reduced diagrammatic $m$-hypotheticals relative to $\beta$} as:
+    \begin{equation}\label{eqn: reduced diagrammatic hypotheticals}
+        \cat{HTh}^{\mathrm{red}}_m(G,\beta)
+        := \begin{cases}
+            \cat{Fam}_{\mathrm{red}}\bigl(\cat{Hyp}(G,\beta)\bigr)
+            &\text{if } m = 0,\\
+            \displaystyle
+            \prod_{x\in\pts{G}}
+            \cat{Fam}_{\mathrm{red}}
+            \left(
+                \cat{Fam}_{\mathrm{red}}
+                \left(
+                    \sum_{y\in\pts{G}}
+                    \cat{HTh}^{\mathrm{red}}_{m-1}
+                    (G,\beta\cdot x\cdot y)
+                \right)
+            \right)
+            &\text{otherwise.}
+        \end{cases}
+    \end{equation}
+\end{definition}
+
+\begin{proposition}\label{prop: set-theoretic and diagrammatic strategies agree}
+    For every structure $G$, every $0\leq m\leq\ell$, and every partial assignment $\beta\colon[2(\ell-m)]\to\pts{G}$, there are a canonical bijections
+    \begin{align*}
+        \operatorname{Strat}_m(G,\beta)
+        &\cong
+        \operatorname{Ob}
+        \bigl(
+            \cat{Strat}^{\mathrm{red}}_m(G,\beta)
+        \bigr) \text{ and}\\
+        \operatorname{HTh}_m(G,\beta)
+        &\cong
+        \operatorname{Ob}
+        \bigl(
+            \cat{HTh}^{\mathrm{red}}_m(G,\beta)
+        \bigr).
+    \end{align*}
+\end{proposition}
+\begin{proof}
+    The proof is routine and basically the same in both cases, so we just show it for strategies (below the isomorphisms follow because the sets have the same size). 
+    
+    If $m=0$, then $\operatorname{Ob} \bigl( \cat{Strat}^{\mathrm{red}}_0(G,\beta) \bigr) = \operatorname{Ob}(\mathbf{1}) \cong \operatorname{Strat}_0(G,\beta).$ Now, inducting on $m$, if $m>0$, then
+    \[
+        \operatorname{Ob}
+        \bigl(
+            \cat{Strat}^{\mathrm{red}}_m(G,\beta)
+        \bigr)
+        =
+        \prod_{x\in\pts{G}}
+        2^{
+            \sum_{y\in\pts{G}}
+            \operatorname{Ob}
+            \bigl(
+                \cat{Strat}^{\mathrm{red}}_{m-1}
+                (G,\beta\cdot x\cdot y)
+            \bigr)
+        }\\
+        \cong 
+        \prod_{x\in\pts{G}}
+        2^{
+            \sum_{y\in\pts{G}}
+            \operatorname{Strat}_{m-1}
+            (G,\beta\cdot x\cdot y)
+        }\\
+        =:
+        \operatorname{Strat}_m(G,\beta).
+    \]
+\end{proof}
+
+\body{
+    In what follows, it turns out to be easier to forget the requirement of being reduced and work directly with diagrammatic strategies and hypotheticals. For these, we will show that pullbacks exist and then note that pullbacks of reduced strategies (respectively hypotheticals) are themselves reduced. 
+}
+
+\subsubsection{Underlying Strategies and Induced Hypotheticals: A Useful Adjunction}
+
+\begin{definition}
+    Just as hypotheses have underlying assignments, there is a canonical \define{underlying strategy functor} $U\colon \cat{HTh}_m(G,\beta) \to \cat{Strat}_m(G,\beta)$ for every assignment $\beta$ on a structure $G$, which recursively forgets the hypothetical data and flattens out the family of personalities into a single family of responses. Formally, we have:
+    \begin{equation}\label{eqn: underlying strategy functor}
+        U :=
+        \begin{cases}
+            
+            \cat{Fam}(\cat{Hyp}(G,\beta))
+            \xrightarrow{!}
+            \mathbf{1}
+            &\text{if }m=0,\\[1.5ex]
+            \displaystyle
+            \prod_{x\in\pts{G}}
+            \left(
+                {\mu} \circ
+                \cat{Fam}\left(
+                    \cat{Fam}\left(
+                        \sum_{y\in\pts{G}} U
+                    \right)
+                \right)
+            \right)
+            &\text{otherwise,}
+        \end{cases}
+    \end{equation}
+    where ${ \mu \colon \cat{Fam}(\cat{Fam}(\cat C)) \to \cat{Fam}(\cat C)}$ is the canonical flattening functor (a family of a family is just a family in the same way that a list of lists can be flattened to a list). Functoriality follows immediately by induction from the functoriality of sums, products, $\cat{Fam}$, and $\mu$.
+\end{definition}
+
+\body{
+The following proposition provides us with an analogue to induced hypotheses in our more general setting. They turn out to be right adjoints to the underlying strategy functor. Intuitively, we want to ``induce'' a hypothetical on a strategy by populating it with induced hypotheses.
+}
+
+\begin{proposition}\label{prop: induced hypothetical is right adjoint}
+    The forgetful functor $U$ from hypotheticals to strategies has as right adjoint\footnote{Categorical aside: one can easily see that this induced hypothetical functor is monic and hence $\cat{Strat}_m(G, \beta)$ is a coreflective subcategory of $\cat{HTh}_{m}(G, \beta)$.} the induced hypothetical functor, namely we have the following adjunction for any $G$ and $\beta$. 
+    \[\begin{tikzcd}[row sep=small]
+	{\cat{HTh}_{m}(G, \beta)} & {\cat{Strat}_m(G, \beta)}
+	\arrow[""{name=0, anchor=center, inner sep=0}, "U", shift left=2, from=1-1, to=1-2]
+	\arrow[""{name=1, anchor=center, inner sep=0}, "{\_[G]}", shift left=2, from=1-2, to=1-1]
+	\arrow["\dashv"{anchor=center, rotate=-90}, draw=none, from=0, to=1]
+\end{tikzcd}\]
+On objects, the right adjoint is defined as follows: for a strategy $S$, the induced hypothetical $S[G]$ is the hypothetical whose hypotheses are all induced on $G$. 
+\end{proposition}
+\begin{proof}
+    By Proposition~\ref{prop: Universal property of induced hypotheses}, it is easy to see that induced hypotheses are right adjoint to the forgetful functor from hypotheses to assignments, summarized below. 
+    \[\begin{tikzcd}[row sep=small]
+	{\cat{Hyp}_m(G, \beta)} & {\pts{G}^{[2\ell - m]}}
+	\arrow[""{name=0, anchor=center, inner sep=0}, "U", shift left=2, from=1-1, to=1-2]
+	\arrow[""{name=1, anchor=center, inner sep=0}, "{\_[G]}", shift left=2, from=1-2, to=1-1]
+	\arrow["\dashv"{anchor=center, rotate=-90}, draw=none, from=0, to=1]
+\end{tikzcd}\]
+    We shall ``lift'' this adjunction through the recursive definition of hypotheticals, so induct on $m$. For $m = 0$, $\cat{HTh}_{m}(G, \beta) = \cat{Fam}(\cat{Hyp}(G, \beta))$. For any family $S \xrightarrow{[N_s]_{s \in S}} \cat{Hyp}(G, \beta)$, applying the counit $\eta$ of the right adjoint $\_[G]$ pointwise, gives us a morphism $(\mathsf{id}_S, (\eta_s \colon N_s \to \beta[G]))$. The adjunction follows immediately. 
+
+    Suppose $m > 0$. Equation~\ref{eqn: canonical equivalence} gives us: 
+    \[
+    \cat{HTh}_m(G,\beta) \simeq
+        \prod_{x\in\pts{G}}
+        \cat{Fam}\left(
+            \prod_{y\in\pts{G}}
+            \cat{Fam}\left(
+                \cat{HTh}_{m-1}(G,\beta\cdot x\cdot y)
+            \right)
+        \right).
+    \]
+    From which one can see (similarly to how we will prove Lemma~\ref{lemma: hypothetical projection adjunction}) that the adjunction 
+    \[\begin{tikzcd}[row sep=small]
+	{\cat{HTh}_{m-1}(G,\beta\cdot x\cdot y)} & {\cat{Strat}_{m-1}(G,\beta\cdot x\cdot y),}
+	\arrow[""{name=0, anchor=center, inner sep=0}, "U", shift left=2, from=1-1, to=1-2]
+	\arrow[""{name=1, anchor=center, inner sep=0}, "R", shift left=2, from=1-2, to=1-1]
+	\arrow["\dashv"{anchor=center, rotate=-90}, draw=none, from=0, to=1]
+    \end{tikzcd}\]
+    which we get by induction, can be lifted pointwise through families and products. 
+\end{proof}
+
+\subsubsection{Projections of Strategies and Hypotheticals}
+
+\body{
+    The proof of the following functoriality result uses standard facts in fibered category theory. More formally, one can find all of this, albeit not applied in this setting, in Jacobs' textbook where he covers families and reindexing~\cite[Section~1.2]{JacobsCLTT} and fibred coproducts~\cite[Section~1.9]{JacobsCLTT}. These results are not difficult to see on their own, however, given how nested the construction is, we prefer to point it all out below.
+}
+
+\begin{proposition}\label{prop:functoriality-of-projection}
+    For any map $f\colon G\to H$ and partial assignment
+    $\beta\colon[2(\ell-m)]\to\pts{G}$, projection along~$f$ defines the functors
+    \[
+        f_*\colon
+        \cat{Strat}_m(G,\beta)
+        \to
+        \cat{Strat}_m(H,f\beta)
+    \]
+    and
+    \[
+        f_*\colon
+        \cat{HTh}_m(G,\beta)
+        \to
+        \cat{HTh}_m(H,f\beta).
+    \]
+    We abuse notation by denoting both functors by $f_*$, since it will always be clear from context which is meant.
+\end{proposition}
+\begin{proof}
+    We prove both statements simultaneously by induction on $m$. If $m=0$, the statement for strategies is immediate, while postcomposition with $f$ defines a functor 
+    \[
+        f^{\cat{Hyp}}_*\colon
+        \cat{Hyp}(G,\beta)
+        \to
+        \cat{Hyp}(H,f\beta),
+    \]
+    and applying $\cat{Fam}$ gives the required functor on $0$-hypotheticals.
+
+    Suppose $m>0$. Apply the projection functors supplied by the induction hypothesis to the $(m-1)$-strategies and $(m-1)$-hypotheticals, respectively, and then apply the categorical operations appearing in their recursive definitions---coproducts, reindexing along the fibers of $f$, products, and the relevant applications of $\cat{Fam}$. Since all of these operations are functorial, the result follows.
+\end{proof}
+
+\begin{example}\label{example: prop:functoriality-of-projection}
+    Write $[C_i]_{i\in I}$ for an indexed family $I^*\to\cat{C}$ which sends each $i$ to some $C_i\in \cat{C}$. In particular, $[C]$
+    denotes a singleton family. We also note that repeated entries are not
+    identified.
+
+    We will consider $1$-hypotheticals relative to some assignment $\beta$ on a structure $G$. For each $x,y\in\pts{G}$, choose a hypothesis $\nu_{x,y}\colon N_{x,y}\to G$ whose underlying assignment is
+    $\beta\cdot x\cdot y$. Consider the hypothetical that, at each
+    universal choice $x$, has one personality offering every
+    $y\in\pts{G}$ as a response, with singleton continuation
+    $[\nu_{x,y}]$; this looks like $\mathbb{H}:=\left( \Bigl[ \bigl[ [N_{x,y}\xrightarrow{\nu_{x,y}}G] \bigr]_{y\in\pts{G}} \Bigr] \right)_{x\in\pts{G}}\in\cat{HTh}_1(G,\beta)$. Let $f\colon G\to H$ be a homomorphism to some other structure $H$. The projection of $\mathbb{H}$ is $f_*\mathbb{H}\in\cat{HTh}_1(H,f\beta)$. Explicitly:
+    \[
+\Biggl(
+    \;\;\;\underbrace{
+        \Bigl[
+            \;\;\underbrace{
+                \bigl[
+                        \;\underbrace{
+                            [N_{x,y}\xrightarrow{\nu_{x,y}}G]
+                        }_{\substack{\text{singleton family}\\
+                                     \text{of hypotheses}}}\;
+                \bigr]_{y\in\pts{G}}
+            }_{\text{family of responses}}\;\;
+        \Bigr]
+    }_{\text{one personality}}\;\;\;
+\Biggr)_{x\in\pts{G}}
+\xmapsto{f_*}
+\Biggl(
+    \;\;\;\underbrace{
+        \Bigl[
+            \;\;\underbrace{
+                \bigl[
+                        \;\underbrace{
+                            [N_{x,y}\xrightarrow{\nu_{x,y}}G
+                                      \xrightarrow{f}H]
+                        }_{\substack{\text{singleton family}\\
+                                     \text{of hypotheses}}}\;
+                \bigr]_{y\in\pts{G}}
+            }_{\text{family of responses}}\;\;
+        \Bigr]_{x\in f^{-1}(x')}
+    }_{\text{family of personalities}}\;\;\;
+\Biggr)_{x'\in\pts{H}}.
+\]
+    Projection postcomposes each hypothesis with $f$ and changes
+    its response tag from $y$ to $f(y)$. For each universal choice
+    $x'\in\pts{H}$, the outer family then contains one personality
+    for each $x\in f^{-1}(x')$.
+
+    Crucially, the response family remains indexed by $\pts{G}$:
+    distinct responses with the same image under $f$ remain
+    distinct entries. Likewise, personalities coming from
+    different universal choices are concatenated, not merged.
+    For example, when $G=\{a,b\}$ and $H=\{\ast\}$, projection
+    produces two personalities at $\ast$, each containing two
+    responses, all tagged by $\ast$.
+\end{example}
+
+\begin{remark}
+        Given that our intended application is dynamic programming, it might seem troubling to be indexing part of the hypothetical in $H$ using using points from $G$ (see Example~\ref{example: prop:functoriality-of-projection}). However, this is precisely what reduced families (c.f.~\cref{def: reduced families}) are for: since the number of hypotheses on $H$ does \textit{not} depend on the size of $G$, we will have many duplicate copies which we can throw away using reduced families. In particular,  reduction proceeds from the inside out: first reduce the continuations, then remove duplicate responses within each personality, and finally remove duplicate personalities. The relevance of the duplicate entries will be felt when we start looking at morphisms between hypotheticals.
+    \end{remark}
+
+\subsubsection{Total categories of strategies and hypotheticals}
+
+\body{
+    Proposition~\ref{prop:functoriality-of-projection} tells us that the categories
+    $\cat{Strat}_m(G,\beta)$ and $\cat{HTh}_m(G,\beta)$ can be compared along maps
+    $G\to H$ and appropriate partial assignments. This motivates the definition of
+    ``flattened out'' categories of strategies and hypotheticals, whose objects remember
+    the structure and assignment over which they are defined, and whose morphisms allow
+    us to transport strategies and hypotheticals between different structures. To do
+    this, we first define the category of positions\footnote{This is nothing other than
+    a slice category over $[2(\ell-m)]$.}.
+}
+
+\begin{definition}
+    \label{def:category-of-positions}
+    Fix $0\leq m\leq\ell$. The category $\cat{Pos}_m^\sigma$ of \define{$m$-positions} has as its objects pairs $(G,\beta)$, where $G$ is a $\sigma$-structure and $\beta\colon[2(\ell-m)]\to\pts{G}$ is an assignment. A morphism $f\colon(G,\beta)\to(H,\gamma)$ is a morphism $f\colon G\to H$ satisfying $f\beta=\gamma$, as in the following
+    commuting triangle.
+    \[
+    \begin{tikzcd}[sep=small]
+        && G \\
+        {[2(\ell-m)]} \\
+        && H
+        \arrow["f", from=1-3, to=3-3]
+        \arrow["\beta", from=2-1, to=1-3]
+        \arrow["\gamma"', from=2-1, to=3-3]
+    \end{tikzcd}
+    \]
+    Identities and composition are inherited from the category of $\sigma$-structures.
+\end{definition}
+
+\body{
+    One should think of each category $\cat{Strat}_m(G,\beta)$ and
+    $\cat{HTh}_m(G,\beta)$ as ``sitting over'' the $m$-position~$(G,\beta)$. We now
+    assemble each of these collections of categories into a single ambient category.
+    We call the resulting categories the \textit{total category of strategies} and
+    the \textit{total category of hypotheticals}. Their objects are strategies or
+    hypotheticals equipped with the positions over which they are defined, while
+    their morphisms keep track both of a change of position and of a morphism after
+    transporting along that change. These are the categories in which we shall take
+    pullbacks. We recommend consulting Figure~\ref{fig: grothendieck construction} while reading the following definition. 
+}
+
+\begin{definition}\label{def: total categories of strategies and hypotheticals}
+    Fix $0\leq m\leq\ell$. For $\cat{X}\in\{\cat{Strat},\cat{HTh}\},$ define the \define{total category $\cat{X}_m^\sigma$} as follows.\footnote{ \textbf{Categorical aside.} We include this footnote for readers coming from a category-theoretic background; anyone unfamiliar with Grothendieck constructions or pseudofunctors may safely ignore it. Proposition~\ref{prop:functoriality-of-projection} can be strengthened by observing that, for both strategies and hypotheticals, there are canonical natural isomorphisms $(\mathsf{id}_G)_* \cong \mathsf{id}_{\cat{X}_m(G,\beta)}$ and $(gf)_*\cong g_*f_*$ for composable maps $f$ and $g$. Thus, for $\cat{X}\in\{\cat{Strat},\cat{HTh}\}$, the assignment $(G,\beta)\mapsto\cat{X}_m(G,\beta)$ together with the projection functors $f_*$ defines a pseudofunctor $\cat{Pos}_m^\sigma\to\cat{Cat}$. The  category $\cat{X}_m^\sigma$ defined here is precisely its Grothendieck  construction. In particular, there is a canonical projection functor  $p_m^{\cat{X}}\colon \cat{X}_m^\sigma\to\cat{Pos}_m^\sigma$ whose fiber over $(G,\beta)$ is $\cat{X}_m(G,\beta)$. Thus the total categories of strategies and hypotheticals are canonically opfibred over the category of positions. As usual, we suppress the canonical coherence isomorphisms in the formulas for identities and composition below. 
+    }\vspace{-0.5em}
+    \begin{itemize}
+        \item An object of $\cat{X}_m^\sigma$ is a triple $(G,\beta,\mathbb{A}),$ where $(G,\beta)\in\cat{Pos}_m^\sigma$ and $\mathbb{A}\in
+            \operatorname{Ob}\bigl(\cat{X}_m(G,\beta)\bigr)$.\vspace{-0.5em}
+        \item A morphism $(f,\eta)\colon (G,\beta,\mathbb{A}) \to (H,\gamma,\mathbb{B})$ consists of a morphism of positions $f\colon(G,\beta)\to(H,\gamma)$  together with a morphism $\eta\colon f_*\mathbb{A}\to\mathbb{B}$ in $\cat{X}_m(H,\gamma)$.\vspace{-0.5em}
+    \end{itemize}
+
+    Its identities are
+    $\bigl(\mathsf{id}_G,\mathsf{id}_{\mathbb{A}}\bigr)$ and it has composition $(g,\theta)\circ(f,\eta) := \bigl(gf,\theta\circ g_*(\eta)\bigr)$. We call $\cat{Strat}_m^\sigma$ the
+    \define{total category of $m$-strategies} and we call $\cat{HTh}_m^\sigma$ the
+    \define{total category of $m$-hypotheticals}.
+\end{definition}
+
+\body{
+    A morphism in either total category is best visualized as in Figure~\ref{fig: grothendieck construction}: first ship the strategy or hypothetical along the underlying morphism of positions, and then compare the
+    transported object with the target inside the category sitting over the codomain position. To interpret this in our language of co-decompositions, one should think of there being an auxiliary co-decomposition of strategies (resp. hypotheticals) whose bags and adhesions are the categories of $m$-strategies (resp. $m$-hypotheticals) sitting over the bags and adhesions of our co-decomposition of structures $\Ta$.
+}
+
+\begin{figure}
+    \centering
+    \input{figures/grothendieck_construction}
+    \caption{A morphism
+    $({\color{red} f},{\color{red} \eta})\colon
+    (G,\beta,\mathbb{A})\to(H,\gamma,\mathbb{B})$
+    in a total category of strategies or hypotheticals
+    (c.f.~\cref{def: total categories of strategies and hypotheticals}).}
+    \label{fig: grothendieck construction}
+\end{figure}
+
+\body{
+    The point of introducing these total categories is so that \textit{one can take pullbacks of strategies and hypotheticals}! The proof of the following is included in the next subsection.
+}
+
+\begin{theorem}\label{thm: total category has pullbacks}
+    Fix $0\leq m\leq\ell$ and suppose that the category of positions $\cat{Pos}_m^\sigma$ has pullbacks. Then the total categories $\cat{Strat}_m^\sigma$ and $\cat{HTh}_m^\sigma$ have pullbacks, and their projection functors to $\cat{Pos}_m^\sigma$ preserve them.
+\end{theorem}
+
+\body{
+The following two subsections are organised as follows: first, we prove \autoref{thm: total category has pullbacks}; and then we spell out the pullback object guaranteed by the theorem.
+}
+
+\subsubsection{Proof of \cref{thm: total category has pullbacks}: Pullbacks of Strategies and Hypotheticals}
+\label{sec: pullbacks of strategies and hypotheticals}
+
+\body{
+    Establishing pullbacks in $\cat{HTh}_m^\sigma$ from first principles is nontrivial and indeed the construction (see Figure~\ref{fig: pullback in total category}) can be an eye-full. 
+    \begin{figure}
+        \centering
+        \input{figures/pullback_in_total_category}
+        \caption{Schematic view of the pullback construction in $\cat{HTh}_m^\sigma$. The lower diagram is the pullback of the underlying positions in $\cat{Pos}_m^\sigma$, while above each position sits its corresponding category of diagrammatic hypotheticals (the ``fibers''). The maps of positions induce the pushforward functors ($p_{1*}^{12}, p_{2*}^{12}, \pi_{1*}$ and $\pi_{2*}$) between the fibres. Each one of these functors has a right adjoint. We use these right adjoints to transport the cospan $p_{2*}^{12}\mathbb A_2 \xrightarrow{\zeta_1^{12}} \mathbb A_{12} \xleftarrow{\zeta_2^{12}}p_{1*}^{12}\mathbb A_1$ in $\cat{HTh}_m(G_{12},\beta_{12})$ back up to $\cat{HTh}_m(G _1 \times_{G_{12}} G_2,\beta_1 \times_{\beta_{12}} \beta_2)$. Using the fact that $\cat{HTh}_m(G _1 \times_{G_{12}} G_2,\beta_1 \times_{\beta_{12}} \beta_2)$ has pullbacks (c.f.~Proposition~\ref{lemma: fibers of HTh have pullbacks}), we can compute the pullback of this resulting cospan. This gives the pullback in the total category $\cat{HTh}_m^\sigma$.}
+        \label{fig: pullback in total category}
+    \end{figure}
+    Fortunately, much of the required machinery is known from fibered category theory and can be found in Jacobs' textbook~\cite{JacobsCLTT}. We will draw upon it as needed. The same argument applies to both strategies and hypotheticals. One can think of the total categories $\cat{Strat}_m^\sigma$ and $\cat{HTh}_m^\sigma$ as being ``fibered'' over $\cat{Pos}_m^\sigma$, with fibers $\cat{Strat}_m(G,\beta)$ and $\cat{HTh}_m(G,\beta)$ respectively. We will need to show two ingredients:\vspace{-0.5em}
+    \begin{enumerate}
+        \item the pushforward functor $f_*$ (Prop.~\ref{prop:functoriality-of-projection}) of a morphisms of positions $f$ admits a right adjoint $f^*$; and \vspace{-0.5em}
+        \item the categories $\cat{Strat}_m(G,\beta)$ and $\cat{HTh}_m(G,\beta)$ for a position $(G,\beta)$, admit pullbacks. \vspace{-0.5em}
+    \end{enumerate}
+    From here, Theorem~\ref{thm: total category has pullbacks} will follow. To that end, we begin working toward proving the first point. Its proof will combine the known coproduct-reindexing adjunction for families~\cite[Lemma~1.9.5]{JacobsCLTT} with induction on the depth of a strategy or hypothetical.
+}
+
+\begin{lemma}\label{lemma: hypothetical projection adjunction}
+    Let $\cat{X}\in\{\cat{Strat},\cat{HTh}\}$. Given any morphism of positions $f\colon(G,\beta)\to(H,f\beta)$, we have the following adjunction \vspace{-0.5em}
+    \[\begin{tikzcd}
+	{\cat{X}_m(G,\beta)} & {\cat{X}_m(H,f\beta)}
+	\arrow[""{name=0, anchor=center, inner sep=0}, "{f_*}", shift left=2, from=1-1, to=1-2]
+	\arrow[""{name=1, anchor=center, inner sep=0}, "{f^*}", shift left=2, from=1-2, to=1-1]
+	\arrow["\dashv"{anchor=center, rotate=-90}, draw=none, from=0, to=1]
+\end{tikzcd}\]
+    where $f_*$ is the projection functor established in Proposition~\ref{prop:functoriality-of-projection}.
+\end{lemma}
+
+\begin{proof}
+    Recall that applying $\cat{Fam}$ to an adjunction again gives
+    an adjunction: the original adjunction is applied componentwise,
+    without changing the function between the indexing sets. We prove both statements simultaneously by induction on $m$. 
+    
+    \textbf{Base case.} For $m=0$, the statement for strategies is immediate since
+    $\cat{Strat}_0(G,\beta)=\mathbf{1}$. For hypotheticals, the existence of pullbacks of hypotheses (Lemma~\ref{lemma: limits of hypotheses}) gives a right adjoint $f^*$ to postcomposition $f_*\colon\cat{Hyp}(G,\beta)\to\cat{Hyp}(H,f\beta)$, namely $f^*(\nu) := \beta[G]\times_{(f\beta)[H]}\nu.$ From the universal property of this pullback, we have a canonical isomorphism of hom-sets
+    \[
+        {\cat{Hyp}(G,\beta)\bigl(N,f^*M\bigr)} \cong 
+        {\cat{Hyp}(H,f\beta)\bigl(f_*N,M\bigr)}
+    \]
+    which establishes the desired adjunction. Applying $\cat{Fam}$, with unit and counit defined componentwise, gives the required adjunction on $0$-hypotheticals.
+
+    \textbf{Inductive case.} Suppose $m>0$. Let $\cat{X}\in\{\cat{Strat},\cat{HTh}\}$. We will show that the adjunctions supplied by the inductive hypothesis survive the recursive construction of $f_*$. To that end, for each $x\in\pts{G}$, define the functor
+    \begin{align}
+        T_x\colon \sum_{y\in\pts{G}}\cat{X}_{m-1}(G,\beta\cdot x\cdot y)
+        &\to \sum_{y'\in\pts{H}} \cat{X}_{m-1}(H,f\beta\cdot f(x)\cdot y') \\
+        (y,\mathbb A)\quad  &\mapsto \quad (f(y),f_*\mathbb A).
+    \end{align}
+    We claim that
+    \[
+        \cat{Fam}(T_x)\colon
+        \cat{Fam}\left(\sum_{y\in\pts{G}}\cat{X}_{m-1}(G,\beta\cdot x\cdot y)\right)
+        \to
+        \cat{Fam}\left(\sum_{y'\in\pts{H}}\cat{X}_{m-1}(H,f\beta\cdot f(x)\cdot y')\right)
+    \]
+    has a right adjoint. By  Proposition~\ref{prop: fam of sum is product of fam} we may use the canonical equivalence
+    \[
+        \cat{Fam}\left(\sum_{i\in I}\cat{C}_i\right)
+        \simeq
+        \prod_{i\in I}\cat{Fam}(\cat{C}_i)
+    \]
+    to equivalently rewrite $\cat{Fam}(T_x)$ as 
+    \[
+        \cat{Fam}(T_x)\colon
+        \prod_{y\in\pts{G}}\cat{Fam}\bigl(\cat{X}_{m-1}(G,\beta\cdot x\cdot y)\bigr)
+        \to
+        \prod_{y'\in\pts{H}}\cat{Fam}\bigl(\cat{X}_{m-1}(H,f\beta\cdot f(x)\cdot y')\bigr).
+    \]
+    Under this equivalent interpretation, $\cat{Fam}(T_x)$ first applies the projection functors
+    \begin{equation}\label{eqn: prop: hypothetical projection adjunction}
+        L_y := \cat{Fam}(f_*)\colon
+        \cat{Fam}\bigl(\cat{X}_{m-1}(G,\beta\cdot x\cdot y)\bigr)
+        \to
+        \cat{Fam}\bigl(\cat{X}_{m-1}(H,f\beta\cdot f(x)\cdot f(y))\bigr)
+    \end{equation}
+    componentwise and then, for each $y'\in\pts{H}$, concatenates the resulting families over $f^{-1}(y')$. Explicitly, it sends 
+    \[
+        (\mathbb A_y)_{y\in\pts{G}}
+        \mapsto
+        \left(
+            \sum_{y\in f^{-1}(y')} L_y(\mathbb A_y)
+        \right)_{y'\in\pts{H}}.
+    \]
+    Here the coproduct is taken in the category of families; it is given by co-producting (summing) indexing sets.
+
+    By the induction hypothesis and preservation of adjunctions by $\cat{Fam}$, each $L_y$ has a right adjoint $R_y:=\cat{Fam}(f^*)$. For each $y'\in\pts{H}$, taking the coproduct over $f^{-1}(y')$ is left adjoint to the diagonal functor, which repeats a family once for each $y\in f^{-1}(y')$. This is the coproduct-reindexing adjunction for families~\cite[Lemma~1.9.5]{JacobsCLTT}. Consequently, under the same equivalences, a right adjoint to $\cat{Fam}(T_x)$ is given by
+    \[
+        (\mathbb B_{y'})_{y'\in\pts{H}}
+        \mapsto
+        \bigl(R_y(\mathbb B_{f(y)})\bigr)_{y\in\pts{G}}.
+    \]
+    That is, the pointwise application of the right-adjoints $R_y$ to the hypotheticals at the image indexes $f(y)$.
+
+    For strategies, the projection functor on $m$-strategies applies these functors componentwise and then concatenates the resulting families over each preimage $f^{-1}(x')$. Applying the same coproduct-reindexing argument therefore supplies a right adjoint to $f_*$.
+
+    For hypotheticals, applying $\cat{Fam}$ once more shows that $\cat{Fam}(\cat{Fam}(T_x))$ has a right adjoint. The projection functor on $m$-hypotheticals then applies these functors componentwise and concatenates the resulting outer families over each fibre $f^{-1}(x')$. Again applying the same coproduct-reindexing argument supplies a right adjoint to $f_*$.
+\end{proof}
+
+\body{
+    The following example illustrates the right adjoint $f^*$ in the case of hypotheticals.
+}
+
+\begin{example}[The right adjoint to projection]
+    \label{example: hypothetical projection adjunction}
+    We use the notation for indexed families from
+    Example~\ref{example: prop:functoriality-of-projection}.
+    Take $m=\ell=1$, so that the initial assignment is empty and there is one universal choice followed by one existential response. Work in the empty relational signature (i.e. we work with \textit{sets}) and consider the unique map
+    \[
+        f\colon G=\{a,b\}\to H=\{\ast\}.
+    \]
+
+    Let $N$ be the structure with point set $[2]$. Since the signature is empty, there is only one hypothesis over each assignment, so let the unique hypothesis with head $N$ be the unique map $\nu\colon N\to H$ and, for each $x,y\in\pts{G}$, let $\nu_{x,y}\colon N\to G$ be the map sending $\nu_{x,y}(1)=x$ and $\nu_{x,y}(2)=y$. 
+    (Note that $f\circ\nu_{x,y}=\nu$ for every $x,y$).
+
+    Consider the hypothetical $\mathbb B$ on $H$ which, at its only universal choice $\ast$, has one personality offering the only existential response $\ast$, with singleton continuation $[N\xrightarrow{\nu}H]$. The right adjoint acts
+    as follows:
+    \[
+    \Biggl(
+        \;\;\;\underbrace{
+            \Bigl[
+                \;\;\underbrace{
+                    \bigl[
+                        \;\underbrace{
+                            [N\xrightarrow{\nu}H]
+                        }_{\substack{\text{singleton family}\\
+                                     \text{of hypotheses}}}\;
+                    \bigr]
+                }_{\text{one response }\ast}\;\;
+            \Bigr]
+        }_{\text{one personality}}\;\;\;
+    \Biggr)_{x'\in\pts{H}}
+    \xmapsto{f^*}
+    \Biggl(
+        \;\;\;\underbrace{
+            \Bigl[
+                \;\;\underbrace{
+                    \bigl[
+                        \;\underbrace{
+                            [N\xrightarrow{\nu_{x,y}}G]
+                        }_{\substack{\text{singleton family}\\
+                                     \text{of hypotheses}}}\;
+                    \bigr]_{y\in\pts{G}}
+                }_{\text{both lifts of the response }\ast}\;\;
+            \Bigr]
+        }_{\text{still one personality}}\;\;\;
+    \Biggr)_{x\in\pts{G}}.
+    \]
+    To read this expression, first fix a universal choice $x\in\pts{G}$. Since $f(x)=\ast$, we take the family of personalities belonging to $\mathbb B(\ast)$. Its indexing set does not change: there is still exactly one personality at this fixed $x$.
+
+    Within that personality, however, the response $\ast$ has two possible lifts, namely $a$ and $b$. The right adjoint retains both. For the lift $y$, it applies the depth-zero right adjoint to the continuation. That is, we obtain the family of pullbacks of $\nu$ with the induced hypothetical on the lifted assignment $x\cdot y$: giving $[N\xrightarrow{\nu_{x,y}}G]$. Spelling out the two universal choices separately, we obtain
+    \[
+    \begin{aligned}
+        (f^*\mathbb B)(a)
+        &=
+        \Bigl[
+            \bigl[
+                [N\xrightarrow{\nu_{a,a}}G],\,
+                [N\xrightarrow{\nu_{a,b}}G]
+            \bigr]
+        \Bigr],
+        \\[1.5ex]
+        (f^*\mathbb B)(b)
+        &=
+        \Bigl[
+            \bigl[
+                [N\xrightarrow{\nu_{b,a}}G],\,
+                [N\xrightarrow{\nu_{b,b}}G]
+            \bigr]
+        \Bigr].
+    \end{aligned}
+    \]
+
+    For example, the second response at universal choice $a$ chooses $b$ and leaves the completed assignment~$(a,b)$.
+
+    The two universal choices therefore each have one personality, and that personality offers two responses. The lifts of the existential response become entries of the inner family. Also, these two response entries are distinct: their underlying assignments have different last coordinates, so reduction does not identify them.
+\end{example}
+
+\body{
+    Now that we have proven that there is a right adjoint to the projection functors, we are ready to establish the easier fact that the fibers sitting over each position, that is categories of the form $\cat{Strat}_m(G,\beta)$ and $\cat{HTh}_m(G,\beta)$, have pullbacks. The proof will once again be an induction on $m$.
+}
+
+\begin{lemma}\label{lemma: fibers of HTh have pullbacks}
+    For every structure $G$, every $0\leq m\leq\ell$, and every partial assignment $\beta\colon[2(\ell-m)] \to \pts{G}$, the categories $\cat{Strat}_m(G,\beta)$ and $\cat{HTh}_m(G,\beta)$ admit pullbacks.
+\end{lemma}
+
+\begin{proof}
+    We prove both statements simultaneously by induction on $m$. For $m=0$, $\cat{Strat}_0(G,\beta)=\mathbf{1}$ has pullbacks, while the hypothetical case follows from Lemma~\ref{lemma: limits of hypotheses} and Proposition~\ref{prop:fam-pullbacks}.
+
+    For $m>0$, Proposition~\ref{prop: fam of sum is product of fam} gives the canonical equivalences
+    \begin{equation}
+        \cat{Strat}_m(G,\beta)
+        := \prod_{x\in\pts{G}}
+        \cat{Fam}\left(
+            \sum_{y\in\pts{G}}
+            \cat{Strat}_{m-1}(G,\beta\cdot x\cdot y)
+        \right) 
+        \simeq
+        \prod_{x\in\pts{G}}
+        \prod_{y\in\pts{G}}
+        \cat{Fam}\left(
+            \cat{Strat}_{m-1}(G,\beta\cdot x\cdot y)
+        \right),
+    \end{equation} \label{eqn: canonical equivalence strategies}
+    
+    and
+    \begin{align}
+        \cat{HTh}_m(G,\beta)
+        &:= \prod_{x\in\pts{G}} \cat{Fam}\left( \cat{Fam}\left( \sum_{y\in\pts{G}} \cat{HTh}_{m-1} (G,\beta\cdot x\cdot y) \right) \right) \nonumber \\ 
+        &\simeq
+        \prod_{x\in\pts{G}}
+        \cat{Fam}\left(
+            \prod_{y\in\pts{G}}
+            \cat{Fam}\left(
+                \cat{HTh}_{m-1}(G,\beta\cdot x\cdot y)
+            \right)
+        \right). \label{eqn: canonical equivalence}
+    \end{align}
+    By induction, each $\cat{Strat}_{m-1}(G,\beta\cdot x\cdot y)$ and $\cat{HTh}_{m-1}(G,\beta\cdot x\cdot y)$ has pullbacks. Products of categories with pullbacks have pullbacks componentwise, and $\cat{Fam}$ preserves the existence of pullbacks by Proposition~\ref{prop:fam-pullbacks}. 
+\end{proof}
+
+\begin{remark}
+    The reader will notice in the above proof that the awful set-theoretic bookkeeping becomes a pointwise computation of pullbacks: after all, this was the whole point of passing to categories of families. 
+\end{remark}
+
+\body{
+    At this point we are ready to prove Theorem~\ref{thm: total category has pullbacks}. As we mentioned earlier, by known results in fibered category theory~\cite[Theorem~8.3]{StreicherFibredCategories}, once one establishes lemmas of the form of Lemma~\ref{lemma: hypothetical projection adjunction} and Lemma~\ref{lemma: fibers of HTh have pullbacks}, existence of pullbacks in the total categories is guaranteed. 
+}
+
+\begin{theorem}[Theorem~8.3,~\cite{StreicherFibredCategories}] \label{thm: Streicher pullbacks}
+    Let $p\colon\cat{E}\to\cat{B}$ be a fibration, where $\cat{B}$ has pullbacks. Then $\cat{E}$ has pullbacks and $p$ preserves them if and only if every fibre has pullbacks and every reindexing functor preserves them.
+\end{theorem}
+
+\begin{proof}[Proof of Theorem~\ref{thm: total category has pullbacks}]
+    By Lemma~\ref{lemma: hypothetical projection adjunction}, the opfibrations defining $\cat{Strat}_m^\sigma$ and $\cat{HTh}_m^\sigma$ are also fibrations whose reindexing functors $f^*$ preserve pullbacks, being right adjoints. Furthermore, their fibres have pullbacks by Lemma~\ref{lemma: fibers of HTh have pullbacks}; hence Theorem~\ref{thm: Streicher pullbacks} applies to both.
+\end{proof}
+
+\body{
+    Despite having proven the desired theorem and despite the fact that we have already given the high-level picture in Figure~\ref{fig: pullback in total category}, we find it clarifying to spell out the construction explicitly, step by step. The reader familiar with fibered categories and who is satisfied with the black-box proof of Theorem~\ref{thm: total category has pullbacks} can safely skip ahead past Section~\ref{sec: explaining pullbacks in total category}. The following section will focus only on the total category of hypotheticals, since the very same reasoning can be applied to the total category of strategies.
+}
+
+\subsubsection{Spelling out the Pullback Object Guaranteed by Theorem~\ref{thm: total category has pullbacks}}\label{sec: explaining pullbacks in total category}
+
+\body{
+    Throughout we recommend `zooming out' by glancing sporadically at Figure~\ref{fig: pullback in total category}.
+    For any $m$, consider a cospan in the total category of $m$-hypotheticals; the following one, say: 
+    \begin{equation}\label{eqn:  spelling out pullbacks in the total category}
+        (G_1, \beta_1, \mathbb{A}_2) \xrightarrow{(f_1^{12}, \xi_{2}^{12})} (G_{12}, \beta_{12}, \mathbb{A}_{12}) \xleftarrow{(f_1^{12}, \xi_{2}^{12})} (G_2, \beta_2, \mathbb{A}_2).
+    \end{equation}
+     By how morphisms are defined in the total category of hypotheticals (c.f.~Figure~\ref{fig: grothendieck construction}), this determines the following cospan in the category $\cat{HTh}_m(G_{12}, \beta_{12})$: 
+    \[(f_1^{12})_*(\mathbb{A}_1) \xrightarrow{\xi_{1}^{12}} A_{12} \xleftarrow{\xi_2^{12}} (f_2^{12})_*(\mathbb{A}_2).\]
+    Our goal is to transport this pullback back up into the category $\cat{HTh}_m(G_1 \times_{G_{12}} G_2, \beta_1 \times_{\beta_{12}} \beta_2)$ and, as it turns out, the fact that the pushforward (i.e.~projection) maps between the categories of $m$-hypotheticals have right adjoints is crucial to be able to do this.  
+}
+
+\body{
+    By using the right adjoint $(f_1^{12})^*$ of $(f_1^{12})_*$, we can lift the arrow $\xi_1^{12}$ to an arrow $(f_1^{12})^*(\xi_{1}^{12})$. However this arrow does not have $\mathbb{A}_1$ as its domain. This is where the fact that $(f_1^{12})^*$ is right adjoint comes handy: the unit of the adjunction, call it $\varepsilon_{1, \mathbb{A}_1}$, supplies the required map into the domain of $(f_1^{12})^*(\xi_{1}^{12})$. Diagrammatically we obtain the following composite morphism in the category $\cat{HTh}_m(G_1, \beta_1)$: 
+    \[ \mathbb{A}_1 \xrightarrow{\varepsilon_{1, \mathbb{A}_1}} (f_1^{12})^*((f_1^{12})_*(\mathbb{A}_1)) \xrightarrow{(f_1^{12})^*(\xi_{1}^{12})} (f_1^{12})^*(G_{12}).\]
+    Applying the very same reasoning, but to $(f_2^{12})_*$ and its right adjoint, we obtain the composite 
+    \[ \mathbb{A}_2 \xrightarrow{\varepsilon_{2, \mathbb{A}_2}} (f_2^{12})^*((f_2^{12})_*(\mathbb{A}_2)) \xrightarrow{(f_2^{12})^*(\xi_{2}^{12})} (f_2^{12})^*(G_{12})\]
+    in $\cat{HTh}_m(G_2, \beta_2)$. Both of these can be lifted to obtain the following diagram in $\cat{HTh}_m(G_1 \times_{G_{12}} G_2, \beta_1 \times_{\beta_{12}} \beta_2)$, using the right adjoints $\pi_1^*$ and $\pi_2^*$ of $(\pi_1)_*$ and $(\pi_2)_*$, respectively:
+    \[\pi_1^*\mathbb{A}_1 \xrightarrow{\pi_1^*\left( (f_1^{12})^*(\xi_{1}^{12}) \circ \varepsilon_{1, \mathbb{A}_1} \right)} \pi_1^*(f_1^{12})^*(\mathbb{A}_{12}) \quad \quad \pi_2^*(f_2^{12})^*(\mathbb{A}_{12}) \xleftarrow{\pi_2^*\left( (f_2^{12})^*(\xi_{2}^{12}) \circ \varepsilon_{2, \mathbb{A}_2} \right)} \pi_2^*\mathbb{A}_2.\]
+    This diagram forms a cospan in $\cat{HTh}_m(G_1 \times_{G_{12}} G_2, \beta_1 \times_{\beta_{12}} \beta_2)$ since $\pi_1^*(f_1^{12})^*(\mathbb{A}_{12})$ and $\pi_2^*(f_2^{12})^*(\mathbb{A}_{12})$ are isomorphic (to see this, notice that, since we started with a commuting square of pseudofunctors, their adjoints also form a commuting square of pseudofunctors).
+}
+
+\body{
+    Now, since $\cat{HTh}_m(G_1 \times_{G_{12}} G_2, \beta_1 \times_{\beta_{12}} \beta_2)$ has pullbacks (c.f.~Lemma~\ref{lemma: fibers of HTh have pullbacks}), we can compute the pullback of
+    \[\pi_1^*\mathbb{A}_1 \xrightarrow{\pi_1^*\left( (f_1^{12})^*(\xi_{1}^{12}) \circ \varepsilon_{1, \mathbb{A}_1} \right)} \pi_1^*(f_1^{12})^*(\mathbb{A}_{12}) \cong \pi_2^*(f_2^{12})^*(\mathbb{A}_{12}) \xleftarrow{\pi_2^*\left( (f_2^{12})^*(\xi_{2}^{12}) \circ \varepsilon_{2, \mathbb{A}_2} \right)} \pi_2^*\mathbb{A}_2\]
+    to obtain a pullback object $P$ with pullback legs (i.e. pullback projections) $p_1$ and $p_2$. Theorem~\ref{thm: total category has pullbacks} ensures that the object \[(G_1 \times_{G_{12}} G_2, \beta_1 \times_{\beta_{12}} \beta_2, P)\] is the pullback of Diagram~\ref{eqn:  spelling out pullbacks in the total category}. The legs of its cone come once again from the adjunctions. By passing the leg $p_1$ through $(\pi_1)_*$ and by applying the counit of the adjunction, we obtain a morphism \[(\pi_1)_*(P) \xrightarrow{\eta_1} \mathbb{A}_1\]
+    and hence we have that the leg of the cospan in the total category is $(\pi_1, \eta_1)$. Similarly we produce the other leg $(\pi_2, \eta_2)$. By similar reasoning and since the projections form a comutative square of pseudofunctors, we have the following comutative square in $\cat{HTh}_m(G_{12} , \beta_{12})$: 
+    \[\begin{tikzcd}[row sep=small]
+	& {(\pi_1)_*(f_1^{12})_* \mathbb{A}_1} && {(\pi_2)_*(f_2^{12})_* \mathbb{A}_2} & \\
+	{(f_1^{12})_* \mathbb{A}_1} &&&& {(f_2^{12})_* \mathbb{A}_2} \\
+	&& { A_{12}}
+	\arrow["\sim", no head, from=1-2, to=1-4]
+	\arrow[from=1-2, to=2-1]
+	\arrow[from=1-4, to=2-5]
+	\arrow["{\xi_{1}^{12}}"', from=2-1, to=3-3]
+	\arrow["{\xi_2^{12}}", from=2-5, to=3-3]
+\end{tikzcd}\]
+    This defines a commuting square in the total category which, using the definition of arrows in the total category and the universal propertty of $P$, is easily seen to satisfy the universal property of pullbacks.
+}
+
+
+\subsection{A delicious analogue of Lemma~\ref{lem:lim_env_is_env_lim}}
+
+
+
+\body{
+    Let $f\colon G\to H$ be a homomorphism and $\beta\colon[\ell]\to\pts{G}$ an assignment. In Lemma~\ref{lem:helper_1}, we prove that $f$ is a morphism of hypotheses $\beta[G]\to (f\beta)[G]$. Now we prove an analogue of strategies and hypotheticals.
+}
+
+\begin{lemma}[Analogue of Lemma~\ref{lem:helper_1}]\label{lemma: canonical comparison from projected induced to induced projected}
+    Let $f$ be a morphism and $S$ be any strategy over the position $(G, \beta)$, then there is a canonical morphism from the projection to $H$ of the induced hypothetical on $G$ of $S$ (namely $f_*(S[G])$) to the induced hypothetical on $H$ of the projection of $S$ (namely $f_*(S)[H])$. This morphism is denoted 
+    \begin{equation}\label{eqn: canonical comparison from projected induced to induced projected}
+        S[f] \colon f_*(S[G]) \to f_*(S)[H].
+    \end{equation}
+\end{lemma}
+\begin{proof}
+    Consider now any morphism $f \colon G \to H$. Using the adjunctions of Proposition~\ref{prop: induced hypothetical is right adjoint}, we can form the following picture. 
+    \begin{equation}\label{eqn: comparing induced hypotheticals after projection}
+        \begin{tikzcd}[sep=small]
+	G && {\cat{HTh}_m(G, \beta)} && {\cat{Strat}_m(G, \beta)} \\
+	\\
+	H && {\cat{HTh}_m(H, f\beta)} && {\cat{Strat}_m(H, f\beta)}
+	\arrow["f", from=1-1, to=3-1]
+	\arrow[""{name=0, anchor=center, inner sep=0}, "U", shift left=2, from=1-3, to=1-5]
+	\arrow["{f_*}", color={rgb,255:red,214;green,92;blue,92}, from=1-3, to=3-3]
+	\arrow[""{name=1, anchor=center, inner sep=0}, "{\_[G]}", shift left=2, color={rgb,255:red,214;green,92;blue,92}, from=1-5, to=1-3]
+	\arrow["{f_*}", color={rgb,255:red,92;green,92;blue,214}, from=1-5, to=3-5]
+	\arrow[""{name=2, anchor=center, inner sep=0}, "U", shift left=2, from=3-3, to=3-5]
+	\arrow[""{name=3, anchor=center, inner sep=0}, "{\_[H]}", shift left=2, color={rgb,255:red,92;green,92;blue,214}, from=3-5, to=3-3]
+	\arrow["\dashv"{anchor=center, rotate=-90}, draw=none, from=0, to=1]
+	\arrow["\dashv"{anchor=center, rotate=-90}, draw=none, from=2, to=3]
+\end{tikzcd}
+    \end{equation}
+    This gives us a canonical way of comparing the image of an induced hypothetical on $G$ with the induced hypothetical on its projected strategy. In symbols, starting with a strategy $S \in \cat{Strat}_M(G, \beta)$ and staring at Diagram~\ref{eqn: comparing induced hypotheticals after projection}, we have two options: 
+    \begin{enumerate}\vspace{-0.5em}
+        \item we move left and then down, i.e.~we form an induced hypothetical on $G$ and then project it to $H$ (the {\color{red}red} path in Diagram~\ref{eqn: comparing induced hypotheticals after projection});\vspace{-0.5em}
+        \item we move down and then left, i.e.~we project $S$ to a strategy on $H$ and then produce its induced hypothetical (the {\color{blue}blue} path in Diagram~\ref{eqn: comparing induced hypotheticals after projection}).\vspace{-0.5em}
+    \end{enumerate}
+    Since the underlying strategy functors $U$ commute (as pseudofunctors) with the pushforwards $f_*$ of $f$, we have that $U(f_*(S[G]))$ is isomorphic to $f_*(S)$ via an isomorphism $\iota \colon U(f_*(S[G])) \to f_*(S)$. The unit of the adjunction $U \dashv \_[H]$, gives us a canonical morphism $\eta_{f_*(S[G])} \colon f_*(S[G]) \to U(f_*(S[G]))[H]$, which, composed with the image of $\iota$ under $\_[H]$ gives us the desired comparison map of Equation~\ref{eqn: canonical comparison from projected induced to induced projected} as the following composite: \[ f_*(S[G]) \xrightarrow{\color{blue} \eta_{f_*(S[G])}} U(f_*(S[G]))[H] \xrightarrow{\color{red} \sim} f_*(S)[H].\]
+    Diagrammatically, all of this can be summarized as follows. 
+    \[\begin{tikzcd}[sep=small]
+	& {S[G]} &&&& S \\
+	G && {\cat{HTh}_m(G, \beta)} && {\cat{Strat}_m(G, \beta)} \\
+	\\
+	H && {\cat{HTh}_m(H, f\beta)} && {\cat{Strat}_m(H, f\beta)} \\
+	& {f_*(S[G])} &&& {U(f_*(S[G]))} \\
+	& {U(f_*(S[G]))[H]} &&&& {f_*(S)} \\
+	&& {f_*(S)[H]}
+	\arrow["\in"{description}, color={rgb,255:red,59;green,59;blue,59}, dotted, no head, from=1-2, to=2-3]
+	\arrow[color={rgb,255:red,107;green,107;blue,107}, maps to, from=1-2, to=5-2]
+	\arrow[color={rgb,255:red,107;green,107;blue,107}, maps to, from=1-6, to=1-2]
+	\arrow["\ni"{description}, color={rgb,255:red,59;green,59;blue,59}, dotted, no head, from=1-6, to=2-5]
+	\arrow[color={rgb,255:red,107;green,107;blue,107}, maps to, from=1-6, to=6-6]
+	\arrow["f", from=2-1, to=4-1]
+	\arrow[""{name=0, anchor=center, inner sep=0}, "U", shift left=2, from=2-3, to=2-5]
+	\arrow["{f_*}", from=2-3, to=4-3]
+	\arrow[""{name=1, anchor=center, inner sep=0}, "{\_[G]}", shift left=2, from=2-5, to=2-3]
+	\arrow["{f_*}", from=2-5, to=4-5]
+	\arrow[""{name=2, anchor=center, inner sep=0}, "U", shift left=2, from=4-3, to=4-5]
+	\arrow[""{name=3, anchor=center, inner sep=0}, "{\_[H]}", shift left=2, from=4-5, to=4-3]
+	\arrow["\in"{description}, color={rgb,255:red,59;green,59;blue,59}, dotted, no head, from=4-5, to=5-5]
+	\arrow["\in"{description}, color={rgb,255:red,59;green,59;blue,59}, dotted, no head, from=4-5, to=6-6]
+	\arrow["\in"{description, pos=0.7}, color={rgb,255:red,59;green,59;blue,59}, dotted, no head, from=5-2, to=4-3]
+	\arrow[color={rgb,255:red,107;green,107;blue,107}, maps to, from=5-2, to=5-5]
+	\arrow["\eta", color={rgb,255:red,92;green,92;blue,214}, from=5-2, to=6-2]
+	\arrow[color={rgb,255:red,107;green,107;blue,107}, maps to, from=5-5, to=6-2]
+	\arrow["\sim"{description}, color={rgb,255:red,214;green,92;blue,92}, from=5-5, to=6-6]
+	\arrow["\in"{description, pos=0.8}, color={rgb,255:red,59;green,59;blue,59}, dotted, no head, from=6-2, to=4-3]
+	\arrow["\sim"{description}, color={rgb,255:red,214;green,92;blue,92}, from=6-2, to=7-3]
+	\arrow[color={rgb,255:red,107;green,107;blue,107}, maps to, from=6-6, to=7-3]
+	\arrow["\in"{description, pos=0.9}, color={rgb,255:red,59;green,59;blue,59}, dotted, no head, from=7-3, to=4-3]
+	\arrow["\dashv"{anchor=center, rotate=-90}, draw=none, from=0, to=1]
+	\arrow["\dashv"{anchor=center, rotate=-90}, draw=none, from=2, to=3]
+\end{tikzcd}\]
+
+\end{proof}
+    
+\begin{theorem}\label{thm: limit of strategies is strategy of limit}
+    Let $\Ta=(T,\{G_a\},\{g_t^e\})$ be a tree co-decomposition and for each $a\in V(T)\cup E(T)$ denote by $\pi_a$ the projection $\lim\Ta\to G_a$. Let\vspace{-0.5em}
+    \begin{itemize}
+        \item $\beta \colon [2\ell - m] \to \lim\Ta$; \vspace{-0.5em}
+        \item $S\in\cat{Strat}_m(\lim\Ta,\beta)$ be am $m$-strategy on $\lim\Ta$ with respect to $\beta$; and\vspace{-0.5em}
+        \item for each $a\in V(T)\cup E(T)$, let ${\pi_a}_*S \in\cat{Strat}_m(\lim\Ta,\pi_a \circ \beta)$ be the projection of $S$ to $(G_a, \pi_a \circ \beta)$.\vspace{-0.5em}
+    \end{itemize}
+    For each $t\in V(T)$ and incident $e\in E(T)$, consider the induced morphism of strategies (c.f.~Lemma~\ref{prop:functoriality-of-projection}) in the total category\vspace{-0.5em}
+    \[
+        (g_t^e, g_{t*}^e) \colon \left(G_t,\;\pi_t\beta,\;\pi_{t*} S \right)\to \left(  G_e,\; \pi_e \beta,\;\pi_{e*} S\right), 
+    \]
+    then the tuple\vspace{-0.5em}
+    \[
+    \Ta_{*}S := \; \left(T,\;\underset{a\in V(T)\cup E(T)}{\{\pi_{a*}S\}},\;\underset{t\in e\in E(T)}{\{(g_t^e, g_{t*}^e)\}}\right)
+    \]
+    is a co-decomposition valued in the total category of strategies. Furthermore, there is a canonical map\vspace{-0.5em}
+    \begin{equation}\label{eqn: canonical map of limit of strategies is strategy of limit}
+        \left(\lim \Ta, \beta, S \right) \to \lim (\Ta_{*}S).
+    \end{equation}
+\end{theorem}
+\begin{proof}
+    Observe that $\Ta_{*}S$ is a codecompostion by definition. Recalling that the total category of strategies has pullbacks (c.f.~Theorem~\ref{thm: total category has pullbacks}) and noticing that $\left(\lim \Ta, \beta, S \right)$ forms the apex of a cone sitting over $\Ta_{*}S$, we get the desired morphism~\ref{eqn: canonical map of limit of strategies is strategy of limit} as the unique limit arrow (recall that we compute the limit of $\Ta_{*}S$ recursively by successive pullbacks).
+\end{proof}
+
+\begin{corollary}[Analogue for Lemma~\ref{lem:lim_env_is_env_lim}]\label{corollary: deliscious}
+    Let $\Ta=(T,\{G_a\},\{g_t^e\})$ be a tree co-decomposition and for each $a$ denote by $\pi_a$ the projection $\lim\Ta\to G_a$. Let $S$ be a strategy for $\lim\Ta$.
+
+    For each $a\in V(T)\cup E(T)$, consider the hypothetical $\mathbb{H}_a:=({\pi_a}_*S)[G_a]$ induced by the projected strategy ${\pi_a}_*S$. For each $t\in V(T)$ and incident $e\in E(T)$, consider the induced morphism of induced hypotheticals (Lemma~\ref{lemma: canonical comparison from projected induced to induced projected}) $\pi_{t*}(S)[g_t^e]\colon{{g_t^e}_*(\;\pi_{t*}(S)[G_t]\;)} \to  {({g_t^e}_*\circ\pi_{t*}(S))[G_e]}$ and let $\rho_t^e\colon \mathbb{H}_t\to\mathbb{H}_e$ be the composite defined as follows 
+    \[\pi_{t*}(S)[G_t] 
+        \xrightarrow{ {g_t^e}_* } 
+            {g_t^e}_*(\;\pi_{t*}(S)[G_t]) 
+                \xrightarrow{\pi_{t*}(S)[g_t^e] } 
+                    ({g_t^e}_*\circ\pi_{t*}(S))[G_e]                
+                        \xrightarrow{\sim} 
+                        \pi_{e*}(S)[G_e].
+    \]
+    The tuple $S[\Ta]:=(T,\{\mathbb{H}_a\},\{\rho_e^t\})$ is a co-decomposition of hypotheticals. Furthermore, there is a canonical map $S[\lim\Ta] \to \lim S[\Ta]$.
+\end{corollary}
+\begin{proof}
+    Notice that $S[\Ta]$ is none other than the codecompostion obtained by passing all the bags and adhesion maps of the codecompostion $\Ta_* S$ of Theorem~\ref{thm: limit of strategies is strategy of limit} through the adjunction $U_{G_a} \dashv \; \_[G_a]$ of Proposition~\ref{prop: induced hypothetical is right adjoint}. By this very adjunction, since induced hypotheticals are right adjoint to the underlying strategy functor and since right adjoints preserve limits, there is a canonical map from $S[\lim\Ta] \to \lim S[\Ta]$. 
+\end{proof}
+
+\begin{addendum}[Addendum to the proof of Corollary~\ref{corollary: deliscious}]
+    Those who prefer reasoning purely via abstract nonsense can safely skip this addendum. However, there may be readers who might find the above proof a little psychologically unsatisfying since it is nontrivial to see that all the required morphisms do indeed exists and that they are in the right places. For such readers, we will spell things out a little more below. To that end consider 
+    
+% https://q.uiver.app/#q=WzAsMTEsWzEsMCwiR18xIl0sWzUsMCwiKEdfMSwgXFxwaV8xXFxiZXRhLCBcXHBpX3sxKn1TKSJdLFs1LDIsIihHX3sxMn0sIGdfMV57MTJ9IFxcY2lyYyBcXHBpX3sxfSBcXGNpcmMgXFxiZXRhLCAoZ197MX1eezEyfSlfKihcXHBpX3t7MX0qfShTKSkpIl0sWzAsMywiRyJdLFsxLDMsIkdfezEyfSJdLFszLDMsIihHLCBcXGJldGEsIFMpIl0sWzQsMywiKEcsIFxcYmV0YSwgUCkiXSxbNSwzLCIoR197MTJ9LCBcXHBpX3sxMn0gXFxjaXJjIFxcYmV0YSwgXFxwaV97ezEyfSp9KFMpKSJdLFs1LDQsIihHX3sxMn0sIGdfMl57MTJ9IFxcY2lyYyBcXHBpX3syfSBcXGNpcmMgXFxiZXRhLCAoZ197Mn1eezEyfSlfKihcXHBpX3t7Mn0qfShTKSkpIl0sWzEsNiwiR18xIl0sWzUsNiwiKEdfMiwgXFxwaV8yXFxiZXRhLCBcXHBpX3syKn1TKSJdLFswLDQsImdfMV57MTJ9Il0sWzEsMiwiKGdfMV57MTJ9KV8qIl0sWzIsNywiXFxzaW0iLDAseyJzdHlsZSI6eyJoZWFkIjp7Im5hbWUiOiJub25lIn19fV0sWzMsMCwiXFxwaV8xIiwwLHsiY3VydmUiOi0xfV0sWzMsOSwiXFxwaV8yIiwyLHsiY3VydmUiOjF9XSxbNSwxLCIiLDAseyJjdXJ2ZSI6LTV9XSxbNSwxMCwiIiwwLHsiY3VydmUiOjV9XSxbNiwxLCIiLDAseyJjdXJ2ZSI6LTJ9XSxbNiwxMCwiIiwwLHsiY3VydmUiOjJ9XSxbOCw3LCJcXHNpbSIsMCx7InN0eWxlIjp7ImhlYWQiOnsibmFtZSI6Im5vbmUifX19XSxbOSw0LCJnXzJeezEyfSIsMl0sWzEwLDhdXQ==
+\[\begin{tikzcd}[sep=small]
+	& {G_1} &&&& {(G_1, \pi_1\beta, \pi_{1*}S)} \\
+	\\
+	&&&&& {(G_{12}, g_1^{12} \circ \pi_{1} \circ \beta, (g_{1}^{12})_*(\pi_{{1}*}(S)))} \\
+	G & {G_{12}} && {(G, \beta, S)} & {(G, \beta, P)} & {(G_{12}, \pi_{12} \circ \beta, \pi_{{12}*}(S))} \\
+	&&&&& {(G_{12}, g_2^{12} \circ \pi_{2} \circ \beta, (g_{2}^{12})_*(\pi_{{2}*}(S)))} \\
+	\\
+	& {G_1} &&&& {(G_2, \pi_2\beta, \pi_{2*}S)}
+	\arrow["{g_1^{12}}", from=1-2, to=4-2]
+	\arrow["{(g_1^{12})_*}", from=1-6, to=3-6]
+	\arrow["\sim", no head, from=3-6, to=4-6]
+	\arrow["{\pi_1}", curve={height=-6pt}, from=4-1, to=1-2]
+	\arrow["{\pi_2}"', curve={height=6pt}, from=4-1, to=7-2]
+	\arrow[curve={height=-30pt}, from=4-4, to=1-6]
+	\arrow[curve={height=30pt}, from=4-4, to=7-6]
+	\arrow[curve={height=-12pt}, from=4-5, to=1-6]
+	\arrow[curve={height=12pt}, from=4-5, to=7-6]
+	\arrow["\sim", no head, from=5-6, to=4-6]
+	\arrow["{g_2^{12}}"', from=7-2, to=4-2]
+	\arrow[from=7-6, to=5-6]
+\end{tikzcd}\]
+where $P$ is the pullback of strategies $\pi_{1*}S \times_{\pi_{12*} S} \pi_{2*}S$. Applying the `induced hypothetical' functor ${}\_[G]$ gives us
+\[\begin{tikzcd}[sep=small]
+	& {(G_{1}, \pi_{1} \circ \beta, \;\pi_{{1}*}S[G_1])} & {(G_1, \pi_1\beta,   \;  (\pi_{1*}S)[G_1])} \\
+	\\
+	& {(G_{12}, g_1^{12} \circ \pi_{1} \circ \beta, \; \left((g_{1}^{12})_*\pi_{{1}*}S\right)[G_1]))} & {(G_{12}, g_1^{12} \circ \pi_{1} \circ \beta,  \;  \left((g_{1}^{12})_*\pi_{{1}*}S\right)[G_{12}])} \\
+	{(G, \beta, S[G])} && {(G_{12},  \pi_{12} \circ \beta,  \;  \left(\pi_{{12}*}S \right)[G_{12}])} \\
+	& {(G_{12}, g_2^{12} \circ \pi_{2} \circ \beta,   \;   \left((g_{2}^{12})_*\pi_{{2}*}S\right)[G_2]))} & {(G_{12}, g_2^{12} \circ \pi_{2} \circ \beta,  \;  \left((g_{2}^{12})_*\pi_{{2}*}S\right)[G_{12}])} \\
+	\\
+	& {(G_{1}, \pi_{1} \circ \beta, \; \pi_{{1}*}S[G_1])} & {(G_2, \pi_2\beta,   \;  (\pi_{2*}S)[G_2])}
+	\arrow["{S[\pi_1]}", from=1-2, to=1-3]
+	\arrow["{(g_1^{12})_*}"{description}, from=1-3, to=3-2]
+	\arrow["{(\pi_{1*}S)[g_1^{12}] := \eta_{\pi_{1*}S} \circ \cong}"', shift right=3, from=3-2, to=3-3]
+	\arrow["\sim", no head, from=3-3, to=4-3]
+	\arrow[curve={height=-30pt}, from=4-1, to=1-2]
+	\arrow[curve={height=30pt}, from=4-1, to=7-2]
+	\arrow["{(\pi_{2*}S)[g_2^{12}] := \eta_{\pi_{2*}S} \circ \cong}", shift left=3, from=5-2, to=5-3]
+	\arrow["\sim"', no head, from=5-3, to=4-3]
+	\arrow["{S[\pi_2]}"', from=7-2, to=7-3]
+	\arrow["{(g_2^{12})_*}"{description}, from=7-3, to=5-2]
+\end{tikzcd}\]
+%\colA{the labels for $(\pi_{1*}S)[g_2^{12}]$ and  $(\pi_{2*}S)[g_2^{12}]$ look weird to me, is that how they're meant to render?}
+from which we deduce, by preservation of limits (since ${}\_[G]$ is a right-adjoint), that
+    \begin{align*}
+        (G, \beta, P[G]) &:= \left( (G_1, \; \pi_1\beta, \; \pi_{1*}S) \times_{(G_{12}, \; \pi_{12} \circ \beta, \; \pi_{{12}*}(S))} (G_{12}, \; \pi_{12} \circ \beta, \; \pi_{{12}*}(S)) \right)[G_{12}] \\
+        &\cong (G_1, \; \pi_1\beta, \;\;(\pi_{1*}S)[G_1]) \times_{(G_{12}, \;  \pi_{12} \circ \beta,  \;\;  \left(\pi_{{12}*}S \right)[G_{12}])} (G_2, \; \pi_2\beta,   \;\;  (\pi_{2*}S)[G_2]).
+    \end{align*}
+\end{addendum}
+
+
+
+\body{The distinction between projecting an induced hypothetical and inducing a projected strategy is subtle and, perhaps, depending on the reader's psychology, easier to see through abstraction than combinatorially. Below, we attempt to illustrate it concretely with a small example on a ``cross graph'' (four points, two diagonal edges; i.e.~$2K_2$). The example also also shows why the additional outer family in the definition of hypotheticals is necessary when computing pullbacks.
+}
+
+\begin{example}
+    Let $A$ and $B$ each be copies of the two-point structure with a single symmetric edge $0\sim1$, and let $o$ be the one-point structure with a loop. Then $X:=A\times_o B$ is the graph \[\begin{tikzcd}[row sep=small]
+	00 & 01 \\
+	10 & 11
+	\arrow[no head, from=1-1, to=2-2]
+	\arrow[no head, from=1-2, to=2-1]
+\end{tikzcd}\] with has points $\{00,01,10,11\}$, and edges between points at Hamming distance $2$ (both coordinates are different). Consider the strategy $S$ with universal/existential play/response given by
+    $ %a satisfying little square 
+                00\mapsto01,\;
+                01\mapsto11,\;
+                11\mapsto10,\;
+                10\mapsto00,
+    $
+    visualised below as a clockwise turn around the square:
+    \[
+    \begin{tikzcd}[row sep=1.5em, column sep=2.5em]
+        00 \arrow[r] & 01 \arrow[d] \\
+        10 \arrow[u] & 11 \arrow[l]
+    \end{tikzcd}
+    \]
+    In this example, hypotheses can only record whether there is an edge or a non-edge, so, for brevity, write $\top$ for the induced two-point hypothesis in which the selected pair is related, and $\bot$ for the one in which it is not. Since each $x$ and $S(x)$ have Hamming distance $1$, the induced hypothetical will always contain $\bot$ as the singleton hypothesis; in particular, the induced hypothetical is
+    \[
+        S[X](x)=\bigl[[\,x\cdot S(x)\mapsto\{\bot\}\,]\bigr].
+    \]
+
+    Let $\pi_A\colon X\to A$, $\pi_B\colon X\to B$, and $\pi_o\colon X\to o$ be the projections. We write an assignment $[2]\to A$ sending $1\mapsto a_1$ and $2\mapsto a_2$ as $a_1\cdot a_2$. With this notation, the projection of $S[X]$ to $A$ is given below (labels on the underbraces indicate which universal choice in $X$ the corresponding personality was projected from: we add these for legibility):
+    \[
+    \begin{aligned}
+    (\pi_{A*}S[X])(0)
+    &=
+    \left[
+    \underbrace{[\,0\cdot0\mapsto\{\bot\}\,]}_{00},
+    \underbrace{[\,0\cdot1\mapsto\{\bot\}\,]}_{01}
+    \right],\\
+    (\pi_{A*}S[X])(1)
+    &=
+    \left[
+    \underbrace{[\,1\cdot0\mapsto\{\bot\}\,]}_{10},
+    \underbrace{[\,1\cdot1\mapsto\{\bot\}\,]}_{11}
+    \right].
+    \end{aligned}
+    \]
+    We read this as follows: the assignment $0\cdot1$, for example, is carrying the hypothesis $\bot$, meaning the no-edge hypothesis. Notice that this hypothesis need not be induced here (indeed, in this case it isn't! --- $0$ is adjacent to $1$ in $A$): it is simply the projection of what we had in $S[X]$ at that coordinate.
+
+    Before moving on and having a look at the other projections, it is worth contrasting this with first projecting the strategy $S$ and then taking its induced hypothetical on $A$. In this case we obtain
+    \[
+    \begin{aligned}
+    ((\pi_{A*}S)[A])(0)
+    &=
+    \left[
+        [\,0\cdot0\mapsto\{\bot\},\;
+           0\cdot1\mapsto\{\top\}\,]
+    \right],\\
+    ((\pi_{A*}S)[A])(1)
+    &=
+    \left[
+        [\,1\cdot0\mapsto\{\top\},\;
+           1\cdot1\mapsto\{\bot\}\,]
+    \right].
+    \end{aligned}
+    \]
+    Thus projecting the induced hypothetical and inducing the projected strategy are not the same operation, that's why we need the canonical comparison map of Lemma~\ref{lemma: canonical comparison from  projected induced to induced projected}. In this example, when   focusing on $A$, the map is $S[\pi_A]\colon \pi_{A*}(S[X]) \to (\pi_{A*}S)[A]$ which merges the two projected personalities over each universal choice and sends their carried hypotheses to the corresponding induced hypotheses in $A$.
+
+    Returning to the projections, shipping $S[X]$ to $B$, produces 
+    \[
+    \begin{aligned}
+    (\pi_{B*}S[X])(0)
+    &=
+    \left[
+    \underbrace{[\,0\cdot1\mapsto\{\bot\}\,]}_{00},
+    \underbrace{[\,0\cdot0\mapsto\{\bot\}\,]}_{10}
+    \right],\\
+    (\pi_{B*}S[X])(1)
+    &=
+    \left[
+    \underbrace{[\,1\cdot1\mapsto\{\bot\}\,]}_{01},
+    \underbrace{[\,1\cdot0\mapsto\{\bot\}\,]}_{11}
+    \right].
+    \end{aligned}
+    \]
+
+    \textbf{N.B.} It is important to notice that, whether we project to $A$ or to $B$, each projection has two distinct personalities over each universal choice. The point of the outer family in \cref{def: hypothetical} is to keep these behaviors separate rather than merging them into a single nondeterministic response. In contrast, projected strategies lose this distinction, since their definition involves only a single application of $\cat{Fam}$.
+
+    Projecting further to $o$ gives four personalities, which, for the same reason we just pointed out, despite having identical underlying behavior, remain distinct entries of the family. This projection is:
+    \[
+    (\pi_{o*}S[X])(\bullet)
+    =
+    \left[
+    \underbrace{[\,\bullet\cdot\bullet\mapsto\{\bot\}\,]}_{00},
+    \underbrace{[\,\bullet\cdot\bullet\mapsto\{\bot\}\,]}_{01},
+    \underbrace{[\,\bullet\cdot\bullet\mapsto\{\bot\}\,]}_{10},
+    \underbrace{[\,\bullet\cdot\bullet\mapsto\{\bot\}\,]}_{11}
+    \right].
+    \]
+    In the reduced version of the above, the personalities merge into one. It is the maps between hypotheticals that `remember' that there should be distinctions: In the cospan $\pi_{A*}S[X]\to\pi_{o*}S[X] \leftarrow \pi_{B*}S[X],$ the personality arising from $x$ on the $A$-side and the personality arising from $x$ on the $B$-side are both sent to the personality labelled by $x$ over $o$. 
+
+    Consequently, the pullback matches precisely the two personalities arising from the same $x\in X$. Their responses pull back to
+    \[
+        \bigl(\pi_A(S(x)),\pi_B(S(x))\bigr)=S(x),
+    \]
+    and their hypotheses pull back to $x\cdot S(x)\mapsto\{\bot\}$. Hence the pullback recovers exactly the original hypothetical $S[X]$.
+
+    The tricky part, which is worth being explicit about, is that, although the two projections to $A$ and $B$ individually forget the ``direction'' of the spiral, it is the cospan that they form over $o$ that ``remembers'' how to pair them up appropriately so that the pullback reconstructs the original spiral. The comparison maps $S[\pi_A]$, $S[\pi_B]$, and $S[\pi_o]$ then relate these projected induced hypotheticals to the induced hypotheticals of the projected strategies appearing above.
+\end{example}
+
+
+\subsection{Proof of Theorem~\ref{thm: FO model checking on codecompositions}: FO-Model-Checking in FPT-Time on Co-Decompositions}
+
+\body{
+    At this point, the dynamic programming argument for full FO follows exactly the same pattern as the one given for $\exists$-FO. This is the payoff of going through the trouble of proving the existence of pullbacks of hypotheicals: we took care in finding canonical definitions of the objects used in the dynamic programming so that we could reveal the satisfying (to us) fact that, structurally, from an algorithmic point of view, there is no distinction between $\exists$-FO and full FO (despite the latter being much more complicated). 
+}
+
+\body{
+    The arguments we employed to establish the algorithm for $\exists$-FO used \textit{no special property of assignments and hypotheses} except for:\vspace{-0.5em}
+    \begin{enumerate}
+        \item the existence of an induced-object construction,\vspace{-0.5em}
+        \item functorial projections to the bags,\vspace{-0.5em}
+        \item pullbacks for combining compatible local states,\vspace{-0.5em}
+        \item the fact that the collection of states on each bag has size bounded by the parameter.\vspace{-0.5em}
+    \end{enumerate}
+    All the machinery we built so far established the corresponding ingredients for strategies and hypotheticals. Consequently, once we define supported hypotheticals and write down the corresponding supportedness recurrence, the algorithm of Theorem~\ref{thm:exists-fo} can be lifted to the full FO model checking case by employing the dictionary we gave earlier in Table~\ref{tab:existential-to-full-fo}.
+}
+
+\body{
+    Now, we will fill-in the only two missing points: supported hypotheticals (third from bottom in Table~\ref{tab:existential-to-full-fo}) and their corresponding ``head condition'' (last in Table~\ref{tab:existential-to-full-fo}). We will deliberately follow the structure of Paragraph~\ref{para: def: supported hypoethis} so that the analogy is unmistakable. Let $\Ta=(T,\{G_a\},\{g_t^e\})$ be a rooted co-decomposition, $i$ be a node threin, and $\pi_i\colon G[i]\rightarrow G_i$ be the canonical projection from the partial limit at $i$ to its root bag. We say that an $m$-hypothetical $\mathbb{H}_i\in\cat{HTh}_m(G_i,\beta_i)$ is \define{supported at $i$} if $\mathbb{H}_i=(\pi_i)_*(S[G[i]])$ for some $m$-strategy $S\in\cat{Strat}_m(G[i],\beta)$, where $\beta$ projects to $\beta_i$. Given an $m$-strategy $S_i\in\cat{Strat}_m(G_i,\beta_i)$, the \define{supported hypotheticals for $S_i$} are those supported hypotheticals whose underlying strategy is $S_i$. Again, as was the case for $\exists$-FO, what is important is which hypotheticals are supported at the root. This is the following lemma.
+}
+
+\begin{lemma}[Analogue of Lemma~\ref{lemma: support at root is enough}]\label{lemma: satisfiability at root main}
+    Take an FO-formula $\phi = \forall x_1 \exists y_1, \dots, \forall x_\ell \exists y_\ell \psi(\vec{x}, \vec{y})$ in alternating prenex form over a signature $\sigma$ and consider a tree co-decomposition $\Ta$ rooted at some node~$r$. Then $\lim \Ta \models \phi$ if and only if there is a supported $\ell$-hypothetical $\mathbb{H}$ ar $r$ such that the head of every hypothesis occurring in a $0$-hypothetical of $\mathbb{H}$ satisfies $\phi$.   
+\end{lemma}
+\begin{proof}
+    Thinking of satisfaction as a game between a universal player and an existential player, $\lim \Ta \models \phi$ if and only if there is a there is an $\ell$-strategy $S$ on $\lim \Ta$ such that every hypothesis in the hypothetical $S[\lim \Ta]$ induced on $\lim \Ta$ has head satisfying $\phi$. Since $G[r] \cong \lim \Ta$, the supported hypotheticals at the root $r$ are precisely the projections of these induced hypotheticals to the bag $G_r$. Since projection doesn't change the heads of hypotheses, the result follows.  
+\end{proof}
+
+\begin{observation}
+    \label{prop: computing supported hypotheticals}
+    The dynamic programming recurrences of Lemmas~\ref{lem:running_env} and~\ref{lem:two_children} remain valid for supported hypotheticals under the dictionary of Table~\ref{tab:existential-to-full-fo}. In particular, the supported hypotheticals at every node can be computed bottom-up using only projections, the canonical comparison maps $S[f]\colon f_*(S[G])\longrightarrow f_*(S)[H]$, and pullbacks in the total category of hypotheticals.
+\end{observation}
+
+\body{
+    The proof of the above observation is the same as in the existential case, so we just sketch it. To see that it does indeed hold, notice that at a leaf, supported hypotheticals are simply induced hypotheticals on the bag. At an internal node, one combines the supported hypotheticals coming from the relevant subtree or subtrees with compatible local strategies on the current bag, using the canonical comparison maps $S[f]$ to situate the resulting induced hypotheticals over the appropriate adhesion and then taking their pullback in $\cat{HTh}_m^\sigma$. (This is exactly what we did in the case of hypotheses.) The universal property of these pullbacks gives exactly the hypotheticals arising from strategies on the corresponding partial limit. Thus the bottom-up recurrence of \cref{lem:running_env,lem:two_children} carries over verbatim.
+}
+
+
+\begin{lemma}\label{lem: bounded hypothetical state space}
+    For fixed signature $\sigma$, formula $\phi$, and width $w$, the number of reduced hypotheticals that can occur over a bag of size at most $w$ is bounded by a function of $w$ and $|\phi|$.
+\end{lemma}
+
+\body{
+    \cref{lem: bounded hypothetical state space} follows directly from the recursive definition using \textit{reduced} families. Perhaps more interesting is to see explicitly just how horrible the explicit value of the above bound can get. At each internal node, we may need to consider every pair of supported hypotheticals arising from the relevant child tables. Thus, if $h_\ell$ bounds the number of reduced $\ell$-hypotheticals stored at any bag, then the number of candidate pairs considered at a node is at most $h_\ell^2.$ If $\mathsf{compPB}(w,|\phi|)$ denotes an upper bound on the time required to compute and reduce a single pullback of hypotheticals over bags of width at most $w$, then the work performed at each node is bounded by $O\!\left(h_\ell^2\,\mathsf{compPB}c_{\mathrm{pb}}(w,|\phi|)\right)$. Thus, over a co-decomposition with $b$ bags, the total running time is bounded by $O\!\left( b\,h_\ell^2\,c_{\mathrm{pb}}(w,|\phi|) \right)$. Of course, the worst term is $h_\ell$ which, staring at the recursive definition of hypotheticals, amounts to: 
+\[
+    h_\ell
+    \leq
+    \underbrace{
+    2^{\,w\,2^{\,w\,2^{\,w\,2^{\cdots^{\,w\,2^{\,w\,2^{2^q}}}}}}}
+    }_{2\ell+2\text{ exponential layers}},
+    \quad \text{where} \quad 
+    q:=\sum_{R\in\sigma}(2\ell)^{\operatorname{ar}(R)}.
+\]
+}\label{para: explicit bounds}
+
+\begin{proof}[Proof of Theorem~\ref{thm: FO model checking on codecompositions}]
+    Put $\phi$ into alternating prenex normal form and process the co-decomposition from the leaves towards the root, maintaining at each node the reduced supported hypotheticals. By Proposition~\ref{prop: computing supported hypotheticals}, these tables are computed by exactly the same bottom-up procedure as the supported-hypothesis tables of Theorem~\ref{thm:exists-fo}, replacing hypotheses by hypotheticals and taking the corresponding pullbacks in $\cat{HTh}_m^\sigma$.
+
+    By Lemma~\ref{lem: bounded hypothetical state space}, the number and size of the reduced hypotheticals considered at any one node are bounded by a function of $w$ and $|\phi|$. Since each node is processed once, the total running time is $f_\sigma(w,|\phi|)\cdot b.$ Finally, at the root we apply Lemma~\ref{lemma: satisfiability at root main} and accept when there is a supported hypothetical all of whose leaf hypotheses satisfy the quantifier-free part of $\phi$.
+\end{proof}

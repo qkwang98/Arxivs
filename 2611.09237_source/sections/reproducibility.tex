@@ -1,0 +1,72 @@
+\section{Finite certificates and reproducibility}\label{sec:reproducibility}
+
+The type~A proof and the type~D incidence construction have no finite enumeration as a mathematical premise. The arbitrary-type torsion theorem uses the bounded inputs of Proposition~\ref{tor:certificates}, after the geometric Levi reduction. The supplied programs reconstruct these inputs from the simple reflections using the Python standard library and exact integer arithmetic. The optional type~A diagnostics are finite corroboration of the geometric proof, not a substitute for it or a formal proof certification.
+
+\subsection{The finite inputs}
+For each element $w$ of a bounded Weyl group, choose one reduced word $Q_w$. One word suffices: every local ring needs one suitable regular proper birational source, not a degree bound for every reduced expression. Its full vertex-divisor column set is
+\[
+ E(Q_w,u)=\{j:\Dem(Q_w\text{ with position }j\text{ deleted})=u\}.
+\]
+Empty-column cases are covered by Theorem~\ref{tor:degrees} and Lemmas~\ref{tor:fibre}--\ref{tor:columns}.
+
+Breadth-first enumeration in the simple-root reflection matrices constructs the entire group and a first-arrival reduced word for every element. Closure under all simple generators and the expected group order are checked. Every single deletion is evaluated with the Demazure rule and every witness mask with ordinary multiplication. The program retains the literal integer simple-root coordinates of the boundary-character differences from Proposition~\ref{tor:mask-degrees}.
+
+For a pair of gap $d$, a mask ending at $u$ can omit at most $d$ letters: the length of its selected word is at least $\ell(u)$. The parity of the number omitted equals the parity of $d$. This proves the finite mask bound used in the reconstruction; it is not a heuristic truncation. Each witness minor uses every exceptional column and distinct legal row indices. Extended Euclid supplies explicit integral B\'ezout coefficients for the retained maximal minors, and the program checks the resulting identities.
+
+\begin{table}[htbp]
+\centering
+\small
+\begin{tabular}{lrrl}
+\toprule
+Type and gap & Group order & Centre pairs & Result\\
+\midrule
+$A_3$, gap $3$ & $24$ & $1$ & primitive\\
+$B_3$, gap $3$ & $48$ & $12$ & all primitive\\
+$C_3$, gap $3$ & $48$ & $12$ & eleven primitive; one gcd $2$\\
+$C_2$, gap $2$ & $8$ & $3$ & two primitive; one gcd $2$\\
+$F_4$, gap $4$ & $1152$ & $567$ & all primitive\\
+$G_2$, gap $3$ & $12$ & $0$ & empty-column case\\
+\bottomrule
+\end{tabular}
+\caption{The complete bounded inputs reconstructed by the supplied verifier. Pair counts concern nonempty exact-column sets at the indicated gap. The word argument in Proposition~\ref{tor:exceptional} proves the absence of $G_2$ columns at every gap at least three.}
+\label{tab:certificate-summary}
+\end{table}
+
+For both $B_3$ and $C_3$ there are $199$ exact-centre pairs in total: $138$ of gap one, $49$ of gap two, and $12$ of gap three. Thus the exceptional pairs of gap at least two number $61$. The distinction is relevant to coverage even though the theorem uses only the specified dimensional inputs. The final simple roots are $e_3$ and $2e_3$, respectively; sharing an abstract Weyl group does not permit sharing their character matrices.
+
+In $F_4$, the complete $567$ gap-four centre pairs comprise $497$ one-column, $49$ two-column, and $21$ three-column cases. The program enumerates all centres directly from the simple reflections and reconstructs every endpoint, character row, exact-column set, determinant, and B\'ezout identity. The resulting witnesses cover all $567$ cases.
+
+A second implementation acts on explicit Euclidean root sets by permutations. Without importing the Cartan-matrix implementation, it checks word lengths by positive-root inversion counts, recomputes the complete deletion-centre sets and all stored character witnesses, and evaluates the witness determinants by the Leibniz formula. This supplies an independent check on the root-length conventions and the certificate calculations.
+
+Containment of the witness rows in the actual integral curve-degree lattice, proved in Proposition~\ref{tor:mask-degrees}, is sufficient. Generation of the whole degree lattice is unnecessary. A primitive full-column submatrix forces the ramification congruences. For a general full-rank matrix, the maximal-minor gcd is the product of the nonzero Smith invariants, not necessarily the largest invariant. In these certificates the primitive cases have gcd one; the nonprimitive cases have a single column with gcd two. The verifier uses precisely those justified conclusions.
+
+\subsection{Files and reproduction}
+The programs, exact certificates, and execution records are available among the ancillary files of this arXiv version. Downloading the complete article source preserves their directory structure and their correspondence with the manuscript. The \texttt{anc/} directory contains \texttt{README.md}, the certificates in \texttt{generated/}, and the following entry points:
+\begin{center}
+\small
+\begin{tabular}{@{}ll@{}}
+\toprule
+File in \texttt{anc/} & Purpose\\
+\midrule
+\texttt{verify\_all.py} & Run all required checks\\
+\texttt{verify\_torsion\_certificates.py} & Reconstruct the exact certificates\\
+\texttt{verify\_root\_permutations.py} & Check with explicit root permutations\\
+\bottomrule
+\end{tabular}
+\end{center}
+
+Python~3.10 or later and its standard library suffice. From the source-package root, use the first command for the required checks and the second to include the optional type~A diagnostics:
+\begin{quote}
+\small
+\begin{verbatim}
+python anc/verify_all.py
+python anc/verify_all.py --extended
+\end{verbatim}
+\end{quote}
+The default run reconstructs all six rows of Table~\ref{tab:certificate-summary}, compares the supplied JSON with the reconstruction, independently checks the root-permutation witnesses, and checks the type~D sample identities. Any failed check gives a nonzero exit status. Success ends with \mbox{\texttt{ALL REQUESTED CHECKS PASSED.}} The certificate manifest separately checks file identities.
+
+Measured in a fresh standard-library virtual environment on Linux with CPython~3.12.14 and an AMD EPYC~9V74 processor, the default and extended runs took $2.3$ and $33.3$ seconds, respectively. These single-run wall-clock measurements, together with the environment details, individual timings, and complete outputs, are recorded in \texttt{anc/verification\_results/}.
+
+The extended run checks $417$ filtered-maximum instances in $S_6$, $4{,}998$ in $S_7$, and, in $S_6$, $347{,}542$ horizontal-incidence comparisons against an independent bipartite matching algorithm, $29{,}968$ greedy lifts, and $4{,}096$ complete horizontal-prefix witnesses. These bounded checks do not establish the arbitrary-rank theorem; the coordinate and divisor proofs in Section~\ref{sec:type_a} do that.
+
+All arbitrary-rank and field-extension quantifiers come from the geometric arguments. In particular, the type~C scalar-Veronese identification uses the actual Lagrangian graph model and the equivariant induction. It is not inferred from a Smith invariant equal to two. Likewise, the $D$-family dimension, canonical degree, and Hilbert-series identities are proved algebraically for every parameter in Section~\ref{sec:type-d}; the finite sample checks serve only to detect transcription errors.

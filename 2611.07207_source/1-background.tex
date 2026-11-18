@@ -1,0 +1,368 @@
+\section{Background}
+\label{Sect:Background}
+
+We assume familiarity with symmetric monoidal categories (see~\cite{MacLane2010}) and introductory functional analysis (see~\cite{Hall2015}).
+Given a functor $F: \mathcal{C} \to \mathcal{D}$, we write $\Ob( F )$ for underlying mapping on objects and $\Mor( F )$ for the underlying mapping on morphisms.
+We write $\{ X, Y, Z \}$ for the standard Pauli matrices, $\mathbb{I}_n$ for the $n \times n$ identity matrix, and $\mathbb{O}_n$ for the $n \times n$ zero matrix.
+
+\vspace{1em}
+\noindent
+\textbf{Matrix Exponentials}.
+%
+If $M$ is a matrix, then $\exp( M ) = \sum_{n=0}^{\infty} \frac{M^n}{n!}$.
+Clearly $\exp( \mathbb{O}_n ) = \mathbb{I}_n$ and $\exp( M \otimes \mathbb{I}_n ) = \exp( M ) \otimes \mathbb{I}_n$.
+If $H$ is a skew Hermitian matrix, then $U = \exp( H )$ is a unitary matrix and $H$ is a \emph{logarithm} of $U$.
+For each unitary matrix $U$, there exists a unique logarithm $H = \Log( U )$ of $U$ such that all eigenvalues of $H$ fall within $i ( -\pi, \pi ]$.
+If $H$ is an $n$-dimensional Hermitian matrix with eigenvalues $\{ \alpha_j \}_{j=1}^n$ and an associated orthonormal eigenbasis $\{ b_j \}_{j=1}^n$, then $\exp( iH ) = \sum_{j=1}^n e^{i\alpha_j} \ket{b_j} \bra{b_j}$.
+The matrix exponential enjoys several useful properties~\cite{Hall2015}.
+\begin{align}
+    &\text{If } MN = NM \text{, then } \exp( N + M ) = \exp( N ) \exp( M ).\label{Eqn:SimulDiag}
+    \\
+    &\text{If } U \text{ is unitary, then } \exp( i{U^\dagger}HU) = U^\dagger \exp( iH ) U \text{ and } \Log( i{U^\dagger}HU) = U^\dagger \Log( iH ) U.\label{Eqn:UnitaryConj}
+\end{align}
+
+\begin{figure}[t]
+    % --------------------------------------------------------
+    \begin{subfigure}[b]{0.13\textwidth}
+        \centering
+        \caption{$0: 0 \to 0$.}
+    \end{subfigure}
+    % --------------------------------------------------------
+    \begin{subfigure}[b]{0.13\textwidth}
+        \centering
+        \scalebox{0.65}{\circimg{tikz-cache/prop__wire.pdf}}
+        \vspace{-0.5em}
+        \caption{$1: 1 \to 1$.}
+    \end{subfigure}
+    % --------------------------------------------------------
+    \begin{subfigure}[b]{0.16\textwidth}
+        \centering
+        \scalebox{0.65}{\circimg{tikz-cache/prop__swap.pdf}}
+        \vspace{-0.5em}
+        \caption{$\sigma: 2 \to 2$.}
+    \end{subfigure}
+    % --------------------------------------------------------
+    \begin{subfigure}[b]{0.16\textwidth}
+        \centering
+        \scalebox{0.65}{\circimg{tikz-cache/prop__gate.pdf}}
+        \vspace{-0.5em}
+        \caption{$x: n \to m$.}
+    \end{subfigure}
+    % --------------------------------------------------------
+    \begin{subfigure}[b]{0.17\textwidth}
+        \centering
+        \scalebox{0.65}{\circimg{tikz-cache/prop__comp.pdf}}
+        \vspace{-0.5em}
+        \caption{$g \circ f: n \to m$.}
+    \end{subfigure}
+    % --------------------------------------------------------
+    \begin{subfigure}[b]{0.22\textwidth}
+        \centering
+        \scalebox{0.65}{\circimg{tikz-cache/prop__tensor.pdf}}
+        \vspace{-0.5em}
+        \caption{$f \boxtimes g: n + s \to m + t$.}
+    \end{subfigure}
+    % --------------------------------------------------------
+    \caption{A graphical language for the morphisms in $P( \Sigma )$. Two morphisms in $P( \Sigma )$ are equal if and only if their diagrams are isomorphic~\cite{Selinger2010}. A complete set of graphical rewrite rules to determine if two morphisms are isomorphic can be found in~\cite{Clement2023}.}
+    \label{Fig:Circuits}
+\end{figure}
+
+\noindent
+\textbf{Prop Categories}.
+%
+A \emph{prop category} is a strict symmetric monoidal category $( \mathcal{C}, \boxtimes, \mathbb{I} )$ in which $( \Ob( \mathcal{C} ), \boxtimes )$ is the monoid of natural numbers~\cite{MacLane1965}.
+A functor between two prop categories is a symmetric monoidal functor $F: \mathcal{C} \to \mathcal{D}$ such that $\Ob( F )( 1 ) = 1$.
+A \emph{prop signature} is a collection of symbols $\Sigma$ equipped with a domain operator $\dom: \Sigma \to \mathbb{N}$ and a codomain operator $\cod: \Sigma \to \mathbb{N}$.
+Prop signatures form a category in which the morphisms from $\Sigma$ to $\Gamma$ are the functions $\tau: \Sigma \to \Gamma$ which satisfy the equations $\dom( \tau( x ) ) = \dom( x )$ and $\cod( \tau( x ) ) = \cod( x )$ for each $x \in \Sigma$.
+The underlying signature of a prop category $\mathcal{C}$ is the prop signature $( \Mor( \mathcal{C} ), \dom, \cod )$ such that $f \in \Mor( \dom( f ), \cod( f ) )$ for each $f \in \Mor( \mathcal{C} )$.
+There exists an underlying signature functor $U: \CatProp \to \CatSig$ which sends each prop category to its underlying signature and each prop functor $F: \mathcal{C} \to \mathcal{D}$ to $\Mor( F )$.
+For each prop signature $\Sigma$, there exists a prop category $P( \Sigma )$ such that the set of morphisms in $P( \Sigma )$ is the minimal solution to the following set of equations where $( \circ )$, $( \boxtimes )$, $( 0 )$, $( 1 )$, and $( \sigma )$ are formal symbols~\cite{Clement2023}.
+\begin{itemize}
+\item \textbf{Structure}.
+      $0 \in P( \Sigma )( 0, 0 )$, $1 \in P( \Sigma )( 1, 1 )$ and $\sigma \in P( \Sigma )( 2, 2 )$.
+\item \textbf{Generators}.
+      If $x \in \Sigma$, then $g \in P( \Sigma )( \dom( x ), \cod( x ) )$.
+\item \textbf{Sequential Comp}.
+      If $f \in P( \Sigma )( n, x )$ and $g \in P( \Sigma )( x, m )$, then $( g \circ f ) \in P( \Sigma )( n, m )$.
+\item \textbf{Parallel Comp}.
+      If $f \in P( \Sigma )( n, m )$ and $g \in P( \Sigma )( s, t )$, then $( f \boxtimes g ) \in P( \Sigma )( n + s, m + t )$.
+\end{itemize}
+The identity morphisms in $P( \Sigma )$ are $1_0 = 0$ and $1_{n+1} = 1 \boxtimes 1_{n}$, and $\sigma$ is the generating permutation.
+In particular, $\sigma_{1,1} = \sigma$ and $\sigma_{1,k+1} = ( \sigma \boxtimes 1_k ) \circ ( 1 \boxtimes \sigma_{1,k} )$ defines the family of permutations which swap $1$ with $k$.
+The morphisms in $P( \Sigma )$ are subject to the following relations~\cite{Clement2023}.
+\begin{itemize}
+\item \textbf{Sequential Unitality}.
+      $1_m \circ f = f = f \circ 1_n$ for each $f: n \to m$.
+\item \textbf{Parallel Unitality}.
+      $1_0 \boxtimes f = f = f \boxtimes 1_0$ for each $f: n \to m$.
+\item \textbf{Sequential Associativity}.
+      $( h \circ g ) \circ f = h \circ ( g \circ f )$ for each $f: n \to x$ and $g: x \to m$.
+\item \textbf{Parallel Associativity}.
+      $( f \boxtimes g ) \boxtimes h = f \boxtimes ( g \boxtimes h )$ for each $f, g, h \in \Mor( P( \Sigma ) )$.
+\item \textbf{Bifunctoriality}.
+      $( k \circ h ) \boxtimes ( g \circ f ) = ( k \boxtimes g ) \circ ( h \boxtimes f )$ for each $n \xrightarrow{f} x \xrightarrow{g} m$ and $s \xrightarrow{h} y \xrightarrow{k} t$. 
+\item \textbf{Symmetry}.
+      $\sigma \circ \sigma = 1_2$ and $( f \boxtimes 1 ) \circ \sigma_{1,k} = \sigma_{1,k} \circ ( 1 \boxtimes f )$ for each $f: n \to m$.
+\end{itemize}
+Note that from the \textbf{Symmetry} relations, it is possible to derive the standard permutation relations as defined~\cite{Lafont2003}.
+Obviously, there exists an inclusion $i: \Sigma \to U( P( \Sigma ) )$ which maps each generator in $\Sigma$ to its corresponding element in the free prop.
+Moreover, $P( \Sigma )$ is free in the sense that for each $\mathcal{C} \in \Ob( \CatProp )$ and each $\tau \in \CatSig( \Sigma, U( \mathcal{C} ) )$, there exists a unique functor $F: P( \Sigma ) \to \mathcal{C}$ such that $U( F ) \circ i = \tau$~\cite{Clerc2015}.
+Concretely, $F$ is defined by the following equations where $x \in \Sigma$.
+\begin{align*}
+    F( 1 ) &= 1
+    &
+    F( \sigma ) &= \sigma
+    &
+    F( x ) &= f( x )
+    &
+    F( g \circ f ) &= F( g ) \circ F( f )
+    &
+    F( f \boxtimes g ) &= F( f ) \boxtimes F( g )
+\end{align*}
+The morphisms in $P( \Sigma )$ can be understood as circuit diagrams~\cite{Hotz1965}, as depicted in~\cref{Fig:Circuits}.
+
+\vspace{1em}
+\noindent
+\textbf{Dagger Props}.
+%
+A functor $F: \mathcal{C} \to \mathcal{C}^\textbf{op}$ is said to be \emph{involutive} if $F \circ F = 1_{\mathcal{C}}$.
+A \emph{dagger prop} is a prop category $\mathcal{C}$ with an involutive monoidal functor $\dagger: \mathcal{C} \to \mathcal{C}^{\text{op}}$.
+The application of $\dagger$ to $f \in \mathcal{C}( n, m )$ is denoted $f^\dagger \in \mathcal{C}( m, n )$.
+Since $( \dagger )$ is contravariant, then $( f \circ g )^\dagger = g^\dagger \circ f^\dagger$.
+If $f^\dagger$ is a two-sided inverse to $f$, then $f$ is \emph{unitary}.
+
+\begin{figure}[t]
+    % --------------------------------------------------------
+    \begin{subfigure}[b]{0.14\textwidth}
+        \centering
+        \scalebox{0.6}{\circimg{tikz-cache/cprop__notation.pdf}}
+        \caption{$C( f )$.}
+        \label{Fig:ControlDefn:Notation}
+    \end{subfigure}
+    % --------------------------------------------------------
+    \begin{subfigure}[b]{0.20\textwidth}
+        \centering
+        \scalebox{0.6}{\circimg{tikz-cache/cprop__id_lhs.pdf}}
+        =
+        \scalebox{0.6}{\circimg{tikz-cache/cprop__id_rhs.pdf}}
+        \caption{$C( 1 ) = 1_2$.}
+        \label{Fig:ControlDefn:Units}
+    \end{subfigure}
+    % --------------------------------------------------------
+    \begin{subfigure}[b]{0.37\textwidth}
+        \centering
+        \scalebox{0.6}{\circimg{tikz-cache/cprop__comp_lhs.pdf}}
+        =
+        \scalebox{0.6}{\circimg{tikz-cache/cprop__comp_rhs.pdf}}
+        \vspace{-0.5em}
+        \caption{$C( f \circ g ) = C( f ) \circ C( g )$.}
+        \label{Fig:ControlDefn:Composition}
+    \end{subfigure}
+    % --------------------------------------------------------
+    \begin{subfigure}[b]{0.26\textwidth}
+        \centering
+        \scalebox{0.6}{\circimg{tikz-cache/cprop__tensor_lhs.pdf}}
+        =
+        \scalebox{0.6}{\circimg{tikz-cache/cprop__tensor_rhs.pdf}}
+        \vspace{-0.5em}
+        \caption{$C( f \boxtimes 1 ) = C( f ) \boxtimes 1$.}
+        \label{Fig:ControlDefn:IdTensor}
+    \end{subfigure}
+    % --------------------------------------------------------
+    \\
+    % --------------------------------------------------------
+    \begin{subfigure}[b]{0.43\textwidth}
+        \centering
+        \scalebox{0.6}{\circimg{tikz-cache/cprop__csym_lhs.pdf}}
+        =
+        \scalebox{0.6}{\circimg{tikz-cache/cprop__csym_rhs.pdf}}
+        \vspace{0.3em}
+        \caption{$C( f ) \circ ( \sigma \boxtimes 1_n ) = ( \sigma \boxtimes 1_n ) \circ C( f )$.}
+        \label{Fig:ControlDefn:ContrlSym}
+    \end{subfigure}
+    % --------------------------------------------------------
+    \begin{subfigure}[b]{0.55\textwidth}
+        \centering
+        \scalebox{0.6}{\circimg{tikz-cache/cprop__tsym_lhs.pdf}}
+        =
+        \scalebox{0.6}{\circimg{tikz-cache/cprop__tsym_rhs.pdf}}
+        \vspace{-0.5em}
+        \caption{$( 1 \boxtimes \gamma_{n,k} ) \circ C( f ) \circ ( 1 \boxtimes \gamma_{n,k} ) = C( \gamma_{n,k} \circ f \circ \gamma_{n,k} )$.}
+        \label{Fig:ControlDefn:DataSym}
+    \end{subfigure}
+    % --------------------------------------------------------
+    \caption{The definition of a control functor stated in terms of graphical equations.}
+    \label{Fig:ControlDefn}
+\end{figure}
+
+\vspace{1em}
+\noindent
+\textbf{Controlled Props}.
+%
+If $\mathcal{C}$ is a category, then $\mathcal{C}_{\mathbf{endo}}$ denotes the subcategory of endomorphisms in $\mathcal{C}$.
+A \emph{controlled prop}~\cite{Delorme2025} is a prop category $\mathcal{C}$ with an ordinary functor $C: \mathcal{C}_{\mathbf{endo}} \to \mathcal{C}_{\mathbf{endo}}$ such that $\Ob( C )( n ) = n + 1$ and the following equations hold where $\gamma_{n,k} = 1_k \boxtimes \sigma \boxtimes 1_{n-k}$.
+\begin{enumerate}
+\item $C( f \boxtimes 1 ) = C( f ) \boxtimes 1$ for each $f \in \mathcal{C}( m, m )$ and $n \in \mathbb{N}$.
+\item $( \sigma \boxtimes 1_n ) \circ C( C( f ) ) = C( C( f ) ) \circ ( \sigma \boxtimes 1_n )$ for each $f \in \mathcal{C}( n, n )$.
+\item $( 1 \boxtimes \gamma_{n,k} ) \circ C( f ) \circ ( 1 \boxtimes \gamma_{n,k} ) = C( \rho_{n,k} \circ f \circ \gamma_{n,k} )$ for each $f \in \mathcal{C}( n + 2, n + 2 )$ and $0 \le k \le n$.
+\end{enumerate}
+A controlled prop is said to be \emph{$(u,v)$-pointed}~\cite{Delorme2025} when there exists points $u, v \in \mathcal{C}( 0, 1 )$ such that $C( f ) \circ ( u \boxtimes 1_n ) = u \boxtimes f$ and $C( f ) \circ ( v \boxtimes 1_n ) = v \boxtimes 1_n$ for each $f \in \mathcal{C}( n, n )$.
+A \emph{dagger controlled prop}~\cite{Delorme2025} is a dagger prop $( \mathcal{C}, \dagger )$ with a choice of control functor $C: \mathcal{C}_{\mathbf{endo}} \to \mathcal{C}_{\mathbf{endo}}$ satisfying the equation $C \circ \dagger = \dagger \circ C$.
+A \emph{conjugated controlled prop}~\cite{Delorme2025} is a dagger controlled prop $( \mathcal{C}, \dagger, C )$ which satisfies the equation $C( g^\dagger \circ f \circ g ) = ( 1 \boxtimes g^\dagger ) \circ C( f ) \circ ( 1 \boxtimes g )$ for each $f \in \mathcal{C}( n, n )$ and $g \in \mathcal{C}( m, n )$.
+The control functor $C( - )$ is said to be \emph{conjugated}.
+Given a prop signature $\Sigma$, it is possible to extend the construction of $P( \Sigma )$ to obtain a controlled prop $P_C( \Sigma )$.
+The morphisms in $P_C( \Sigma )$ must also satisfy the equation that $C( f ) \in P_C( \Sigma )( n + 1, n + 1 )$ for each $f \in P_C( \Sigma )( n, n )$.
+The morphisms in $P_C( \Sigma )$ are also subject to the following equations.
+\begin{itemize}
+\item \textbf{C-Functoriality}.
+      $C( 1 ) = 1_{2}$ and $C( g \circ f ) = C( g ) \circ C( f )$ for each $f: n \to n$ and $g: n \to n$.
+\item \textbf{Controlled Identity}.
+      $C( f \boxtimes 1 ) = C( f ) \boxtimes 1$ for each $f: m \to m$.
+\item \textbf{Control Symmetry}.
+      $( \sigma \boxtimes 1_n ) \circ C( C( f ) ) = C( C( f ) ) \circ ( \sigma \boxtimes 1_n )$ for each $f: n \to n$.
+\item \textbf{Data Symmetry}.
+      $( 1 \boxtimes \gamma_{n,k} ) \circ C( f ) \circ ( 1 \boxtimes \gamma_{n,k} ) = C( \gamma_{n,k} \circ f \circ \gamma_{n,k} )$ for each $f: n + 2 \to n + 2$.
+\end{itemize}
+Just as $P( \Sigma )$ is free with respect to strict monoidal functors, it is straight-forward to show that the category $P_C( \Sigma )$ is free with respect to strict monoidal functors that preserve controls.
+A graphical language for $P_C( \Sigma )$ can be found in~\cref{Fig:ControlDefn}.
+
+\vspace{1em}
+\noindent
+\textbf{Rewriting in Props}.
+%
+Let $\Sigma$ be a prop signature.
+A \emph{$\Sigma$-equation} is a pair $( f, g )$ of morphisms from $\Mor( P( \Sigma ) )$ such that $\dom( f ) = \dom( g )$ and $\cod( f ) = \cod( g )$.
+A set of $\Sigma$-equations $E$ is called a \emph{prop congruence relation} if it is transitive, reflexive, symmetric, and closed under both sequential and parallel composition.
+In particular, the following congruence conditions hold for each $f, g \in P( \Sigma )( n, m )$.
+\begin{enumerate}
+\item If $( f, g ) \in E$ with $h: s \to n$ and $k: t \to m$, then $( k \circ f \circ h, k \circ g \circ h ) \in E$.
+\item If $( f, g ) \in E$ with $h: s \to t$ and $k: x \to y$, then $( h \boxtimes f \boxtimes k, h \boxtimes g \boxtimes k ) \in E$.
+\end{enumerate}
+A set of $\Sigma$-equations $E$ from $\Mor( P_C( \Sigma ) )$ is called a \emph{controlled prop congruence relation} if it also satisfies $( C( f ), C( g ) ) \in E$ for each $( f, g ) \in E$.
+Given a set of $\Sigma$-equations $E$, there exists a minimal congruence relation $R$ such that $E \subseteq R$.
+There then exists a unique prop $P( \Sigma ) / E$ with a unique projection $\pi_E: P( \Sigma ) \to P( \Sigma ) / E$ such that the following equations hold (see~\cite{Clerc2015}).
+\begin{enumerate}
+\item $\pi_E( f ) = \pi_E( g )$ if and only if $( f, g ) \in R$.
+\item If $F: P( \Sigma ) \to \mathcal{C}$ is a prop functor and $F( f ) = F( g )$ for each $( f, g ) \in E$, then there exists a unique prop functor $F_E: P( \Sigma ) / E \to \mathcal{C}$ such that $F_E \circ \pi_E = P( F )$.
+\end{enumerate}
+This extends readily to controlled prop categories and their functors.
+The pair $( \Sigma, E )$ is said to be a \emph{prop presentation} for the class of props isomorphic to $P( \Sigma ) / E$.
+In particular, if $F: P( \Sigma ) \to \mathcal{C}$ is surjective, then a presentation for $\mathcal{C}$ is a pair $( \Sigma, E )$ such that $( f, g ) \in E$ if and only if $F( f ) = F( g )$.
+Often $E$ is called a \emph{complete equational theory} for $\mathcal{C}$ and $F$ is called a \emph{semantic interpretation} and is denoted $\sem{-}_\mathcal{C}$.
+We write $f \approx_E g$ when $( f, g )$ is in the congruence relation induced by $E$.
+
+\vspace{1em}
+\noindent
+\textbf{Euler Relations}.
+%
+The Euler relation is a complex generalization of the Euler angle decomposition for 3D-rotations, which describes how rotations on a sphere can be decomposed into rotations around any two chosen axes.
+There are many equivalent variations of this relation in the literature, varying in the choice of axes, the exact number of parameters involved, and their corresponding algebraic relations to one another.
+Use of an Euler angle relation was shown to be necessary for completeness when working with quantum circuits~\cite{Clement2024Minimal,Vilmart2021}.
+In~\cite{Delorme2025}, a certain two parameter version of the Euler relation was introduced.
+Define a function $( \beta_0, \beta_1, \beta_2, \beta_3 ) = \mathsf{Euler}( \alpha_1, \alpha_2 )$ as follows, for $\alpha_1, \alpha_2 \in \mathbb{R}$.
+\begin{equation*}
+    \begin{array}{l}
+      u := -\sin\left(\frac{\alpha_1+\alpha_2}{2}\right)+i\cos\left(\frac{\alpha_1-\alpha_2}{2}\right)\\
+      v := +\cos\left(\frac{\alpha_1+\alpha_2}{2}\right)-i\sin\left(\frac{\alpha_1-\alpha_2}{2}\right)
+    \end{array}
+\end{equation*}
+\begin{center}
+  \begin{tabular}{c|c|c|c}
+    & $\beta_1$ & $\beta_2$ & $\beta_3$ \\
+    \hline
+    if $v=0$ & $2\arg(u)$ & $0$ & $0$\\
+    \hline
+    if $u=0$ & $2\arg(v)$ & $\pi$ & $0$\\
+    \hline
+    otherwise \hspace{0.2em}&\hspace{0.2em} $\arg(u)+\arg(v)$ \hspace{0.2em}&\hspace{0.2em} $2\arg\left(i+\left\lvert\tfrac{u}{v}\right\rvert\right)$ \hspace{0.2em}&\hspace{0.2em} $\arg(u)-\arg(v)$
+  \end{tabular}
+\end{center}
+\begin{equation*}
+    \beta_0 = \frac{(\pi+\alpha_1+\alpha_2-\beta_1-\beta_2-\beta_3)}{2}
+\end{equation*}
+Then $H Z( \alpha_2 ) H Z( \alpha_1 ) H = e^{i\beta_0} Z( \beta_3 ) H Z( \beta_2 ) H Z( \beta_1 )$ where $H$ is the Hadamard gate and $Z( - )$ is the $Z$-rotation $Z( \theta ) = \exp( i \ket{0} \bra{0} \theta )$.
+It should be noted that $H Z( \theta ) H$ is an $X$-rotation, giving rise to the second axis of rotation.
+For more details about Euler relations beyond what is listed here, we refer the readers to~\cite{Vilmart2021,Clement2024Minimal,Clement2024Extensions,Delorme2025}.
+
+\begin{figure}[t]
+    \begin{framed}
+        \vspace{-1.5em}
+        \begin{align*}
+            \scalebox{0.58}{\circimg{tikz-cache/cqc__eqn1_lhs.pdf}}
+            &\overset{Q(1)}{=}
+            \scalebox{0.58}{\circimg{tikz-cache/cqc__eqn1_rhs.pdf}}
+            & % --------------------------------------------------------
+            \scalebox{0.58}{\circimg{tikz-cache/cqc__eqn2_lhs.pdf}}
+            &\overset{Q(2)}{=}
+            \scalebox{0.58}{\circimg{tikz-cache/cqc__eqn2_rhs.pdf}}
+            & % --------------------------------------------------------
+            \scalebox{0.58}{\circimg{tikz-cache/cqc__eqn3_lhs.pdf}}
+            &\overset{Q(3)}{=}
+            \scalebox{0.58}{\circimg{tikz-cache/cqc__eqn3_rhs.pdf}}
+            & % --------------------------------------------------------
+            \scalebox{0.58}{\circimg{tikz-cache/cqc__eqn4_lhs.pdf}}
+            &\overset{Q(4)}{=}
+            \scalebox{0.58}{\circimg{tikz-cache/cqc__eqn4_rhs.pdf}}
+        \end{align*}
+        \vspace{-2em}
+        \begin{align*}
+            \scalebox{0.58}{\circimg{tikz-cache/cqc__eqn5_lhs.pdf}}
+            &\overset{Q(5)}{=}
+            \scalebox{0.58}{\circimg{tikz-cache/cqc__eqn5_rhs.pdf}}
+            & % --------------------------------------------------------
+            \scalebox{0.58}{\circimg{tikz-cache/cqc__eqn6_lhs.pdf}}
+            &\overset{Q(6)}{=}
+            \scalebox{0.58}{\circimg{tikz-cache/cqc__eqn6_rhs.pdf}}
+        \end{align*}
+        \vspace{-2em}
+        \begin{align*}
+            \scalebox{0.58}{\circimg{tikz-cache/cqc__eqn7_lhs.pdf}}
+            &\overset{Q(7)}{=}
+            \scalebox{0.58}{\circimg{tikz-cache/cqc__eqn7_rhs.pdf}}
+            & % --------------------------------------------------------
+            \scalebox{0.58}{\circimg{tikz-cache/cqc__eqn8_lhs.pdf}}
+            &\overset{Q(8)}{=}
+            \scalebox{0.58}{\circimg{tikz-cache/cqc__eqn8_rhs.pdf}}
+            & % --------------------------------------------------------
+            \scalebox{0.58}{\circimg{tikz-cache/cqc__eqn9_lhs.pdf}}
+            &\overset{Q(9)}{=}
+            \scalebox{0.58}{\circimg{tikz-cache/cqc__eqn9_rhs.pdf}}
+        \end{align*}
+        \vspace{-1.5em}
+    \end{framed}
+    \caption{A known equational theory~\cite{Delorme2025} for the category of controlled quantum circuits, where $\alpha, \alpha_1, \alpha_2 \in \mathbb{R}$ and $( \beta_0, \beta_1, \beta_2, \beta_3 ) = \mathsf{Euler}( \alpha_1, \alpha_2 )$.}
+    \label{Fig:CQCEqnTheory}
+\end{figure}
+
+\vspace{1em}
+\noindent
+\textbf{Quantum Control}.
+%
+Let $\CatUnitary$ denote the prop category of unitary matrices and $\{ \ket{0}, \ket{1} \}$ denote the computational basis for $\mathbb{C}^2$.
+It is well known that $\CatUnitary$ is a dagger prop with $\dagger: \CatUnitary \to \CatUnitary^\text{op}$ sending each matrix $U$ to its conjugate transpose $U^\dagger$.
+For each $d \in \mathbb{N}$, there is a prop subcategory $\CatUnitary_d$ of $\CatUnitary$ such that $\CatUnitary_d( n, n ) = \CatUnitary( d^n, d^n )$.
+It was shown in \cite{Delorme2025} that $C( f: n \to n ) = \ket{0} \bra{0} \otimes \mathbb{I}_n + \ket{1} \bra{1} \otimes f$ is a conjugated control functor for $\CatUnitary_2$ with points $( \ket{0}, \ket{1} )$.
+It was further shown that $\CatUnitary_2$ admits a controlled prop presentation $\CatCQC$ with generators
+$   \Sigma_{\CatCQC}
+    =
+    \{
+        % \scalebox{0.65}{\begin{quantikz} & \gate{H} & \end{quantikz}}
+        \scalebox{0.65}{\circimg{tikz-cache/main-figure0.pdf}}
+    \} \cup \{
+        % \scalebox{0.65}{\begin{quantikz} \gate{\alpha} \end{quantikz}}
+        \scalebox{0.65}{\circimg{tikz-cache/main-figure1.pdf}}
+        :
+        \alpha \in \mathbb{R}
+    \}
+$
+and relations $Q$ as depicted in~\cref{Fig:CQCEqnTheory}.
+The semantic interpretation for this theory is generated by 
+$\sem{
+% \scalebox{0.65}{\begin{quantikz} & \gate{H} & \end{quantikz}}
+\scalebox{0.65}{\circimg{tikz-cache/main-figure2.pdf}}
+}_C = H$
+and 
+$\sem{
+% \scalebox{0.65}{\begin{quantikz} \gate{\alpha} \end{quantikz}}
+\scalebox{0.65}{\circimg{tikz-cache/main-figure3.pdf}}
+}_C = e^{i\alpha}$ where $H$ is the Hadamard matrix. 

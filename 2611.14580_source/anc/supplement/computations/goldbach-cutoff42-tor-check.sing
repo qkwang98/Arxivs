@@ -1,0 +1,67 @@
+// Run with Singular -q goldbach-cutoff42-tor-check.sing.
+// The second presentation of J is independently verified by toric
+// elimination in the manuscript supplement's goldbach-cutoff42-primary.sing.
+
+proc sameIdeal(ideal A, ideal B)
+{
+    return(size(ideal(reduce(A,std(B))))==0
+        && size(ideal(reduce(B,std(A))))==0);
+}
+proc requireRegular(ideal K, poly f)
+{
+    if (!sameIdeal(quotient(K,ideal(f)),K)) {ERROR("expected regular element");}
+}
+proc requireSocle(ideal K)
+{
+    if (sameIdeal(quotient(K,maxideal(1)),K)) {ERROR("expected nonzero socle");}
+}
+proc verifyTorDepth(int ch)
+{
+    ring R=ch,(x3,x5,x7,x11,x13,x17,x19,x23,x29,x31,x37,x41),dp;
+    intvec primes=3,5,7,11,13,17,19,23,29,31,37,41;
+    ideal I=0;
+    int i,j,n;
+    poly anchor,pair;
+    for (n=6;n<=82;n=n+2) {
+        anchor=0;
+        for (i=1;i<=size(primes);i++) {
+            for (j=i;j<=size(primes);j++) {
+                if (primes[i]+primes[j]==n) {
+                    pair=var(i)*var(j);
+                    if (anchor==0) {anchor=pair;}
+                    else {I=I,anchor-pair;}
+                }
+            }
+        }
+    }
+    ideal J=I,x13*x37^2-x5*x41^2,x19*x37^2-x11*x41^2,
+        x31^3-x11*x41^2,x31^2*x37-x17*x41^2,x29*x37^2-x31^2*x41,
+        x31*x37^2-x23*x41^2,x37^3-x29*x41^2;
+    ideal C=I,x3;
+    if (!sameIdeal(quotient(I,ideal(x3)),J)) {ERROR("incorrect colon");}
+
+    requireRegular(I,x37);
+    ideal G1=I,x37;
+    requireRegular(G1,x3+x41);
+    ideal G2=G1,x3+x41;
+    requireSocle(G2);
+    // The quotient by two regular linear forms agrees with the
+    // coordinate line x31 in all ordinary degrees >= 3.
+    ideal P=x3,x5,x7,x11,x13,x17,x19,x23,x29,x37,x41;
+    if (size(ideal(reduce(G2,std(P))))!=0) {ERROR("quotient not on coordinate line");}
+    if (size(ideal(reduce(maxideal(2)*P,std(G2))))!=0) {ERROR("torsion survives in length three");}
+    requireRegular(J,x3);
+    ideal T1=J,x3;
+    requireSocle(T1);
+
+    ideal socle=x5*x7,x5*x13,x5*x19,x5*x23,x7*x23,x5*x31;
+    if (!sameIdeal(quotient(C,maxideal(1)),C+socle)) {ERROR("incorrect slice socle");}
+    for (i=1;i<=6;i++) {
+        if (reduce(socle[i],std(C))==0) {ERROR("vanishing socle representative");}
+    }
+    print("PASS char "+string(ch)+": depths G,T,C = 2,1,0; projective dimensions = 10,11,12.");
+    print("Six C socle classes, of length 2 and weights 12,18,24,28,30,36.");
+}
+verifyTorDepth(0);
+verifyTorDepth(2);
+quit;

@@ -1,0 +1,281 @@
+\section{NP-hardness for \pname{$(s,t)$-Path}}\label{sec: hardness}
+\body{
+    Throughout this paper, a co-decomposition is treated as the input object. That is, when we are given a tree co-decomposition $\mathcal T$, we are not also given its limit $\lim \mathcal T$. The limit is, of course, determined by $\mathcal T$, but it may be much larger than the data specifying $\mathcal T$: if the co-decomposition has $b$ bags of width at most $k$, then the vertex set of the limit may have size on the order of $k^b$. Thus, any algorithm which constructs the limit is not polynomial in the size of the co-decomposition, even if it is polynomial in the size of the limit.\label{para:bags-width-size}
+}
+
+\body{
+    This distinction has computational consequences. For a given graph $G$, it is well-known that deciding whether there is an $s$-to-$t$ path is polynomial-time computable. However, when $G$ is given only \textit{implicitly}, as the limit of a co-decomposition, the vertices $s$ and $t$ are themselves matching families, and an $s$-to-$t$ path is a global sequence of compatible local moves across all bags. The purpose of this section is to show that, when the input consists only of a tree co-decomposition together with two vertex matching families, deciding whether these vertices are connected by a path in the limit is \textsf{NP}-hard. In contrast, later in the paper we show that subgraph isomorphism, and more generally first-order model checking, is fixed-parameter tractable when parameterized by tree co-width and linear in the number of bags. Since $(s,t)$-path is not FO-expressible, there is a sense in which this section demonstrates the algorithmic tightness of our algorithmic meta-theorems. 
+}
+
+
+\body{
+  Towards our hardness result, we reduce from \pname{Exact Cover By 3-Sets} (\pname{X3C}) \cite{garey2002computers}, where, given a ground set $U$ and a family of triples $\mathcal{S}\subseteq {U\choose 3}$ covering $U$, one must decide if
+  there exists some $\mathcal{S}' \subseteq \mathcal{S}$ that partitions $U$. For
+  simplicity, let $(U, \mathcal{S})$ be our input instance with $U = \{u_1, \dots,
+  u_n\}$, and $\mathcal{S} = \{S_1, \dots, S_m\}$.
+}
+
+\body{
+  Construct a tree co-decomposition $\mathcal{T} = (T, \{G_a\}, \{g_t^{e}\})$ from
+  $(U, \mathcal{S})$ as follows (c.f.  \cref{fig:path_hardness}): (i) $T$ is a star with $V(T) = \{{v_0}, {v_1}, \dots,
+  {v_n}\}$ and $E(T) = \{{e_1}, \dots, {e_n}\}$, with ${v_0}$ being the
+  central node, and ${e_i}$ the edge between ${v_0}$ and ${v_i}$; (ii) $G_{v_0}$
+  is a tournament on the vertex set $\{\xmark_0, s_1, \dots, s_m,
+  \mycmark_0\}$  obtained as the transitive closure of $\xmark_0\to s_1\to s_2\to\ldots\to s_n\to\mycmark_0$; (iii) the other bags $G_{v_i}$ are isomorphic to one another, and have $V(G_{v_i}) = \{\xmark_i,
+  x_i, y_i, z_i, \mycmark_i\}$ and $E(G_{v_i}) = \{(\xmark_i, x_i), (\xmark_i, y_i),
+  (x_i, x_i), (y_i, z_i), (y_i, \mycmark_i), (z_i, z_i), (z_i, \mycmark_i)\}$; (iv) each
+  adhesion $G_{e_i}$ is the graph with vertex set $\{\alpha_i, \beta_i,
+  \gamma_i\}$ and the arcs $\{(\alpha_i,\alpha_i),(\alpha_i,\beta_i),(\alpha_i,\gamma_i),(\beta_i,\alpha_i)\}$; (v) for each $u_i \in U$ we define
+  $g_{v_i}^{{e_i}}$ by $(g_{v_i}^{{e_i}})^{-1}(\alpha_i) = \{\xmark_i, x_i, z_i\}$,
+  $(g_{v_i}^{{e_i}})^{-1}(\beta_i) = \{y_i\}$, and $(g_{v_i}^{{e_i}})^{-1}(\gamma_i) =
+  \{\mycmark_i\}$; (vi) for each $S_j \in \mathcal{S}$ and each $u_i \in U$, we set:\vspace{-1.5em}
+
+  \[
+    g_{v_0}^{e_i}(s_j)
+    =
+    \begin{cases}
+      \alpha_i & \text{if $u_i \notin S_j$},\\
+      \beta_i & \text{if $u_i \in S_j$};
+    \end{cases}\vspace{-.3em}
+  \]
+
+  (vii) set $g_{v_0}^{e_i}(\xmark_0) = \alpha_i$ and $g_{v_0}^{e_i}(\mycmark_0) =
+  \{\gamma_i\}$; (viii) finally, we write $\vec{\xmark} := (\xmark_0, \dots, \xmark_n)$ and $\vec{\mycmark} := (\mycmark_0,
+  \dots, \mycmark_n)$, which will be the start and destination for our path.
+}
+
+\begin{figure}
+  \centering
+  \newcommand{\cyscale}{0.7}
+  \begin{tikzpicture}[>=Latex]
+    \tikzset{
+      VertexStyle/.style={
+        shape=circle,
+        draw=black,
+        fill=black,
+        minimum size=5pt,
+        inner sep=0pt
+      },
+      graphbox/.style={
+        draw,
+        rounded corners=8pt,
+        inner sep=8pt
+      },
+      mapbox/.style={
+        draw,
+        dashed,
+        rounded corners=6pt,
+        inner sep=5pt,
+        align=center
+      },
+      perfect loop/.style 2 args={to path={
+          arc[start angle=#1-180, end angle=#1+180, radius=#2] \tikztonodes
+      }},
+      functional graph/v label pos/.store in=\fgVLabelPos,   functional graph/v label pos=45,
+      functional graph/loop dir/.store in=\fgLoopDir,       functional graph/loop dir=180,
+      functional graph/id/.store in=\fgId,                 functional graph/id=1,
+      functional graph/bend dir/.store in=\fgBendDir,       functional graph/bend dir=right,
+      functional graph/.pic={
+        \begin{scope}[local bounding box=-bbox,yscale=0.8]
+
+          % Define vertices using standard names appended with the explicit ID parameter (\fgId)
+          \Vertex[x=0, y=0,  Math, Lpos=90,           L={\protect\xmark_{\fgId}}]{mark\fgId}
+          \Vertex[x=0, y=-1, Math, Lpos=\fgVLabelPos, L={x_{\fgId}}]{x\fgId}
+          \Vertex[x=0, y=-2, Math, Lpos=\fgVLabelPos, L={y_{\fgId}}]{y\fgId}
+          \Vertex[x=0, y=-3, Math, Lpos=-\fgVLabelPos, L={z_{\fgId}}]{z\fgId}
+          \Vertex[x=0, y=-4, Math, Lpos=-90,          L={\protect\mycmark_{\fgId}}]{c\fgId}
+
+          % Internal connections reference the exact same ID-suffixed nodes
+          \Edge[style={->}](mark\fgId)(x\fgId)
+          \Edge[style={->, bend \fgBendDir=60}](mark\fgId)(y\fgId)
+          \Edge[style={perfect loop={\fgLoopDir}{0.2cm}}](x\fgId)(x\fgId)
+          \Edge[style={->}](x\fgId)(y\fgId)
+          \Edge[style={->}](y\fgId)(z\fgId)
+          \Edge[style={->, bend \fgBendDir=60}](y\fgId)(c\fgId)
+          \Edge[style={perfect loop={\fgLoopDir}{0.2cm}}](z\fgId)(z\fgId)
+          \Edge[style={->}](z\fgId)(c\fgId)
+
+          \node (extra10) at ($(mark\fgId)+(0.5,0.5)$) {};
+          \node (extra11) at ($(c\fgId)-(0.5,0.5)$) {};
+
+          \node[
+            graphbox,
+            fit=(mark\fgId)(x\fgId)(y\fgId)(z\fgId)(c\fgId)(extra10)(extra11),
+            label=south:$G_{v_{\fgId}}$
+          ] (Gv\fgId) {};
+
+        \end{scope}
+      },
+      adhesion graph/alpha label pos/.store in=\agAlphaLabelPos,
+      adhesion graph/alpha label pos=135,
+      adhesion graph/beta label pos/.store in=\agBetaLabelPos,
+      adhesion graph/beta label pos=0,
+      adhesion graph/loop dir/.store in=\agLoopDir,       adhesion graph/loop dir=90,
+      adhesion graph/id/.store in=\agId,                 adhesion graph/id=1,
+      adhesion graph/bend dir/.store in=\agBendDir,       adhesion graph/bend dir=right,
+      adhesion graph/.pic={
+        \begin{scope}[local bounding box=-bbox]
+
+          % Vertices ordered by their unique topological sequence: alpha, beta, gamma
+          \Vertex[x=0, y=0,  Math, Ldist=4pt,Lpos=\agAlphaLabelPos, L={\alpha_{\agId}}]{alpha\agId}
+          \Vertex[x=0, y=-1, Math, Ldist=4pt,Lpos=\agBetaLabelPos, L={\beta_{\agId}}]{beta\agId}
+          \Vertex[x=0, y=-2, Math, Lpos=-90, L={\gamma_{\agId}}]{gamma\agId}
+
+          % --- Arcs for the Transitive Tournament ---
+          \Edge[style={->}](alpha\agId)(beta\agId)
+          \Edge[style={->}](beta\agId)(gamma\agId)
+          \Edge[style={->, bend \agBendDir=30}](alpha\agId)(gamma\agId)
+
+          % --- Extra Specified Adhesion Arcs ---
+          % Self loop on alpha: (\alpha_i, \alpha_i)
+          \Edge[style={perfect loop={\agLoopDir}{0.2cm}}](alpha\agId)(alpha\agId)
+
+          % Backward edge: (\beta_i, \alpha_i)
+          % Using a bend to avoid overlapping the forward (alpha -> beta) straight line
+          \Edge[style={->, bend \agBendDir=45}](beta\agId)(alpha\agId)
+
+          % Bounding adjustments matching the architectural style
+          \node (extra10) at ($(alpha\agId)+(0.5,0.5)$) {};
+          \node (extra11) at ($(gamma\agId)-(0.5,0.5)$) {};
+
+          % Outer bounding box frame with dynamic label matching G_{e_i}
+          \node[
+            graphbox, dashed,
+            fit=(alpha\agId)(beta\agId)(gamma\agId)(extra10)(extra11),
+            label=south:$G_{e_{\agId}}$
+          ] (Ge\agId) {};
+
+        \end{scope}
+      }
+    }
+    \SetVertexLabelOut
+    
+    \begin{scope}[yshift=-0.5cm,yscale=\cyscale]
+      \Vertex[x=0,y=0,Math,Lpos=90,L={\protect\xmark_0}]{mark0}
+      \Vertex[x=0,y=-1,Math,Lpos=135,L={s_1}]{s1}
+      \Vertex[x=0,y=-2,Math,Lpos=-45,L={s_2}]{s2}
+      \Vertex[x=0,y=-3,Math,Lpos=-90,L={\protect\mycmark_0}]{c0}
+
+      \Edge[style={->}](mark0)(s1)
+      \Edge[style={->}](s1)(s2)
+      % \Edge[style={->, bend right=60,opacity=0.2}](mark0)(s2)
+      % \Edge[style={->, bend left=60,opacity=0.2}](s1)(c0)
+      \Edge[style={->}](s2)(c0)
+      \node (extra00) at ($(mark0)+(0.5,0.5)$) {};
+      \node (extra01) at ($(c0)-(0.5,0.5)$) {};
+
+      \node[
+        graphbox,
+        fit=(mark0)(s1)(s2)(c0)(extra00)(extra01),
+        label=south:$G_{v_0}$
+      ] (Gv0) {};
+    \end{scope}
+
+    
+
+    \begin{scope}[xshift=-7cm,yscale=\cyscale]
+      \pic at (0,0) [functional graph/id=1] {functional graph};
+    \end{scope}
+    
+    
+    \begin{scope}[xshift=-3.5cm,yshift=-1cm,yscale=\cyscale]
+      \pic at (0,0) [adhesion graph/id=1, adhesion graph/alpha label pos=45] {adhesion graph};
+    \end{scope}
+    
+    
+    \begin{scope}[xshift=3.5cm,yshift=-1cm,yscale=\cyscale]
+      \pic at (0,0) [adhesion graph/id=2, adhesion graph/alpha label pos=135, adhesion graph/beta label pos=180,adhesion graph/bend dir=left] {adhesion graph};
+    \end{scope}
+
+    \begin{scope}[xshift=7cm,yscale=\cyscale]
+      \pic at (0,0) [functional graph/id=2, functional graph/bend dir=left, functional
+      graph/loop dir=0, functional graph/v label pos=135] {functional graph};
+    \end{scope}
+
+    \Edge[style={color=goodred}](mark0)(alpha1)
+    \Edge[style={color=goodred}](mark0)(alpha2)
+    
+    \Edge[style={color=goodblue,bend right=20}](s1)(beta1)
+    \Edge[style={color=goodblue,bend left=20}](s1)(beta2)
+    
+    \Edge[style={color=goodblue,bend left=20}](s2)(beta1)
+    \Edge[style={color=goodred,bend right=10}](s2)(alpha2)
+    
+    \Edges[style={color=goodgreen}](c1,gamma1,c0,gamma2,c2)
+
+    \foreach \i in {1,2} {
+        \Edge[style={color=goodred}](mark\i)(alpha\i)
+        \Edge[style={color=goodred}](x\i)(alpha\i)
+
+        \Edge[style={color=goodblue}](y\i)(beta\i)
+
+        \Edge[style={color=goodred}](z\i)(alpha\i)
+    }
+    
+
+  \end{tikzpicture}
+  \vspace{-1em}
+  \caption{Part of the constructed co-decomposition for a \pname{X3C} instance with $\{1,2\} \subset S_1$ and $\{1,3\} \subset S_2$, with some arcs in $G_{v_0}$ omitted for clarity. The coloured edges represent the adhesion mappings: red edges are incident to vertices that, when swapped into the matching family, indicate that the corresponding element is not covered by the set vertex; blue edges are incident to vertices that correspond to element-covering swaps; the green edges are incident to the vertices of the bags that, together, form the target matching family.}
+  \label{fig:path_hardness}
+\end{figure}
+
+\body{
+  Intuitively, we see this as a reconfiguration problem in the co-decomposition,
+  where selecting a set of $\mathcal{S}$ equates with moving one token in
+  each bag of $\mathcal{T}$: upon picking $S_j$, the token on $G_{v_0}$ goes from its
+  previous vertex to $s_j$, which forces a token movement in $G_{v_i}$ to either $x_i$
+  (if $u_i \notin S_j$ and $u_i$ has not been covered), $z_i$ (if $u_i$ has already been
+  covered by another $S_r$), or $y_i$ (if $u_i$ is being covered by $S_j$). The adhesions
+  and homomorphisms are constructed so as to impede the re-covering of any $u_i$. The following completes the proof of Theorem~\ref{thm: s-t path hardness}: given only a co-decomposition and two of its matching families, \pname{$(s,t)$-Path} is $\np$-hard.
+}
+
+\begin{proposition}\label{prop:path_equivalence}\vspace{-.05cm}
+  There is a subset of $\mathcal{S}$ partitioning $U$ if and only if there is a
+  path from $\vec{\xmark}$ to $\vec{\mycmark}$ in~$L$.
+\end{proposition}
+
+\begin{proof}
+  Let $\mathcal{S}'$ be a solution to $(U, \mathcal{S})$ and $L = \lim \Ta$. Write $\mathcal{S}'=\{S_{j_1},S_{j_2},\ldots,S_{j_t}\}$ with $j_1<j_2<\ldots<j_t$. For a
+  given matching family $\vec{\ell}\in V(L)$ and index $i \in \{0, \dots, n\}$, we write $\vec{\ell}[i]$ for the coordinate of $\vec{\ell}$ in bag $G_{v_i}$. We will define a sequence of matching families $\vec{\ell}_1,\ldots,\vec{\ell}_t$ so that $\xmark\vec{\ell}_1\ldots\vec{\ell}_t\mycmark$ is our required path in $L$.
+  For the first step, write  $S_{j_1}=\{u_a, u_b, u_c\}$; we define $\vec{\ell}_1$ so that $\vec{\ell_1}[0] = s_j$, for $i \in
+  \{a,b,c\}$ we have $\vec{\ell_1}[i] = y_i$, and for every $i \notin \{a,b,c\}$, we have
+  $\vec{\ell_i} = x_i$. Observe that every $\xmark_i$ has an arc to $\ell_1[i]$.
+  After the first step, we proceed inductively: $\vec{\ell}_{k+1}$ is
+  obtained from $\vec{\ell}_{k}$ by: (i) replacing $\vec{\ell}_{k}[0] = s_{j_k}$ with
+  $s_{j_{k+1}}$ (since $j_k < j_{k+1}$, we have $s_{j_k}s_{j_{k+1}} \in E(G_{v_0})$); (ii) for each
+  $u_i \in S_{j_{k+1}}$, replace $\vec{\ell}_{k}[i] = x_i$ with $y_i$; and (iii) for each
+  $u_i \notin S_{j_{k+1}}$:\vspace{-1.5em}
+
+  \[
+    \vec{\ell}_{k+1}[i] =
+    \begin{cases}
+      z_i & \text{if $u_i$ was covered by $S_{j_k}$},\\
+      \vec{\ell}_{k}[i] & \text{otherwise.}
+    \end{cases}\vspace{-.3em}
+  \]
+
+  To verify $(\vec{\ell}_{k}, \vec{\ell}_{k+1}) \in E(L)$, note that, during step (ii),
+  $u_i$ has not been covered before, and so it holds that $\vec{\ell}_{k}[i] =
+  \vec{\ell}_{k-1}[i] = \dots = \vec{\ell}_{1}[i] = x_i$, which has an arc to $y_i$;
+  during step (iii), if $u_i$ was covered by $S_{j_k}$, then $\vec{\ell}_{k}[i] = y_i$, which
+  has an arc to $z_i$, otherwise $\vec{\ell}_{k}[i] \notin \{y_i, \mycmark_i\}$ and
+  $\vec{\ell}_{k}$ has a loop.
+  Finally, after processing $S_{j_t}$, every $\vec{\ell}_{t}[i]$ is
+  either $s_{j_t}$ if $i = 0$, $y_i$ or $z_i$, all of which have arcs to their
+  corresponding to $\mycmark_i$, and so $\vec{\ell}_{t}$ has an arc to $\vec{\mycmark}$
+  in $L$. Consequently, $(\vec{\xmark}, \vec{\ell}_{1}, \dots, \vec{\ell}_{t},
+  \vec{\mycmark})$ is a path in $L=\lim\Ta$. For the converse, let $P = (\vec{\xmark}, \vec{\ell}_{1}, \dots, \vec{\ell}_{t},
+  \vec{\mycmark})$ be a sequence of matching families of $\mathcal{T}$ corresponding to a
+  path in $L$. For each $k\in [t]$, let $j_k$ be the index so that $\vec{\ell}_k[0]=s_{j_k}$. By construction, each $s_{j_k}$ is distinct as
+  $G_{v_0}$ is acyclic. We claim that $\mathcal{S}' := \{S_{j_k} \colon k\in[t] \}$ is a partition of $U$.
+  First, suppose for a contradiction that there is some $u_i$ that is not covered by $\mathcal{S}'$. By construction, for each $k\in[t]$ we have $g_{v_0}^{e_i}(s_{j_k}) = \alpha_i$, so it holds that
+  $\vec{\ell}_{1}[i] = x_i$ as the only arc from $\xmark_i$ to
+  $(g_{v_i}^{e_i})^{-1}(\alpha_i)$ is to $x_i$; moreover, this implies that
+  $\vec{\ell}_{t}[i] = \dots = \vec{\ell}_{1}[i] = x_i$, but $x_i$ has no arc to $\mycmark_i$,
+  so $(\vec{\ell}_{t}, \vec{\mycmark}) \notin E(L)$, a contradiction. To see that $u_i$ is covered only once, let $k$ be the first index for which $u_i \in
+  S_{j_k}$; by a similar argument to the previous one, $\vec{\ell}_{k}[i] = y_i$ and for
+  every $r \geq k$ it must be that $\vec{\ell}_{r}[i] \notin \{x_i, y_i\}$ as no other
+  vertex of $G_{v_i}$ reachable from $y_i$ has an arc to any of $\{x_i, y_i\}$.
+  Consequently, $\vec{\ell}_{r}[i] = z_i$, no other vertex of $\vec{\ell}_{r}[0] \notin
+  (g_{v_0}^{e_i})^{-1}(\beta_i)$, and so $S_{j_r}$ cannot contain $u_i$. This completes our proof.
+\end{proof}

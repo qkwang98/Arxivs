@@ -1,0 +1,857 @@
+\section{Symmetric dependent types}
+\seclabel{dependent types}
+
+To precisely show how our construction captures traditional \WLOG
+arguments, we need to move to a more expressive setting. For that, we
+use dependent types, which also allow us to impose richer invariants
+on programming examples such as binary search trees.
+
+We start by recalling the framework of \emph{families}
+(\subsecref{families}), which gives a mathematical interpretation of
+familiar dependent-type notions. Afterwards, we generalise our
+constructs and results to a dependent setting (\subsecref{indexed
+actions}) and show how via the Curry-Howard correspondence, they
+capture proofs that use \WLOG arguments (\subsecref{propositional
+reasoning}). Finally, we use the additional power of dependent types
+to define a more refined notion of canoniser equivariance
+(\subsecref{equivariant canonisers}).
+
+\subsection{Families}
+\subseclabel{families}
+
+A \emph{family}~$\Ctx \types X$ is a pair consisting of a set $\Ctx$
+and an assignment of a set $X \ctx$ to each element $\ctx \in \Ctx$.
+We call $\Ctx$ the \emph{indexing} set, its elements $\ctx \in \Ctx$
+\emph{indices}, and each set $X \ctx$ the \emph{fibre} over the index
+$\ctx$. A \emph{term}~$\Ctx \types t : X$ in a family $\Ctx \types X$
+is an assignment of an element $t \ctx \in X \ctx$ to each $\ctx \in
+\Ctx$. A family $\Ctx \types X$ is a \emph{subfamily} of $\Ctx \types
+Y$, which we write as $\Ctx \types X \subseteq Y$ if $X \ctx \subseteq
+Y \ctx$ for all $\ctx \in \Ctx$.
+
+\begin{example}
+  \examplelabel{families example}
+  To eliminate the necessity for the $\Maybe$ type in the tree lookup
+  from \exampleref{tree example}, let us define the family $\Tree
+  \types \NodeInName$ of \emph{node paths} that contains all paths
+  ending at an internal node of the index tree. More precisely, the
+  fibre $\NodeIn \btree$ is empty if $\btree$ is empty, and is
+  otherwise the set of lists over $\TreeLabel = \set{\Lft,\Rgt}$ which are either
+  $\Nil$, representing the root of the index tree, or $d \:: p$ that
+  start with a step direction $d$ followed by a path $p$ in that
+  subtree. This set can be given inductively as:
+  \begin{gather*}
+    \begin{array}[b]{c}
+    \inferrule{
+      ~
+    }{
+      \Nil \in \NodeIn \Big( \NodeV{\ell}x{r}\Big)
+    }\quad
+    \inferrule{
+      p \in \NodeIn \ell
+    }{
+      (\Lft \:: p) \in \NodeIn \Big(\NodeV{\ell}x{r}\Big)
+    }\quad
+    \inferrule{
+      p \in \NodeIn r
+    }{
+      (\Rgt \:: p) \in \NodeIn \Big(\NodeV{\ell}x{r}\Big)
+    }
+    \end{array}
+    \tag*{\qedhere}
+  \end{gather*}
+\end{example}
+
+When specifying fibres or terms as assignments of the form $\fun\mctx
+X$ or $\fun\mctx t$, which explicitly use a generic index $\mctx
+\in \Ctx$, we write them as $\mctx : \Ctx \types X$ and $\mctx : \Ctx
+\types t : X$.
+We will continue to distinguish these uses, denoting generic indices
+for the purpose of defining a family by $\mctx : \Ctx$, and use $\mctx
+\in \Ctx$ when we refer to elements of an indexing set $\Ctx$ for any other
+purpose. Note that despite using a convenient type-theoretic notation,
+we continue to keep our development purely mathematical, constructing
+objects without any recourse to a syntactic type system.  Were we to
+present such a syntactic type system and differentiate between
+syntactic contexts $\Ctx$ and their interpretations as indexing sets
+$\sem\Ctx$, then we would distinguish between $\ctx : \Ctx$ and $\ctx
+\in \sem\Ctx$.
+
+
+Continuing this approach, we allow fibres and terms to depend on a
+context of variables. For the empty context, we take the indexing set
+$\terminal \definedby \set\unitval$ and identify families $\terminal
+\types X$ with their only fibre~$X \unitval$. Then, we write fibres
+over $\terminal$ simply as $\types X$, and similarly for terms.
+
+For context extension, we employ the \emph{Grothendieck construction}.
+Recall that for a family $\Ctx \types X$, it is defined as the set
+$\coprod_{\Ctx}X \definedby \coprod_{\ctx \in \Ctx} X \ctx$,
+consisting of pairs $\pair\ctx x$ where $\ctx \in \Ctx$ and $x \in X
+\ctx$, together with a projection function $\projection_1
+\definedby \parent{\fun{\pair\ctx x} \ctx}: \coprod_{\Ctx}X \to \Ctx$.
+We write $\Ctx, \mx : X \types Y$ and $\Ctx, \mx : X \types t : Y$ for
+fibres and terms indexed by $\coprod_{\Ctx}X$ and use $\mx$ to refer
+to the second component of the index pair from $\coprod_{\Ctx}X$ in $Y$
+and $t$.
+
+Given two families $\Ctx \types \mX$ and $\Ctx, \x : \mX \types \mY$,
+we have the family of \emph{dependent pairs} $\Ctx \types
+\DPair\x\mX\mY$ whose fibre at $\ctx \in \Ctx$ is the Grothendieck
+construction $\coprod_{\mx \in \mX \ctx}\mY \pair\ctx\mx$, and the
+family of \emph{dependent functions} $\Ctx \types \DFun\x\mX\mY$ whose
+fibre at $\ctx$ is the product $\prod_{\mx \in \mX \ctx}\mY
+\pair\ctx\mx$. As usual, we write $\Fun\mX\mY$ when the codomain
+family $\mY$ does not depend on the argument of the function. To
+distinguish between indices and arguments of dependent functions $\Ctx
+\types f : \DFun\x\mX\mY$, we apply them as $f_{\ctx} \mx$
+for $\ctx \in \Ctx$ and $\mx \in \mX \ctx$, or even as $f \mx$
+when $\ctx$ can be inferred.
+
+\begin{example}
+  \examplelabel{node lookup}
+  With dependent types, we can refine the lookup function $\Tree \to
+  \TreePath \to \Maybe\naturals$ from \exampleref{tree example} to a
+  dependent function $\types \lookup : \DFun{\BoundV t}{\Tree}
+  \Fun{\NodeIn{\BoundV t}} \naturals$, as the path now must point to a node
+  in the tree. We can define it as:
+  \begin{gather*}
+    \lookup \Big({\NodeV \ell n r}\Big) \Nil \definedby n
+    \qquad
+    \lookup \Big(\NodeV {t_{\Lft}}n {t_{\Rgt}}\Big) (d \:: p) \definedby \lookup \, t_{d} \, p
+  \end{gather*}
+  Note that since we have two trees $t_{\Lft}, t_{\Rgt}$ rather than a
+  function $\TreeLabel \to \Tree$, the parametrisation $t_d$ that
+  we use in the second case is just repetition in disguise. Later, we
+  will show how to properly avoid this repetition by using the \WLOG
+  construction.
+\end{example}
+
+\subsection{Indexed actions}
+\subseclabel{indexed actions}
+
+Just as in \exampleref{tree example}, the function $\lookup$ from
+\exampleref{node lookup} is invariant with respect to flipping:
+flipping both the tree and the path returns the same value. But note
+that once we flip the tree $t$, the flipped path no longer lies in
+$\NodeIn{t}$, but in $\NodeIn{(\swap \act t)}$. For example:
+\[
+\swap \act \Bigg(\Lft \:: \Rgt \:: \Nil \in \NodeIn   \bigg(
+  \begin{tree diagram}
+    \& \& 3 \\
+    \& 2 \& \\
+    1 \& \& 4
+    \treeLink1322
+    \treeLink2231
+    \treeLink2233
+\end{tree diagram}\bigg)\Bigg)
+=
+\Rgt \:: \Lft \:: \Nil \in \NodeIn   \bigg(
+  \begin{tree diagram}
+    3 \& \& \\
+    \& 2 \& \\
+    4 \& \& 1
+    \treeLink1122
+    \treeLink2231
+    \treeLink2233
+\end{tree diagram}\bigg)
+\tag*{\qedhere}
+\]
+In general, an action over a family $\Ctx \types A$ should thus
+consist of an action over the index set $\Ctx$, and an action over
+each fibre $A \ctx$, which tracks the indexing action: if $a \in A
+\ctx$, then $g \act a \in A (g \act \ctx)$.
+%
+\begin{definition}
+  Given a $\G$-action $\Ctx$, an \emph{indexed $\G$-action $\Ctx
+  \types \A$} consists of a \emph{carrier} family $\carrier\Ctx \types
+  \carrier\A$ and a dependent function $(\iact{-}) : \DFun {\BoundV
+  g}{\carrier \G} \DFun {\BoundV \ctx}{\carrier \Ctx}
+  \Fun{\carrier\A\ctx} \carrier \A (g \act[\Ctx] \ctx)$, which we
+  apply as $g \iact{\ctx} \ma$, such that
+  \(
+    \unit \iact{\ctx} \ma = \ma
+  \) and \(
+    (g \mul h) \iact{\ctx} \ma = g \iact{h \act \ctx} (h \iact{\ctx} \ma)
+  \).
+\end{definition}
+%
+When $\A$ is ambiguous, we add a superscript and write
+$\iact[\A]{\ctx}$, and when  we can infer the index $\ctx$, we elide
+it and write $g \act \ma$ instead of $g \iact{\ctx} \ma$.
+
+\begin{example}
+  The action of the cyclic group $\Cyc 4$ on 2048 boards can be
+  generalised to an indexed action on the family of arbitrary matrices
+  $\naturals \times \naturals \types \TConst{Mat}$. First, take $\Ctx$
+  to be the action of $\Cyc 4$ on dimensions $\carrier\Ctx \definedby
+  \naturals \times \naturals$, defined as:
+  \(
+    \Rotation\act\pair mn \definedby \pair nm
+  \).
+  We then have a $\Ctx$-indexed action defined as in \exampleref{2048
+  action}:
+  \[
+    \Rotation
+    \iact{\pair mn}
+    \Bigg(
+      \bigg(
+    \begin{smallmatrix}
+      x_{1,1} & \cdots & x_{1,n} \\
+      \vdots & \ddots & \vdots \\[1ex]
+      x_{m,1} & \cdots & x_{m,n}
+    \end{smallmatrix}
+    \bigg)
+    \in
+    \Mat mn\Bigg)
+    =
+    \begin{psmallmatrix}
+      x_{1,n} & \cdots & x_{m,n} \\
+      \vdots & \ddots & \vdots \\[1ex]
+      x_{1,1} & \cdots & x_{m,1}
+    \end{psmallmatrix}
+    \in \Mat nm
+    \tag*{\qedhere}
+  \]
+\end{example}
+
+\begin{example}
+  Take indexed $\G$-actions $\Ctx \types \A$ and $\Ctx, \x : \A \types
+  \B$. Then, we can define the \emph{dependent pair} action $\Ctx
+  \types \DPair\x\A\B$ as:
+  \[
+    \carrier{\Ctx \types \DPair\x\A\B} \definedby \carrier\Ctx \types \DPair\x{\carrier\A}{\carrier\B}
+    \qquad
+    \g \iact[\DPair\x\A\B]{\ctx}{\pair \ma\mb} \definedby
+    \pair{\g\iact[\A]\ctx\ma}{\g\iact[\B]{\pair\ctx\ma}\mb}
+  \]
+  Furthermore, we can define the \emph{dependent function} action
+  $\Ctx \types \DFun\x\A\B$ as:
+  \begin{gather*}
+    \carrier{\Ctx \types \DFun\x\A\B} \definedby \carrier\Ctx \types \DFun\x{\carrier\A}{\carrier\B}
+    \\
+    g\iact[\DFun\x\A\B]\ctx f \definedby
+    \fun{(a : \carrier\A(g \act \ctx))}
+      g \iact[\B]{\pair\ctx{\inv g \act\ma}} f_{\ctx}(\inv g \iact[\A]{g \act \ctx}\ma)
+  \end{gather*}
+  It is straightforward to check that both definitions satisfy the
+  indexed action laws.
+\end{example}
+
+\begin{definition}
+  Given a $\G$-action $\Ctx$ and an indexed $\G$-action $\Ctx \types
+  \A$, a term $\carrier\Ctx \types t : \carrier\A$ is
+  \emph{equivariant} when its components are: $t (g \act[\Ctx] \ctx) =
+  g \iact{\ctx} t \ctx$ for all $\ctx \in \carrier\Ctx$, $g \in
+  \carrier\G$.
+\end{definition}
+
+Equivariance of terms is preserved by reindexing and substitution.
+Furthermore, an equivariant term $\Ctx, \x : \A \types t : \B$ induces
+an equivariant dependent function $\Ctx \types (\fun{\x:\A}t) :
+\DFun\x\A\B$, and two equivariant terms $\Ctx \types t : \A$ and $\ctx
+: \Ctx \types s : \B \pair\ctx{t \ctx}$ induce an equivariant term
+given by the dependent pair in each fibre
+$\Ctx \types \pair ts : \DPair\x\A\B$. For more details and proofs,
+see~\appref[C]{dependent types}.
+
+The ease of compositionality should come as no surprise given that the
+definition of an indexed action is in fact just a reformulation of the
+notion of a family internally to the topos of $\G$-actions:
+
+\begin{proposition}\propositionlabel{Grothendieck action}
+  Let $\Ctx$ be a $\G$-action. Then, a $\Ctx$-indexed action $\A$
+  amounts to an action $\coprod_{\Ctx}\A$ over the Grothendieck
+  construction for which the projection is equivariant:
+  \(
+    \carrier{\coprod_{\Ctx}\A} = \coprod_{\carrier\Ctx}\carrier\A
+  \) and \(
+    \projection_1 :  \coprod_{\Ctx}\A \equito \Ctx
+  \).
+\end{proposition}
+
+We have used this connection above to reformulate standard notions
+from dependent types to the symmetric setting, and continue to do so
+with canonisers, core functions, and the \WLOG construction. Ignoring
+the additional indices, we recover the simply-typed notions from
+\secref{wlog construction}.
+%
+\begin{definition}
+  Let $\Ctx \vdash \A$ be an indexed $\G$-action. An \emph{indexed
+  canoniser} for $\A$ is a $\carrier\Ctx$-indexed term $\carrier\Ctx \types \canoniser :
+  \carrier\A \to \carrier\G$. For each $\ma \in \carrier\A\ctx$, we
+  call the symmetry $\canoniser_{\ctx} \ma \in \carrier\G$
+  the \emph{$\canoniser$-canonising symmetry} of $\ma$, and the
+  element $\canoniser \ma\iact{\ctx} \ma$ the \emph{canonical form} of
+  $\ma$. We define the family of \emph{canonical} elements
+  $\carrier\Ctx \types \Canon\canoniser$ with the fibres
+  \(
+    (\Canon\canoniser) \ctx \definedby \set{
+      \canoniser \ma\iact{\ctx'} \ma
+      \suchthat
+      \ctx' \in \Ctx,
+      \ma \in \carrier\A\ctx',
+      \canoniser \ma\act\ctx' = \ctx
+    }
+  \)
+  for each
+  $\ctx \in \carrier\Ctx$.
+\end{definition}
+
+\begin{example}
+  To capture the symmetry of the lookup function from \exampleref{node
+  lookup}, we define a canoniser for the indexed $\Sym 2$-action on
+  $\mtree : \Tree \types \NodeIn\mtree$:
+  \[
+    \canoniser_{\Node \triple\ell n r}\Nil \definedby \stet \qquad
+    \canoniser_{\Node \triple\ell n r}(\Lft \:: p) \definedby \stet \qquad
+    \canoniser_{\Node \triple\ell n r}(\Rgt \:: p) \definedby \swap
+  \]
+  The canonical elements in $\NodeIn\btree$ are \( \Nil \) and \(
+  (\Lft \:: p) \in \NodeIn(\Node\triple\ell n r) \) where $p \in
+  \NodeIn\ell$ can be an arbitrary path, even one that moves right on
+  any of its steps.
+\end{example}
+
+\begin{definition}
+  Take indexed $\G$-actions $\Ctx \types \A$ and $\Ctx, x : \A \types
+  \B$, a subfamily $\carrier\Ctx \types X \subseteq \carrier\A$, and
+  a function $\carrier\Ctx \types f : \DFun{\x}{X}\carrier\B$.
+  We write $\Ctx \types f : \EFun{\x}{X \subseteq \A}\B$ and say that
+  $f$ is \emph{equivariant} when
+  \(
+    g \iact[\A]{\ctx} x \in X (g \act \ctx)
+    \implies
+    f_{g\act \ctx}(g\iact[\A]{\ctx}x) = g\iact[\B]{\pair\ctx x}f_{\ctx}x
+  \)
+  for all $g \in \carrier\G$, $\ctx \in \carrier\Ctx$, and $x \in X\ctx$.
+\end{definition}
+We can now define the dependently-typed version of the \WLOG{} construction:
+\begin{definition}
+  Let $\Ctx \types \A$ and $\Ctx, \x : \A \types \B$ be indexed
+  $\G$-actions, $\Ctx \types \canoniser : \carrier\A \to \carrier\G$
+  an indexed canoniser, and $\Ctx \types f :
+  \DFun{\x}{\Canon\canoniser} \carrier\B$ a dependent core function.
+  Then, the \emph{indexed \WLOG construction}~$\wlg(c,f) :
+  \DFun{\x}{\carrier\A} \carrier\B$ is defined as:
+  \[
+  \myfigbox{$
+    \wlg(\canoniser,f)_{\ctx} \definedby \fun{(\ma : \carrier\A\ctx)}
+    \inv*{\canoniser_{\ctx}\ma}\iact[\B]{\pair{\canoniser_{\ctx} a \act[\Ctx] \ctx}{\canoniser_{\ctx} a \iact[\A]{\ctx} a}}
+  f_{\canoniser_{\ctx}\ma \act[\Ctx] \ctx}(\canoniser_{\ctx} \ma\iact[\A]{\ctx} \ma)
+  $}
+  \]
+\end{definition}
+
+With all the indices precisely spelt out, the definition can look a
+bit intimidating, but if we elide them we get
+\(
+  \wlg(\canoniser,f)
+    = \fun{\ma} \inv*{\canoniser\ma}\iact[\B]{} f(\canoniser \ma\iact[\A]{} \ma)
+\)
+as in the simply-typed case. And just as before in
+\theoremref{wlog-construction}, the \WLOG construction gives the
+unique equivariant extension of a core function.
+
+\begin{theorem}[indexed representation]
+  \theoremlabel{indexed-wlog-construction}
+  Let $\Ctx \types \A$ and $\Ctx, \x : \A \types \B$ be indexed
+  $\G$-actions and $\Ctx \types \canoniser : \carrier\A \to
+  \carrier\G$ an indexed canoniser for $\A$. If $\Ctx \types f :
+  \EFun{\x}{\Canon\canoniser \subseteq \A} \B$ is an equivariant
+  dependent core function, then  $\wlg(c,f) : \EFun{\x}{\A} \B$ is
+  the unique equivariant function extending~$f$ to the whole
+  $\carrier\Ctx \types \carrier\A$.
+\end{theorem}
+
+\begin{example}
+  \examplelabel{pigeonhole principle}
+  Let us revisit the pigeonhole principle~\cite{wiki:wlog} from the
+  introduction and extend it in two ways. First, instead of a proof,
+  let us construct a function
+  \(
+    \mathsf{findSame} : \DFun{\BoundV{xyz}}{\set{\RED, \BLU}^3} \Type{Same}{\BoundV{xyz}}
+  \)
+  where
+  \(
+    \Type{Same}{\BoundV{xyz}} \definedby \set{
+      (i,j) : (\Fin 3)^2 \suchthat i \neq j \land \projection_i \BoundV{xyz} = \projection_j \BoundV{xyz}
+    }
+  \)
+  is the family of distinct positions of the same colour, indexed by
+  the colouring $\BoundV{xyz}$.
+
+  And second, we shall see that in the special case of the proof,
+  there is another opportunity to use the \WLOG{} argument.
+  Informally, our proof goes as follows:
+  %
+  \begin{quote}
+  \wLOG{}, the first object is red. The other two objects either have
+  the same colour or different colours. If they have the same colour,
+  choose $(1,2)$. If they have different colours, \WLOG{} the second
+  object is red, so choose $(0,1)$.
+  \end{quote}
+  %
+  Such nested uses of \WLOG{} may be suspicious and confusing, which
+  is exactly why it is important to make all aspects of \WLOG{}
+  arguments explicit. In this case, this use is valid. For example,
+  when the second object is not red and the third is red, the
+  inner argument exchanges their positions:
+  \[
+    \newcommand{\balls}[2]{\vcenter{\hbox{
+      \begin{tikzpicture}[
+        scale=0.5,
+        obj/.style={circle, draw, inner sep=0pt, minimum size=4mm},
+        rdot/.style={obj, fill=red!60, draw=red},
+        bdot/.style={obj, fill=blue!20, draw=blue},
+        pair/.style={rounded corners, thin, draw=gray},
+        >=stealth, font=\small
+      ]
+        \pgfmathsetmacro\dx{-0.03}
+        \foreach \col/\f in {#1}
+          \node[\f] at (\col+0.5, 0.5) {\ifthenelse{\equal{\f}{bdot}}{b}{r}};
+        #2
+      \end{tikzpicture}
+    }}}
+    \balls{0/rdot, 1/bdot, 2/rdot}{}
+    \qquad
+    \explain{\rightleftharpoons}{switch\\[-5pt]objects}
+    \qquad
+    \balls{0/rdot, 1/rdot, 2/bdot}{}
+    \qquad
+    \explain{\mapsto}{pick the first\\[-5pt]and second object}
+    \qquad
+    \balls{0/rdot, 1/rdot, 2/bdot}{
+      \draw[pair] (0-\dx,0-\dx) rectangle (1+\dx,1+\dx);
+      \draw[pair] (1-\dx,0-\dx) rectangle (2+\dx,1+\dx);
+    }
+    \qquad
+    \explain{\leftrightharpoons}{switch\\[-5pt]objects back}
+    \qquad
+    \balls{0/rdot, 1/bdot, 2/rdot}{
+      \draw[pair] (0-\dx,0-\dx) rectangle (1+\dx,1+\dx);
+      \draw[pair] (2-\dx,0-\dx) rectangle (3+\dx,1+\dx);
+    }
+  \]
+
+  In the outer level, $\Sym 2$ acts on $\set{\RED,\BLU}$ by flipping
+  the two colours, and on the domain $\set{\RED,\BLU}^3$ with the
+  component-wise product action. On the codomain $\set{\RED,\BLU}^3
+  \types \Type{Same}$, we lift the trivial action to preserve the
+  elements of the fibre, but change the index. This is a sub-action
+  (i.e. an action that preserves a subset) since if objects at two
+  positions are of the same colour, they remain so after we exchange
+  the colours. For example, $\smash{\swap\iact{(\RED,\RED,\BLU)}(0,1)}
+  = (0,1) \in \Type{Same}{(\BLU, \BLU,\RED)}$
+
+  By swapping colours, we make the first object red, thus the outer
+  canoniser is:
+  \[
+    \mathsf{makeFirstRed}(\RED,\mb,\mc) \definedby \stet
+    \qquad
+    \mathsf{makeFirstRed}(\BLU,\mb,\mc) \definedby \swap
+  \]
+  and using it, we can define
+  \[
+  \mathsf{findSame} \definedby \wlg\Bigg(
+    \mathsf{makeFirstRed},
+    \fun{(\RED, \mb, \mc)}
+      \begin{cases}
+        (1,2) &(\mb = \mc) \\
+        \mathsf{findOtherRed}(\mb,\mc) &(\mb \neq \mc)
+      \end{cases}
+  \Bigg)
+  \]
+  where we still need to define
+  \[
+  \mathsf{findOtherRed} : \DFun{(\y,\z)}{\set{(\mb,\mc) \in \set{\RED,\BLU}^2\suchthat \mb \ne \mc}}
+  \Type{Same}{(\RED,\y,\z)}
+  \]
+  Again, we employ symmetry, but now, the $\Sym2$-action on the domain
+  swaps the two components of the pair, but not their colour, i.e.,
+  $\swap\act(\mb,\mc) \definedby (\mc, \mb)$. For the codomain, define
+  an action on $\Fin 3$ that swaps $1$ and $2$, and extend it
+  component-wise to the product $(\Fin 3)^2$. Since $\mb$ and $\mc$
+  are of different colours, it is easy to check that this action again
+  preserves the defining property of $\Type{Same}$ and thus lifts to a
+  sub-action on the codomain. For example,
+  $\smash{\swap\iact{(\RED,\BLU)}(0,1) = (0,2) \in \Type{Same}{(\RED, \BLU,
+  \RED)}}$.
+
+  The inner canoniser now makes the second object red:
+  \[
+  \mathsf{makeSecondRed}(\RED, \BLU) \definedby \stet
+  \qquad
+  \mathsf{makeSecondRed}(\BLU, \RED) \definedby \swap
+  \]
+  and so
+  \(
+  \mathsf{findOtherRed}\definedby \wlg(\mathsf{makeSecondRed},
+  \fun{(\RED,\BLU)}(0,1))
+  \).
+  Equivariance is immediate since both core functions are vacuously
+  equivariant.
+\end{example}
+
+\subsection{Propositional reasoning}
+\subseclabel{propositional reasoning}
+
+So far we have used the \WLOG{} construction to define functions. To
+formalise mathematical proofs, we apply the Curry-Howard
+correspondence and identify propositions with types, and their proofs
+with terms. We could have also approached this differently and e.g.,
+transferred the \WLOG{} construction to higher-order logic or
+first-order logic, but this would require us to duplicate the
+definitions for concepts such as group actions or equivariance for
+proofs.
+
+For concreteness, let us first borrow a running example of Schur's
+inequality from \citet{DBLP:conf/tphol/Harrison09}, which states that
+for all $x, y, z, t \ge 0$, we have
+\[
+  x^{t}(x - y)(x - z)+y^{t}(y - z)(y - x)+z^{t}(z - x)(z - y) \ge 0
+\]
+Since the inequality is symmetric in the three variables, the standard
+proof assumes that \WLOG, $x \le y \le z$ and rearranges the
+expression to an evidently non-negative form.
+
+Let $\Prop \definedby \set{\Tru,\Fls}$ be the set of logical values.
+Each \emph{proposition} $\Ctx \types \phi : \Prop$ determines a family
+$\Ctx \types \Type{Proof} \phi$ such that for each $\ctx \in \Ctx$,
+the fibre $(\Type{Proof} \phi) \ctx = \terminal = \set{\unitval}$ when
+$\phi\ctx = \Tru$ and $(\Type{Proof} \phi) \ctx = \emptyset$ when
+$\phi\ctx = \Fls$. As is conventional, we overload the notation and
+identify propositions with their proofs, writing $\Ctx \types
+\Type{Proof} \phi$ simply as $\Ctx \types \phi$. Then, any proof term
+$\Ctx \types p : \phi$ is an explicit witness that $\phi$ holds at
+every $\ctx \in \Ctx$.
+
+\begin{example}
+  \examplelabel{schur invariance}
+  Schur's inequality is the proposition $(\x, \y, \z) :
+  \preals^3 \types \Type{Schur}(x, y, z) : \Prop$ where
+  \[
+    \Type{Schur}(x, y,z) \definedby \forall t \ge 0.\
+    x^{t}(x-y)(x-z)+y^{t}(y-z)(y-x)+z^{t}(z-x)(z-y) \ge 0
+  \]
+  Recall from \exampleref{symmetric-group-action} that $\Sym 3$ acts
+  on $\preals^3$ by permutation. The proposition $\Type{Schur}$ is
+  invariant under those permutations.
+\end{example}
+
+\begin{definition}
+  A proposition $\Ctx \types \phi : \Prop$ is \emph{invariant} when it
+  is equivariant as a term with respect to the trivial $\G$-action on
+  $\Prop$, i.e. $\phi (\g \act \ctx) = \phi \ctx$ for all $\ctx \in
+  \Ctx$.
+\end{definition}
+
+In addition to equivariant substitutions, like all equivariant terms,
+invariant propositions are also preserved by logical connectives and
+quantifiers. Each invariant proposition $\Ctx \types \phi : \Prop$
+induces a $\Ctx$-indexed action on its proof family $\Ctx \types
+\phi$. Moreover, given a $\Ctx$-indexed action $\A$, each invariant
+proposition $\Ctx, \x : \A \types \phi : \Prop$ induces a
+$\Ctx$-indexed action on the subfamily $\Ctx \types \set{\x : \A
+\suchthat \phi} \subseteq \A$. For more details and proofs, again
+see~\appref[C]{dependent types}.
+
+\begin{example}
+  Coming back to Schur's inequality, we can see that the \WLOG
+  argument again fits the now familiar pattern:
+  \[
+    x_0, x_1, x_2 \in \preals
+    \quad
+    \explain\mapsto{sort using a\\[-5pt]permutation $\perm^{-1}$}
+    \quad
+    x_{\perm0} \le x_{\perm1} \le x_{\perm2}
+    \quad
+    \explain\mapsto{prove using \\[-5pt]additional assumption}
+    \quad
+    \Type{Schur}(x_{\perm0}, x_{\perm1}, x_{\perm2})
+    \quad
+    \explain\mapsto{$\Type{Schur}$ is invariant\\[-5pt]under permutations}
+    \quad
+    \Type{Schur}(x_0, x_1, x_2)
+  \]
+  Let us use the \WLOG construction to obtain a proof, i.e. a
+  function $\DFun{(\x, \y, \z)}{\preals^3} \Type{Schur}(x, y, z)$.
+  From \exampleref{schur invariance} we already have an $\Sym
+  3$-action on $\preals^3$, and since $\Type{Schur}$ is an invariant
+  proposition, we also get an indexed $\Sym 3$-action on $\preals^3
+  \types \Type{Schur}$. For the canoniser, we take a stable sorting
+  function $\sort : \preals^3 \to \Sym 3$ from \exampleref{sorting
+  canoniser} so that $\Canon\sort$ is exactly the set of sorted
+  triples. The last thing we need is the core function $f :
+  \set{(x, y, z) : \preals^3 \suchthat x \le y \le z} \to \Schur(x, y,
+  z)$, which we can define using the rearrangement in the standard proof.
+\end{example}
+
+The resulting function $\wlg(\sort, f)$ is equivariant since in the
+case of propositions, core functions are always equivariant due to
+proof irrelevance:
+
+\begin{lemma}\lemmalabel{core functions to propositions invariance}
+  Let $\Ctx, \x : \A \types \phi : \Prop$ be an invariant proposition,
+  and $\Ctx \types \canoniser : \carrier\A \to \carrier\G$ a
+  canoniser.  Every core function $\Ctx \types f : \Canon\canoniser
+  \to \phi$ is equivariant.
+\end{lemma}
+
+Harrison suggests proving Schur's inequality using the following
+tactic\footnotemark{}, which states that it
+is sufficient to prove permutation invariant propositions only for
+sorted triples~\cite[page 44]{DBLP:conf/tphol/Harrison09}:
+\begin{align*}
+  \inferrule{
+    \forall \x,\y,\z .\ P(\x,\y,\z) \Rightarrow P(\y,\x,\z) \land P(\x,\z,\y)\\
+    \forall \x,\y,\z .\ (\x \le \y) \land (\y \le \z) \Rightarrow P(\x,\y,\z)
+  }{
+    \forall \x,\y,\z .\ P(\x,\y,\z)
+  }
+\end{align*}
+\footnotetext{Available here: \url{https://github.com/jrh13/hol-light/blob/e5236a5/int.ml\#L612}.}%
+%
+Let us see how this bespoke tactic relates to our general \WLOG{}
+construction. In contrast to our approach, the symmetry group $\Sym 3$
+is left implicit, as is the canoniser. Instead, only its set of
+canonical elements $\set{(x, y, z) : \preals^3 \suchthat x \le y \le
+z}$ is spelt out. Furthermore, the first assumption corresponds to an
+indexed $\Sym 3$-action on the proposition $P$, and the second
+assumption is exactly the core function.
+
+The latter is evident, while for the former, first recall from
+\exampleref{2048 action} that a group action is already uniquely
+determined by the action of any set of generators. The symmetry
+group $\Sym 3$ is generated by the two transpositions $(0
+\leftrightarrow 1)$ and $(1 \leftrightarrow 2)$, hence the action of
+$\Sym 3$ is determined by maps $(0 \leftrightarrow 1) \act {-}$ and
+$(1 \leftrightarrow 2) \act {-}$. Spelling out the indices more
+precisely, these two maps are:
+\begin{align*}
+  (0 \leftrightarrow 1) \iact{(x, y, z)} {-} &: P(x, y, z) \to P((0 \leftrightarrow 1) \act (x, y, z))
+  &\text{equivalently}\quad
+  &P(x, y, z) \to P(y, x, z)
+  \\
+  (1 \leftrightarrow 2) \iact{(x, y, z)} {-} &: P(x, y, z) \to P((1 \leftrightarrow 2) \act (x, y, z))
+  &\text{equivalently}\quad
+  &P(x, y, z) \to P(x, z, y)
+\end{align*}
+And this is exactly the contents of the first assumption.
+
+As in \exampleref{2048 action}, we must ensure that such a definition
+by generator cases respects all the equalities of the group. For
+example in any $\Sym n$-action, $(0 \leftrightarrow 1) \act {-}$ must
+be its own inverse (amongst other relations) since $(0 \leftrightarrow
+1) \mul (0 \leftrightarrow 1) = \unit$. However, in the case of
+propositions, once again proof irrelevance implies this condition.
+
+Exposing the symmetric structure in proofs also allows us to use
+existing results in group theory. Consider Harrison's proof in the
+tactic, which explicitly lists all six
+permutations~\cite{DBLP:conf/tphol/Harrison09}. For $\Sym 3$, this
+number may still be manageable, but in general, the group~$\Sym n$ has
+$n!$ elements, so when $n$ increases, the size of the proof script
+quickly becomes prohibitively large. Also, such an approach precludes
+a proof of a general $\wlg_n$ principle if $n$ is a variable, as one
+cannot explicitly list all the $n!$ cases in the script. In contrast,
+we can lean on the general group-theoretic result, whose proof is
+independent of the concrete value of $n$, that $\Sym n$ is generated,
+for example, by a single cycle $(0 \, 1 \, 2 \, \cdots \, n - 1)$ and
+a single transposition of adjacent elements such as $(0
+\leftrightarrow 1)$. So it suffices to prove two cases
+to define any propositional $\Sym n$-action, yielding a single
+parametric principle $\wlg_n$.
+
+\subsection{Equivariant canonisers}
+\subseclabel{equivariant canonisers}
+
+In \subsecref{wlog-equivariance}, we saw that all \WLOG{} constructions
+of a canoniser are equivariant iff the canoniser is strictly
+equivariant (\theoremref{all core functions are partially
+  equivariant}). This result is significant because it allows us to do
+away completely with the equivariance of the core function, which
+involves comparing every pair of symmetric canonical elements.
+However, only the semi-regular actions can
+have such canonisers~(\lemmaref{semi-regularity}). We now investigate a weaker
+notion of equivariance. It is also characterised through equivariant
+extension, but of \emph{stable} core functions. A core function $f$ is
+stable when every \emph{stabilising} symmetry~$g$ of an
+element---$g\act a = a$---also stabilises the image $f\,a$. This
+necessary condition is natural and often easy to check.  Furthermore,
+if we assume the axiom of choice, all actions admit equivariant
+canonisers, making them a viable---albeit theoretical---class of canonisers.
+
+Both $\canoniser (g \act
+a)$ and $\canoniser a \mul \inv g$ canonise $g \act a$. Strictly
+equivariant canonisers equate these two symmetries:
+$\canoniser (g \act a) = \canoniser a \mul \inv g$.
+Equivariant canonisers merely relate
+them: $\canoniser (g \act a) \stabeq{} \canoniser a \mul \inv g$.
+
+\begin{definition}
+  \definitionlabel{indistinguishability}
+  Take a $\G$-action $\A$. Then, for each $a \in \carrier\A$, we equip
+  $\carrier\G$ with an \emph{indistinguishability} relation $g \stabeq
+  a h \iff g \act a = h \act a$. Let $[g]_{\stabeq a}$ be the
+  equivalence class of $g$ in $\carrier\G / \stabeq a$. Define an
+  indexed $\G$-action $\A \types \G / \A$ with the fibre $(\G / \A) \, a
+  \definedby \carrier\G / \stabeq a$ and with $\act[\G / \A]$ defined
+  as:
+  $
+  g \iact[\G / \A] a{[h]_{\stabeq a}} \definedby [h \mul \inv g]_{\stabeq {g \act a}}
+  $.
+\end{definition}
+
+The action is well-defined since $h_1 \stabeq a h_2$ implies $h_1 \mul
+\inv g \stabeq{g \act a} h_2 \mul \inv g$. The relation $\stabeq a$ is
+closely related to the \emph{stabiliser} $\stabilise a \definedby
+\set{g \in \carrier\G \suchthat g \act a = a} = [\unit]_{\stabeq a}$, i.e. a subgroup of all
+symmetries that preserve $a$. In particular, $g \stabeq a h$ is
+equivalent to $(\inv h \mul g) \act a = a$, i.e. $\inv h \mul g \in
+\stabilise a$.
+
+\begin{remark}
+The equivalence classes of the indistinguishability relation are
+precisely the cosets of the stabiliser group. Therefore, we can recast the
+celebrated Orbit-Stabiliser theorem as an \emph{equivariant} isomorphism between
+the actions on orbits and stabiliser cosets.
+
+Given a $\G$-action $\A$, the fibres of the dependent family of
+\emph{orbits} contain all the symmetric elements of an index, i.e. $a
+: \carrier\A \types \OrbitOf[\G]a \definedby \set{h \act a \suchthat h
+\in \carrier\G}$. On orbits, we can define an indexed action as:
+\[
+  g \iact a (h \act a \in \OrbitOf a)
+  \definedby
+  h \act a
+  =
+  (h \mul \inv g) \act (g \act a)
+  \in
+  \OrbitOf{g \act a}
+\]
+Even though the action does not change the fibres, it is not
+trivial, since it changes the indices.
+\end{remark}
+
+\begin{theorem}[Orbit-Stabiliser]
+  \theoremlabel{orbit stabiliser}
+  Let $\A$ be a $\G$-action. We have an equivariant isomorphism:
+  \[
+  a : \A \types \phi_a : (\G / \A) a \overset{\isomorphic}\equito \OrbitOf{a}
+  \qquad
+  \phi_a [h]_{\stabeq a} \definedby h \act a
+  \qquad
+  \inv \phi_a(h \act a) \definedby [h]_{\stabeq a}
+  \]
+\end{theorem}
+
+The indexed action $\G / \A$ generalises $\inv\G$ and allows us to
+consider a weaker property in which the equality $\canoniser\parent{g
+\act[\A] a} = g \act[\inv\G] \canoniser a$ of strictly equivariant
+canonisers is replaced by indistinguishability:
+
+\begin{definition}
+  A canoniser $\canoniser : \carrier\A \to \carrier\G$ is
+  \emph{equivariant} when post-composing it with the quotient map
+  yields an equivariant map $(\fun a[\canoniser\,a]_a) : \EFun
+  a\A{(\carrier\G / \A) a}$, i.e. when $\canoniser (g \act[\A]
+  a) \stabeq{g \act a} g \act[\inv\G] \canoniser a$.
+\end{definition}
+
+\begin{example}
+  % \examplelabel{equivariant canonisers}
+  For a totally ordered set $P$, we can define the $\Sym 2$-action on
+  $P \times P$ by $\swap\act\pair pq \definedby \pair qp$ and a
+  canoniser $\canoniser : P \times P \to \carrier{\Sym2}$ such that
+  $\canoniser \pair pq = \stet$ if $p \le q$, and $\canoniser \pair pq
+  = \swap$ if $p > q$. Then $\canoniser$ is not strictly equivariant
+  since for any $p \in P$, we have:
+  \[
+  \canoniser\parent{\swap \act \pair pp} = \canoniser\pair pp = \stet \neq \swap
+  = \stet \mul {\inv\swap} = \swap\iact{\pair pp}\canoniser\pair pp
+  \]
+  It is, however, equivariant, since
+  \(
+  \canoniser\parent{\swap \act \pair pp} =
+  \stet \stabeq{\pair pp} \swap =
+  \swap\iact{\pair pp}\canoniser\pair pp
+  \).
+\end{example}
+
+Note that for every equivariant function $f$ and every stabilising
+element we have:
+\[
+\begin{tabular}[c]{@{}c@{}}
+\myfigbox{
+  $
+  g \in \stabilise a
+  \implies
+  g \act f a \explain={equivariance} f(g \act a) \explain{=}{stabiliser} f a
+  \implies
+  g \in \stabilise {f \, a}
+  $
+}
+\end{tabular}
+\qquad\text{i.e.:}\qquad
+\myfigbox{$
+  \stabilise a \subseteq \stabilise {f \, a}
+$}
+\]
+We thus arrive at the following condition on core functions:
+\begin{definition}
+  Take indexed $\G$-actions $\Ctx \types \A$ and $\Ctx, x : \A \types
+  \B$, a subfamily $\carrier\Ctx \types X \subseteq \carrier\A$. A
+  function $\carrier\Ctx \types f : \DFun{\x}{X}\carrier\B$
+  is \emph{stable} when it preserves the stabiliser: $\stabilise x
+  \subset \stabilise {f\,x}$ for all $x \in X\ctx$.
+\end{definition}
+
+\begin{example}
+  Just as in \exampleref{strictly equivariant canonisers}, consider a
+  non-total ordering $P$ and a stable sorting function, and the
+  permutation sub-action on all tuples with distinct elements
+  $\set{\vec p \in P^n \suchthat \forall i,j \in \Fin n. p_i \neq
+  p_j}$. Then, we can define $\minimal : \carrier P^n \to \Fin n$ that
+  finds the index of a minimal element by $\minimal \definedby \wlg(\sort,
+  (\fun{\_}0))$.
+
+  Now, for any two incomparable $p, q$, both $\pair pq$ and $\pair qp$
+  are sorted, thus canonical. However:
+  \[
+    (0 \leftrightarrow 1) \act ((\fun{\_}0) \seq{p,q})
+    = (0 \leftrightarrow 1) \act 0
+    = 1 \neq 0 = (\fun{\_}0) \seq{q,p}
+    = (\fun{\_}0) \parent{(0 \leftrightarrow 1) \act \seq{p,q}}
+  \]
+  and so $(\fun{\_}0)$ is not equivariant on $\Canon\sort$. It is,
+  however, vacuously stable. Indeed, take a canonical $\vec p$ and a
+  $\vec p$-stabilising permutation $\perm \in \stabilise{\vec p}$.
+  Since all the elements in $\vec p$ are distinct, yet $\perm\act \vec
+  p = \vec p$, we have that $\perm = \id$. Therefore $\perm \in
+  \stabilise{f\vec p} = \stabilise 0$.
+\end{example}
+
+So, in general, stability is strictly weaker than equivariance.
+Nonetheless, in the presence of an equivariant canoniser, stability
+and equivariance coincide.
+
+\begin{theorem}\theoremlabel{all stable core functions are equivariant}
+  Let $\Ctx \types \A$ be an indexed $G$-action and let $\carrier\Ctx \types
+  \canoniser : \carrier\A \to \carrier\G$ be an indexed canoniser.
+  Then, $\canoniser$ is equivariant iff for every indexed $G$-action
+  $\Ctx, x : \A \types \B$, every stable $\Ctx$-indexed core function
+  $\Ctx \types f : (x : \Canon\canoniser) \to \carrier\B$
+  is equivariant.
+\end{theorem}
+
+Unlike before, where only semi-regular actions admitted strictly
+equivariant canonisers, here every action admits an equivariant
+canoniser, although we may need to invoke the axiom of choice.
+
+\begin{theorem}\theoremlabel{equivariant canoniser choice}
+  Using the axiom of choice, every indexed $\G$-action has an equivariant canoniser.
+\end{theorem}
+
+To us, this use of the axiom of choice indicates that identifying
+symmetry is a creative activity, rather than a mechanical one.

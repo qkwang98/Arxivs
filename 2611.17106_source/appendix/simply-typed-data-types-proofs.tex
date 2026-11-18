@@ -1,0 +1,196 @@
+\section{Algebraic data types: further details}%
+\applabel{algebraic data types}
+
+In some sense, the theoretical development in this section is a
+special case of the proceedings two sections. However, it requires
+some additional abstractions that make the material less accessible:
+indexed families (\appref{indexed data types}), or monadic adjunctions
+and distributive laws (\appref{cat dev}). Therefore, we decided to
+include more specialised proofs for the simply-typed case, that use
+less categorical reasoning and mostly concern sets and functions.
+
+We start by proving that every Cartesian strength is a $\G$-strength
+(cf.~\remarkref{cartesian vs symmetry strengths}).
+
+\begin{lemma}\lemmalabel{Cartesian strengths are symmetric strengths}
+  Let $\strength : X \times FY \to F(X \times Y)$ be a Cartesian
+  strength for a functor $F : \Set \to \Set$. Then
+  $\strength_{\carrier\G,\X} : \carrier\G \times FX \to F(\carrier\G
+  \times X)$ is a $\G$-strength.
+\end{lemma}
+\begin{proof}
+  It's more natural to use diagrammatic reasoning here:
+  \diagram{15}
+  \diagram{16}
+  as we wanted.
+\end{proof}
+
+Next, we prove that a $\G$-strength for $F$ and an $\G$-action $\A$
+let us equip $F\carrier\A$ with a $\G$-action:
+
+\begin{proof}[of \lemmaref{strength lifts actions}]%
+  This definition is a $\G$-action by straightforward calculation:
+  \[
+    e \act t =
+    \fmap (\act) (\strength(\unit, t))
+    \explain={first axiom}
+    \fmap (\act) (\fmap(\fun x \pair \unit x)t)
+    \explain={map fusion}
+    \fmap(\fun x \unit \act x)t
+    =
+    \fmap(\fun x \unit\act x)t
+    =
+    \fmap(\id)t
+    =
+    t
+  \]
+  \begin{align*}
+    g \act (h \act t) &=
+    \fmap (\act) (\strength(g, \fmap (\act) (\strength(h, t))))
+    \\&\explain={strength nat.}
+    \fmap (\act) (\fmap (\fun{\triple{g'}{h'}{x}}\pair{g'}{h'\act x})
+      (\strength(g,
+    (\strength(h, t)))))
+    \\&\explain={map fusion}
+    \fmap (\fun{\triple{g'}{h'}x}g'\act h'\act x)
+    (\strength(g,
+    (\strength(h, t))))
+    \\&=
+    \fmap (\fun{\triple{g'}{h'}x}(g'\mul h')\act x)
+    (\strength(g,
+    (\strength(h, t))))
+    \\&\explain={map fusion}
+    \fmap (\act) (\fmap (\fun{\triple{g'}{h'}x}\pair{g'\mul h'}x)
+      (\strength(g,
+    (\strength(h, t)))))
+    \\&\explain={second axiom}
+    \fmap (\act) (\strength(g \mul h, t))
+    \defines
+    (g\mul h) \act t
+  \end{align*}
+  and so we have an action.
+
+  Let $h : \A \equito \B$ be equivariant. Calculate:
+  \begin{align*}
+    \fmap h (g \act t)
+    &=
+    \fmap h (\fmap (\act) (\gstrength (g, t)))
+    \explain={map fusion}
+    \fmap(\fun{\pair{g'}x}h(g' \act x))(\gstrength (g, t))
+    \\&=
+    \fmap(\fun{\pair{g'}x}g' \act h(x))(\gstrength (g, t))
+    \explain={map fusion}
+    \fmap(\act) \fmap(\id \times h)(\gstrength (g, t))
+    \\&\explain={strength nat.}
+    \fmap(\act) \gstrength(g, \fmap ht)
+    =
+    g \act \fmap h t
+  \end{align*}
+  and so we have an equivariant map $\fmap h : F\A \equito F\B$.
+\end{proof}
+
+Next, we prove that $\G$-strengths for each component functor induce a
+$\G$-strength for the coproduct functor:
+
+\begin{proof}[\propositionref{modularity}]%
+  Follows by $\Set$'s distributivity: the natural
+  isomorphism $\carrier\G \times (\X \amalg \Y) \isomorphic
+  (\carrier\G \times \X) \amalg (\carrier\G \times \Y)$.
+\end{proof}
+
+The following technical result is the workhorse that allows us to both
+derive the action on the data type from its strength, and to reason
+about properties of parameterised maps. It is
+prevalent in Fiore et al.'s work on abstract
+syntax~\cite{fiore-szamozvancev:formal-soas,%
+  fiore-szamozvancev:soas-theory,%
+  fiore-ranchod:substructural-ast}, originally proposed by
+\citeauthor{bird-paterson:generalised-folds-for-nested-datatypes}~\cite{%
+  bird-paterson:generalised-folds-for-nested-datatypes}. Here we use
+the following special case.
+
+\begin{theorem}[parameterised initiality]%
+  \theoremlabel{parameterised initiality}
+  Let $A$ be a set, $F : \Set \to \Set$ a functor, $\roll : F\fix F
+  \to \fix F$ an initial algebra, and $\strength : A\times FX \to F(A
+  \times \X)$ a natural transformation in $\X$. For every $F$-algebra
+  $f : F\X \to \X$ there is a unique \emph{$A$-parameterised}
+  homomorphism $\pfold f : \pair{\fix F}{\roll} \to \pair{X}{f}$, i.e., a
+  function $\pfold f : A \times \fix F \to \X$ satisfying:
+  \[
+  \pfold f\pair a{\roll t} = f(\fmap(\strength(a,t)))
+  \]
+\end{theorem}
+\begin{proof}%
+  Using both the given strength and the Cartesian-closed structure,
+  define the following morphism:
+  \diagram{17}
+  Currying, we have $h \definedby \curry g : F(X^A) \to X^A$, and so
+  by ordinary initiality, there is a unique homomorphism into $X^A$:
+  \diagram{18}
+  We define the required parameterised traversal as the uncurried function:
+  \[
+  \pfold f \definedby \uncurry k :
+  A \times \fix F \xto{\id \times k} A \times X^A \xto\eval X
+  \]
+  We need to show that it satisfies the required equation, and that it
+  is the unique such function. Calculate:
+  \diagram{19}
+  Now, take any map $p : A\times \fix F \to \X$ that satisfies:
+  \diagram{20}
+  Let $q \definedby \curry p : \fix F \to X^A$. Calculate:
+  \diagram{21}
+  and so, by the universal property of the exponential, $q$ satisfies
+  ($*$), and so $q = k$, hence:
+  \[
+  p = \uncurry q = \uncurry k = \pfold f
+  \]
+  and we proved uniqueness.
+\end{proof}
+
+We now lay the capstone in the theory of data types, the Equivariant
+Initiality \theoremref{representation for algebras}:
+
+\begin{proof}[of \theoremref{representation for algebras}]%
+  We have three things to do:
+  \begin{itemize}
+    \item show the unit axiom for $(\act)$.
+    \item show the associativity axiom for $(\act)$.
+    \item show that $\fold f$ is equivariant when $f$ is equivariant.
+  \end{itemize}
+  All three are straightforward calculations, appealing to initiality
+  or parameterised initiality.
+
+  For the unit axiom, appeal to initiality:
+  \diagram{23}
+  and so, by initiality, $\unit \act t = t$.
+
+  For associativity, we appeal to parameterised initiality, for the
+  composite strength:
+  \diagram{24}
+  via the  calculation in \figref{associativity of initial algebra action}.
+  \begin{figure}
+    \diagram{25}
+    \caption{associativity of the action over the initial algebra}
+    \figlabel{associativity of initial algebra action}
+  \end{figure}
+  Therefore, $(g \mul h) \act t = g \act (h \mul t)$, and we have
+  an action. Note that the defining property of $(\act)$ makes the
+  initial algebra structure equivariant $\roll : F\fix F \equito \fix F$.
+
+  Finally, take any equivariant algebra $f : F\A \equito \A$, and
+  consider the unique $F$-homomorphism $\fold f : \fix F \to
+  \carrier\A$. We appeal to parametrised initiality w.r.t.~the
+  $\G$-strength, and calculate as in \figref{equivariant initiality}.
+  \begin{figure}
+    \diagram{26}
+    \caption{equivariance of the homomorphism into an equivariant algebra}
+    \figlabel{equivariant initiality}
+  \end{figure}
+  Therefore $\fold f(g \act t) = g \act (\fold f)$, as we wanted.
+\end{proof}
+
+The proofs from \subsecref{wlog-traversals} are identical and special
+cases to their indexed variants, and do not use abstract categorical
+concepts. We therefore only prove them in the indexed case
+(cf.~\appref{indexed data types}).

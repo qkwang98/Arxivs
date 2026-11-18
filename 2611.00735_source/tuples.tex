@@ -1,0 +1,151 @@
+% !TEX root = TI5.tex
+
+\subsection{Efficient algorithm for isometry of tuples of (anti)symmetric bilinear forms over $\Z/p^e \Z$ 
+	%and finite commutative local PIRs of odd characteristic
+}\label{subsec:tuple-isometry}\label{sec:matrix_tuple}
+
+Throughout Section~\ref{subsec:tuple-isometry}, $R$ denotes a finite local commutative principal ideal ring (PIR) of odd characteristic (equivalently, $R/\m$ is a field of odd characteristic), and we use the notation and terminology laid out in Section~\ref{sec:PIR}.
+
+Given an $R$-module $M$, integers $1 \leq z_i \leq e$, and $R$-bilinear forms $B_i,C_i \colon M \otimes_R M \to R/\m^{z_i}$, the \algprobm{(Tuple) Isometry Problem} is to decide whether there exists $F \in \aut(M)$ such that $B_i(F(u), F(v)) = C_i(u,v)$ for all $u,v \in M$ and all $i=1,\dotsc,m$, and any such $F$ is called an \emph{isometry} from $\vec{B}$ to $\vec{C}$. If we represent each bilinear form by its corresponding matrix, which we denote by the same letter by abuse of notation, we have $(B_i)_{jk} = B_i(v_j, v_k)$, where the $v_*$ are a basis of $M$, and the congruence problem then asks whether $F^t B_i F = C_i$ for all $i = 1,\dotsc,m$, where now we view $F$ as its matrix according to Theorem~\ref{thm:HillarRheaPIR}. (Note that the matrix $B_i$ can be any matrix with entries in $R/\m^{z_i}$, subject to the constraint that if $z_i \leq \min\{e_j, e_k\}$, then the $(j,k)$ entry must be a multiple of $\m^{z_i - \min\{e_j, e_k\}}$. This follows from bilinearity and the fact that $v_j$ is annihilated by $\m^{e_j}$ and $v_k$ is annihilated by $\m^{e_k}$ in $M$.)
+
+For $\varepsilon \in \{\pm 1\}$, we say a bilinear form $B \colon M \otimes M \to R/\m^z$ is $\varepsilon$-symmetric if $B(u,v) = \varepsilon B(v,u)$ for all $u, v \in P$; thus $\varepsilon=1$ corresponds to symmetric and $\varepsilon=-1$ corresponds to anti-symmetric (equivalently, since $p$ is odd, alternating). 
+
+Our main result in this section is:
+
+\begin{theorem}[{Generalizes \cite[Thm.~1.7(1)]{IQ19} from finite fields to finite local commutative PIRs}]\label{thm:matrix_tuple_isometry}
+If $R$ is a finite local commutative PIR with quotient field of odd characteristic $p$, and $M$ is an $n$-generated $R$-module, the \algprobm{Tuple Isometry Problem} for $m$-tuples of $\varepsilon$-symmetric bilinear forms on $M$ can be solved in randomized  time $\poly(n,m,e)$ with operations in $R$ at unit cost, or deterministic time $\poly(n,m,e, p)$ with operations in $R$ at unit cost, where $p$ is the characteristic of $R/\m$.
+
+In particular, when $R = \Z/p^e \Z$, the latter implies a solution in deterministic time $\poly(n,m,p,e)$ on a Turing machine.
+\end{theorem}
+
+Our algorithm follows that of Ivanyos and Qiao closely, and uses several of their key results as subroutines. Here we recall the main steps of their algorithm, and give proofs of the key results that need to be generalized from the case of finite fields to local commutative PIRs as above; we maintain the numbering from their paper for ease of comparison. In Appendix~\ref{app:similar}, we include those proofs of the key results here that are identical or nearly identical to the original ones, merely so that it may be checked carefully that the stated proofs do indeed go through in our more general setting.
+
+Throughout the remainder of this section, let $M$ be an $n$-generated $R$-module. Given an $\varepsilon$-symmetric bilinear form $B \colon M \otimes M \to R/\m^z$, we define its kernel as $\ker B = \{m \in M | B(m,m') = 0 \forall m' \in M\}$. (Note that since $B$ is $\varepsilon$-symmetric, its left kernel and right kernel coincide as submodules of $M$.) Given $z_1, \dotsc, z_m$ and $\varepsilon$-symmetric bilinear forms $B_i \colon M \otimes M \to R/\m^{z_i}$, we say the tuple $(B_1, \dotsc, B_m)$ is \emph{non-degenerate} if $\bigcap_{i=1}^m \ker B_i = 0$. 
+
+%[Move this note to where we actually need it. May need to put something in the appendix for commutative local PIRs beyond Abelian groups... We note that linear algebra over a local commutative PIR can be done in polynomial time with operations in $R$ at unit cost, nearly as efficiently as over fields, in particular this holds (even on usual Turing machines) when $R = \Z/p^e \Z$ \cite{GoldmannRussell}.]
+
+\paragraph{Steps of the algorithm.}
+\begin{enumerate}
+\item \textit{Reduce to the non-degenerate case.} 
+
+\begin{lemma}
+There is a polynomial-time $R$-algorithm which, given a tuple of $\varepsilon$-symmetric bilinear forms $\vec{B}$ on $M$, produces a quotient module $M'$ of $M$, and a non-degenerate tuple of $\varepsilon$-symmetric bilinear forms $\text{nondeg}(\vec{B})$ on $M'$ such that for any two tuples $\vec{B}, \vec{C}$, we have that $\text{nondeg}(\vec{B})$ and $\text{nondeg}(\vec{C})$ are isometric if and only if $\vec{B}, \vec{C}$ are isometric.
+\end{lemma}
+
+Over fields, this is easy by standard linear algebra. Over finite local PIRs, we instead use Smith Normal Form.
+
+Essentially, $\vec{B}$ and $\text{nondeg}(\vec{B})$ are isometric---there is no real loss of information in moving from one to the other---but because they are bilinear forms on different modules $M$ and $M'$, respectively, making this precise takes some work. As we won't need such a statement, we avoid this complication, but we mention it as it may still be helpful for intuition.
+
+\begin{proof}
+We show how to compute $\text{nondeg}(\vec{B})$ and the associated quotient $M'$ of $M$; the same procedure is then applied to $\vec{C}$. (If the quotient module produced in computing $\text{nondeg}(\vec{C})$ is not the same as $M'$, then $\vec{B}$ and $\vec{C}$ do not have isomorphic kernels, and therefore the two tuples cannot be isometric.)
+
+Suppose $\vec{B}$ is degenerate, with common kernel $\bigcap_{i=1}^m \ker B_i = K \leq M$. By Smith Normal Form, there is a basis $m_1,\dotsc,m_n$ for $M$, together with exponents $0 \leq k_1 \leq k_2 \leq \dotsb $ and an integer $k$ such that $t^{k_1} m_1, t^{k_2} m_2, \dotsc, t^{k_k} m_k$ is a basis for $K$. By our assumptions on $R,M,\vec{B}$, we can compute this SNF in polynomial time, which includes the elements $m_i$ and the exponents $k_i$. If the $B_i$ were originally written in a different basis, we apply the change of basis matrix (coming from the SNF computation) to put $B_i$ into the $\{m_1, \dotsc, m_n\}$ basis, resulting in an isometric tuple of bilinear forms, which we call $\vec{B}'$.
+
+In this basis, for $j=1,\dotsc,k$, we have that $t^{k_j} R / \m^{e_j}$ (in the $j$-th position) is in the kernel of $\vec{B}'$. Since every such vector is in the kernel of each $B_i'$, it must be the case that every element of the $j$-th row and $j$-th column of $B_i'$ is divisible by $t^{e_j - k_j}$. 
+
+
+Let $M' = M / K$. If $M = \bigoplus_{i=1}^n \langle m_i \rangle = \bigoplus_{i=1}^n R/\langle t^{e_i} \rangle$, then we have $M'$ is the following ``coordinate-wise quotient'': $M' = \left(\bigoplus_{i=1}^k R/\langle t^{k_i}  \rangle\right) \oplus \left(\bigoplus_{i=k+1}^n R/\langle t^{e_i} \rangle \right)$. That is, in the first $k$ coordinates, we mod out by $t^{k_i}$ in the $i$-th coordinate, and the remaining coordinates are untouched. (If some $k_i=0$, we may then omit that coordinate, which corresponds to $M'$ having a smaller basis than $M$.)
+
+In $\text{nondeg}(B)$ we replace each element of the $j$-th row and column of $B'$ with its quotient by $t^{e_j - k_j}$. (Although there are multiple such quotients, they all differ by multiples of $t^{k_j}$, hence they are all equal as elements of $R/\langle t^{k_j} \rangle$, which is how we now view the $j$-th row and column of $\text{nondeg}(B)$.) If we ever have $e_j = k_j$, then that row and column of every $B_i'$ is zero, and we simply remove that row and column from each $B_i'$. For $j=1,\dotsc,k$, since the $j$-th row and column of $\text{nondeg}(B)$ are now viewed as elements of $R/t^{k_j}$, the matrices we constructed in $\text{nondeg}(\vec{B})$ correspond to bilinear forms on $M'$, whose common kernel corresponds to the image of $K$ in $M'$, which is zero. Thus $\text{nondeg}(\vec{B})$ is non-degenerate.
+
+Furthermore, if $\vec{B}$ and $\vec{C}$ are isometric, then so are $\vec{B}'$ and $\vec{C}'$ (since $\vec{B}'$ is isometric to $\vec{B}$ by construction, and similarly for $\vec{C}'$ and $\vec{C}$). If $F$ is an isometry from $\vec{B}'$ to $\vec{C}'$, let $F'$ be the matrix gotten from $F$ by removing the rows and columns corresponding to rows and columns of $\vec{B}'$ that are removed in $\text{nondeg}(\vec{B})$. Then $F'$ is an isometry from $\text{nondeg}(\vec{B})$ to $\text{nondeg}(\vec{C})$. Doing this process in reverse gives the converse.
+\end{proof}
+
+From now on, we assume that $\vec{B}$ and $\vec{C}$ are themselves non-degenerate tuples of bilinear forms on $M$.
+
+\item \textit{Solve the twisted equivalence problem.} Test whether $\vec{B}$ and $\vec{C}$ are ``twisted equivalent'', meaning that there are invertible elements $A,D \in \aut(M)$ such that $A^t \vec{B} = \vec{C} D$, or in terms of bilinear forms, that $B_i(Au, v) = C_i(u, Dv)$ for all $u,v \in M$ and all $i=1,\dotsc,m$.
+
+\begin{lemma} \label{lem:twisted}
+There is a polynomial-time reduction from \algprobm{Twisted Equivalence} of tuples of $\varepsilon$-symmetric bilinear forms on an $R$-module $M$ to the \algprobm{Module Isomorphism Problem} over $R$. In particular, \algprobm{Twisted Equivalence} for such tuples can be solved in polynomial time.
+\end{lemma}
+
+The reduction is the same construction as in Ivanyos \& Qiao \cite[Prop.~3.2]{IQ19}, but the argument of correctness requires some care in the case of a finite local PIR, so we include it in Appendix~\ref{app:similar}. To solve the \algprobm{Module Isomorphism Problem} over $R$, we use the polynomial-time algorithm of Ciocanea-Teodorescu \cite{CT}, which extends that of Brooksbank \& Luks \cite{BL08} from working over fields to working over finite rings.
+
+\item \textit{Reduce to decomposing an element of a $*$-algebra.}
+
+\newcommand{\adj}{\text{Adj}}
+
+\begin{definition}[{cf. \cite[Def.~2.3]{IQ19}}]
+Let $R$ be a finite local PIR with quotient field of odd characteristic, and $M$ a finite $R$-module. For $\varepsilon \in \{\pm 1\}$, and $\vec{B} = (B_1, \dotsc, B_m)$ a tuple of $\varepsilon$-symmetric bilinear forms on $M$, the \emph{adjoint algebra} of $\vec{B}$, denoted $\adj(\vec{B})$, is $\{(A,D) : A,D \in \End_R(M), A^t B_i = B_i D \,\forall i\}$. $\adj(\vec{B})$ is a $*$-algebra with $(A,D)^* = (D,A)$.
+\end{definition}
+
+By definition we have that $\adj(\vec{B})$ is a sub-algebra of $\End(M)^{op} \oplus \End(M)$, where $\End(M)^{op}$ has the same set of elements of $\End(M)$, but multiplication is reversed (corresponding to the use of the transpose in the above definition). However, when $\vec{B}$ is non-degenerate, we may realize $\adj(\vec{B})$ as isomorphic to a sub-algebra of $\End(M)$ as follows. The idea is that when $\vec{B}$ is non-degenerate, if $(A,D) \in \adj(\vec{B})$, then $A$ uniquely determines $D$ and vice versa. For suppose $(A,D), (A',D)$ are both in $\adj(\vec{B})$. Then we have $A^t B_i = B_i D = (A')^t B_i$ for all $i$. But then we have $(A^t - (A')^t)B_i = 0$ for all $i$, and thus the columns of $A - A'$ are in the common kernel of the $B_i$. But if $\vec{B}$ is non-degenerate, this common kernel is zero by definition, and thus $A - A' = 0$, so $A = A'$. From this it follows that the projection map from $\adj(\vec{B}) \subseteq \End(M)^{op} \oplus \End(M)$ onto the second coordinate $\End(M)$ is injective. Equivalently, when $\vec{B}$ is non-degenerate, we may thus define $\adj(\vec{B})$ as the following sub-algebra of $\End(M)$: $\adj(\vec{B}) \cong \{D \in \End(M) : (\exists A \in \End(M))[A^t \vec{B} = \vec{B} D]\}$, and the $*$ operation is then defined by $D^*$ being the unique $A$ such that $A^t \vec{B} = \vec{B} D$. With this setup, the remainder of \cite[Sec.~3.4]{IQ19} goes through without change. This is because the proofs there are phrased entirely in terms of the $*$ and inverse operations and their basic properties, not relying on anything special to working over fields. In particular, we have the following lemma:
+
+\begin{lemma}[{Cf. \cite[Prop.~3.4]{IQ19}}]
+Let $\vec{B}, \vec{C}$ be $\varepsilon$-symmetric bilinear forms on the $R$-module $M$, and suppose that $A,D \in \aut(M)$ are such that $A^t \vec{B} = \vec{C} D$. Let $E = A^{-1} D^{-1}$ and $\mathfrak{A} = \adj(\vec{C})$, viewed as a subalgebra of $\End(M)$ as above. Then $\vec{B}$ and $\vec{C}$ are isometric if and only if there exists $X \in \mathfrak{A}$ such that $X^* X = E$.
+\end{lemma}
+
+Given $E$ and $\mathfrak{A}$, finding such an $X$ is the \algprobm{$*$-Symmetric Decomposition Problem}. Note that here we are given $\mathfrak{A}$ by a set of elements of $\End(M)$ (which we may view as matrices over $R$ by Theorem~\ref{thm:HillarRheaPIR}) which form a basis for $\mathfrak{A}$.  
+
+\item \textit{Solve the $*$-symmetric decomposition problem.}
+
+\begin{enumerate}
+\item \textit{Compute the algebra structure of $\mathfrak{A}$.} 
+
+\begin{theorem}[{cf. \cite[Thm.~3.6]{IQ19}, which is based on \cite{Ron90,EG00,Iva00}}] \label{thm:structure}
+Given an $n$-generated  $R$-module $M$, and a basis of a subalgebra $\mathfrak{A} \leq \End(M)$, there is a Las Vegas $R$-algorithm running in time $\poly(n)$ that computes (1) a basis of $\rad(\mathfrak{A})$, (2) a surjective $R$-algebra homomorphism $\pi \colon \mathfrak{A} \to M(n_1, \F_{q_1}) \oplus \dotsb \oplus M(n_k, \F_{q_k})$ with kernel $\rad(\mathfrak{A})$, where $\F_{q_i}$ is a finite extension field of $R/\m$ that is specified by a basis of $\F_{q_i}$ over $R/\m$. There is also a deterministic $R$-algorithm for the same running in time $\poly(n, p)$, where $p$ is the characteristic of $R/\m$.
+
+Given the output of the aforementioned algorithm, there are also efficient deterministic algorithms to (3) compute $\pi(a)$ given $a \in \mathfrak{A}$, and (4) given $b \in M(n_1, \F_{q_1}) \oplus \dotsb \oplus M(n_k, \F_{q_k})$, compute $a \in \mathfrak{A}$ such that $\pi(a) = b$.
+\end{theorem}
+
+A key new ingredient compared to the field case is the following lemma:
+
+\begin{lemma} \label{lem:rad}
+Suppose $\mathfrak{A}$ is a finite (or Artinian) $R$-algebra, and let $\pi \colon \mathfrak{A} \to \mathfrak{A} / \m \mathfrak{A}$ be the natural quotient map. Then $\pi(\rad(\mathfrak{A})) = \rad(\mathfrak{A}/\m \mathfrak{A})$.
+\end{lemma}
+
+An element $x \in \mathfrak{A}$ is \emph{strongly nilpotent} if $xy$ is nilpotent for all $y$; in a finite (or Artinian) algebra, the Jacobson radical $\rad(\mathfrak{A})$ is equal to the set of all strongly nilpotent elements.
+
+\begin{proof}
+By Proposition 4.6 of Lam \cite{Lam}, in any ring $\mathfrak{A}$, if $I$ is an ideal contained in $\rad(\mathfrak{A})$, then $\rad(\mathfrak{A})/I = \rad(\mathfrak{A}/I)$. So it will suffice for us to show that $\m \mathfrak{A}$ is an ideal contained in $\rad(\mathfrak{A})$. If $x \in\m \mathfrak{A}$,%\ynote{Is it $\m pA$ or $\m A$?} 
+then $x=tx'$ for some $x' \in A$, where $t$ is a generator of $\m$, and thus $xy=tx'y$. As $t$ is central, we have that $(xy)^e$ is divisible by $t^e$, hence zero. Thus every element of $\m \mathfrak{A}$ is strongly nilpotent, so $\m \mathfrak{A} \subseteq \rad(\mathfrak{A})$. Furthermore, since $t$ is central, $\m \mathfrak{A}$ is a (principal, two-sided) ideal. Thus $\m \mathfrak{A}$ is an ideal of $\mathfrak{A}$ contained in $\rad(\mathfrak{A})$, and the result follows.
+\end{proof}
+
+\begin{proof}[Proof of Theorem~\ref{thm:structure}] 
+(1) To compute $\rad(A)$ we proceed as follows. If $\{a_1, \dotsc, a_d\}$ is a generating set of the additive group of $\mathfrak{A}$, then $\m \mathfrak{A}$ is spanned by the elements $\{ta_i : i = 1, \dotsc, d\}$. Furthermore, we can calculate a basis, exponents, and structure coefficients (as above) of $\mathfrak{A}/\m \mathfrak{A}$ by simply setting each $e_i=1$ and taking each $c_{ij}^k$ to its value modulo $t$. This also specifies for us the quotient map $\pi' \colon \mathfrak{A} \to \mathfrak{A}/\m \mathfrak{A}$ in terms of how it acts on a basis. Then using previous algorithms over finite fields \cite{Ron90,EG00,Iva00} in $\mathfrak{A}/\m \mathfrak{A}$---which is now a finite-dimensional algebra over the finite field $R/\m$---we can compute a basis for $\rad(\mathfrak{A}/\m \mathfrak{A})$ over $R/\m$, and for each basis element of $\rad(\mathfrak{A}/\m \mathfrak{A})$, take any one preimage under $\pi$. Those preimages, together with the aforementioned generating set of $\m \mathfrak{A}$, generate $\rad(\mathfrak{A})$ as an $R$-module, by Lemma~\ref{lem:rad}. Finally, using Smith Normal Form, we can extract from this generating set a basis of $\rad(\mathfrak{A})$.
+
+(2 and 3) In the preceding step, we computed the quotient map $\pi' \colon \mathfrak{A} \to \mathfrak{A} / \m \mathfrak{A}$, the latter of which is an Artinian algebra over the field $R/\m$. Using previous algorithms over finite fields \cite{Ron90,EG00,Iva00}, we can then compute the quotient map $\mathfrak{A} / \m \mathfrak{A} \to \mathfrak{A} / \rad(\mathfrak{A})$ as well as the isomorphism of the latter with $M(n_1, \F_{q_1}) \oplus \dotsb \oplus M(n_k, \F_{q_k})$, where $\F_{q_i}$ is a finite extension field of $R/\m$ that is specified by a basis of $\F_{q_i}$ over $R/\m$.
+
+(4) From the algorithms over finite fields \cite{Ron90,EG00,Iva00}, given $b \in M(n_1, \F_{q_1}) \oplus \dotsb \oplus M(n_k, \F_{q_k})$, we can compute an $a' \in \mathfrak{A} / \m \mathfrak{A}$ that is a preimage of $b$ under the quotient map $\mathfrak{A} \to \mathfrak{A} / \rad(\mathfrak{A})$. We now need to compute an $a \in \mathfrak{A}$ whose image modulo $\mathfrak{m}$ is $a'$. Let $M$ be the inclusion matrix of $\m \mathfrak{A}$ into $\mathfrak{A}$ (say, viewing ring elements here as column vectors). Putting $M$ into Smith Normal Form as in the first step, we get a basis $\{a_1,\dotsc,a_d\}$ of $\mathfrak{A}$ and exponents $f_1, \dotsc, f_d$ such that $t^{f_i} a_i = 0$ and $f_i$ is the least integer with this property, and furthermore we get a $k \leq d$ and integers $0 \leq e_1 \leq e_2 \leq \dotsb \leq e_k$, such that $\{t^{e_1} a_1, t^{e_2} a_2, \dotsb, t^{e_k} a_k\}$ is a basis for $\m \mathfrak{A}$. In this basis on $\mathfrak{A}$, the projection map $\mathfrak{A} \to \mathfrak{A} / \m \mathfrak{A}$ takes the form $\sum_{i=1}^d r_i a_i \mapsto \sum_{i=1}^k (r_i \text{ mod } t^{e_i}) \overline{a}_i$, where $\overline{a}_i$ represent the image of $a_i$ in $\mathfrak{A} / \m \mathfrak{A}$, and each $r_i$ is taken modulo the annihilator of $a_i$ (which is some power of $\m$). Now, say $a' = \sum_{i=1}^k \overline{r}_i \overline{a}_i$ is the element of $\mathfrak{A} / \m \mathfrak{A}$ whose preimage we want to compute. Then it suffices to lift $\overline{r}_i$ from $R/\m^{e_i}$ to $r_i \in R/\Ann_R(a_i)$, and then $\sum_{i=1}^k r_i a_i$ will be a preimage of $a'$.
+
+By induction, it will suffice to be able to lift $\overline{r} \in R/\m^f$ to $r \in R/\m^{f+1}$ such that $r \equiv \overline{r} \pmod{\m^f}$, for arbtirary $0 \leq f \leq e$. However, this follows from our assumption that elements of $R/\m^f$ are represented by elements of $R$; see the beginning of Section~\ref{sec:PIR}.
+\end{proof}
+
+\item \textit{Recognize the $*$-algebra structure.} This part of the algorithm only deals with the semisimple quotient of $\mathfrak{A}$, which is necessarily an algebra over a field. Thus the results of \cite[Sec.~3.5.2]{IQ19} apply directly here, since this part of the algorithm is working in the same setting as they were working in, not a generalization thereof.
+
+\item \textit{Reduce to the semi-simple case.} 
+
+\begin{proposition}[{Cf. \cite[Prop.~3.11]{IQ19}}] \label{prop:semisimple}
+Let $\mathfrak{A}$ be an $*$-algebra over $R$. Let $E \in \mathfrak{A}$ be an invertible $*$-symmetric element, and suppose there exists $Y \in \mathfrak{A} / \rad(\mathfrak{A})$ such that $Y^* Y \equiv E \pmod \rad(\mathfrak{A})$. Then there exists $X \in \mathfrak{A}$ such that $X^* X = E$, and such an $X$ can be found by a deterministic polynomial-time $R$-algorithm.
+\end{proposition}
+
+The one additional ingredient we need in the proof is the following lemma:
+
+\begin{lemma}
+Suppose $\mathfrak{A}$ is a finite $R$-algebra. Let $n = \dim_{R/\m} (\mathfrak{A} / \m \mathfrak{A})$. 
+Then $(\rad \mathfrak{A})^{2^k} = 0$ for some $k \leq 1 + \lceil \log_2(\max\{n,e\}) \rceil $ (where recall that $e$ is minimal such that $\m^e = 0$).
+\end{lemma}
+
+\begin{proof}
+By Lemma~\ref{lem:rad}, $\rad \mathfrak{A} \pmod \m = \rad(\mathfrak{A} / \m \mathfrak{A})$. As argued in the proof of \cite[Prop~3.11]{IQ19}, $\rad(\mathfrak{A}/\m\mathfrak{A})^{2^{k'}} = 0$ for some $k' \leq \lceil \log n \rceil$. Lifting to $\mathfrak{A}$, this is equivalent to saying that $\rad(\mathfrak{A})^{2^{k'}}$ is contained in $\m \mathfrak{A}$ for some $k' \leq \lceil \log n \rceil$. But since $\m^e = 0$ and $\m \subseteq R \subseteq \mathfrak{A}$ is central in $\mathfrak{A}$ (by the definition of $R$-algebra), we have that $(\m \mathfrak{A})^e = 0$ as well. Thus $\rad(\mathfrak{A})^{2^{k'} + e} = 0$. Finally, we have $2^{k'} + e \leq 2\cdot \max\{2^{k'}, e\} \leq 2^k$ for some $k \leq  1+ \lceil \log_2(\max\{n,e\}) \rceil$.
+ \end{proof}
+
+With this lemma in hand, the proof of Proposition~\ref{prop:semisimple} is nearly identical to that in Ivanyos--Qiao, again because their proof is phrased almost entirely in the language of $*$-algebras without using any special properties of algebras over fields. The bound on $k$ such that $(\rad \mathfrak{A})^{2^k} = 0$ is used in the proof to give an upper bound on the number of iterations of the algorithm, thus the running time of our $R$-algoirthm is still only at most $\poly(\dim_{R/\m} \mathfrak{A}/\m\mathfrak{A},e)$.
+
+\item At this point, we may directly use the algorithm of \cite[Sec.~3.5.4 and 3.5.5]{IQ19} to solve the semi-simple case, since semi-simple algebras are always over fields. Thus the remainder of the algorithm uses their algorithm as a (black box) subroutine.
+\end{enumerate}
+
+
+\end{enumerate}
+
+
+Finally, Theorem~\ref{thm:tensor_isomorphism_main} is obtained by Theorem~\ref{thm:GpI-to-AMSI}, Theorem~\ref{thm:tensor_iso_algo}, and Theorem~\ref{thm:matrix_tuple_isometry}. 
+
+%\jnote{Notes for us: the places where we need $R$ to be finite---equivalently, $\m$ to be nilpotent---are in the reduction to the nondegenerate case above, and in Lemma~\ref{lem:rad}. Perhaps Lemma~\ref{lem:rad} can be proved without this assumption by other means, but I do not see how to reduce to the nondegenerate case when $R$ is not finite. e.g. in the $p$-adic integers, if the kernel includes the ideal $\langle p^i \rangle$, as a $\Z_p$-module, this is isomorphic to $\Z_p$...}
+
+
+%[First recall how $A$ is given to us. We are given a "basis" $\{a_1,\dotsc,a_d\}$ (generating set of the additive group of $A$), exponents $e_i$ where $p^{e_i} a_i = 0$ and $e_i$ is minimal with this property, where the underlying additive group of $A$ is the direct sum of the cyclic groups generated additively by the $a_i$, say $A = \bigoplus_i \Z/p^{e_i} \Z$, and finally structure coefficients $c_{ij}^k$, where $a_i \cdot a_j = \sum_k c_{ij}^k a_k$, so $c_{ij}^k$ is in $\Z/p^{e_k} \Z$ for all $i,j,k$.]
+
+
+
+

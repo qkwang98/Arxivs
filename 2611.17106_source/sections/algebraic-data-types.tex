@@ -1,0 +1,876 @@
+\section{Symmetric algebraic data types}
+\seclabel{algebraic data types}
+
+Let us return to the tree lookup function $\lookup : \DFun{\BoundV
+t}{\Tree} \Fun{\NodeIn{\BoundV t}} \naturals$ from \exampleref{node
+lookup}. Consider the symmetry in the two recursive cases
+\[
+  \lookup \Big(\NodeV \ell n r\Big) (\Lft \:: p) \definedby \lookup \, \ell \, p
+  \qquad
+  \lookup \Big(\NodeV \ell n r\Big) (\Rgt \:: p) \definedby \lookup \, r \, p
+\]
+and define the canoniser\label{goLeft canoniser first occurrence} on paths by $\goLeft \, \Nil =
+\goLeft (\Lft \:: p) = \stet$ and $\goLeft (\Rgt \::
+p) = \swap$. Then, we can define $\lookup$ as follows, with dependent
+types ruling out inaccessible cases:
+\[
+\lookup \definedby \fun{\Big(\NodeV \ell n r\Big)} \wlg\Bigg(
+  \goLeft,
+    \begin{cases}
+      \Nil &\mapsto n \\
+      \Lft \:: p' &\mapsto \lookup \, \ell \, p'
+    \end{cases}
+\Bigg)
+\]
+However, note that $\lookup$ and the core function are mutually
+recursive: $\lookup$ is defined in terms of the core function, which
+then recursively calls $\lookup$ on descent. This recursion is
+structural, but via interdependence through a higher-order function.
+
+Languages such as Agda and Idris have an implicit structural recursion
+and a termination checker that tries to detect size changes.  This
+type of implicit mutual recursion, called through the canoniser and
+group action, is typically beyond the termination checker's ability to
+detect a size change. Some languages provide eliminators explicitly,
+such as Rocq and Lean, generating an appropriate
+recursion or induction principle, which the user can use to:
+(1) define the action on the data type; (2) compose the recursion
+principle with \WLOG{} reasoning; and (3) develop induction principles
+for equivariant reasoning. In this section we will isolate an
+additional piece of data in addition to the data type, in the form of
+an action of the group on the data type's \emph{constructors}. From
+this structure we derive (1)--(3). Furthermore, an implementation that
+naively defines $\lookup$ as above is inefficient. It flips the tree
+each time the path changes the step direction. Our theory suggests
+implementation techniques that avoid this inefficiency.
+
+We proceed as follows. We use the well-established framework of \emph{initial
+algebras}. After a brief recall of functors and their initial
+algebras~(\subsecref{initial algebras}), we extend them to the
+symmetric setting~(\subsecref{initial equivariant algebras}) through
+\emph{symmetry strengths} that describe actions in terms of data type
+constructors. They package folds of equivariant algebras as
+equivariant traversals. Next, we show how to reuse canonisers for
+traversals over the same constructors (\subsecref{wlog-traversals}),
+and how symmetry strengths avoid unnecessary data type traversals by
+progressively acting only on a single layer of
+constructors~(\subsecref{partial evaluation}). Finally, we combine
+these results with the previous section (\secref{dependent types}),
+adapting data types to the
+indexed setting~(\subsecref{indexed data types}).
+
+\subsection{Initial algebras}
+\subseclabel{initial algebras}
+
+In \emph{initial algebra semantics}, each data type signature is
+specified by a \emph{structure functor}~$F : \Set \to \Set$. For
+example, trees over natural numbers and paths in them from
+\exampleref{tree example} are given by the following two functors,
+which closely correspond to their usual data type definitions:
+\begin{align*}
+  \mathbf{data}\, \Tree &=
+    \Leaf \Or \Node \, \Tree \, \naturals \, \Tree
+  &
+  \mathbf{data}\, \TreePath &=
+    \Nil \Or \TreeLabel \:: \TreePath \\
+  \struct[\Tree] X &\definedby \terminal \amalg X \times \naturals \times X
+  &
+  \struct[\TreePath] X &\definedby \terminal \amalg \TreeLabel \times X
+  \intertext{
+    Each functor $F$ has an evident component-wise map $F : (X \to Y) \to (F X
+    \to F Y)$, for example:
+  }
+  \fmap[\Tree]\, f\, (\injection_1\unitval) &\definedby \injection_1\unitval &
+  \fmap[\TreePath]\, f\, (\injection_1\unitval) &\definedby \injection_1\unitval &
+   \\
+  \fmap[\Tree]\, f\, (\injection_2\triple{\ell}n{r}) &\definedby \injection_2\triple{f\,\ell}n{f\,r} &
+  \fmap[\TreePath]\, f\, (\injection_2\pair{d}p) &\definedby \injection_2\pair{d}{f\,p}
+\end{align*}
+
+An \emph{algebra}~$\pair\X f$ for a functor $F$ is a set $\X$ together
+with a function $f : F \X \to \X$, which describes the evaluation of
+constructors. For example, the node-counting algebra is the
+$\struct[\Tree]$-algebra $\pair\naturals {c : (\terminal \amalg \naturals
+\times \naturals \times \naturals) \to \naturals}$, given by
+\(
+  c (\injection_1\unitval) \definedby 0
+\) and \(
+  c (\injection_2\triple{m_1}\_{m_2}) \definedby 1 + m_1 + m_2 \). A
+\emph{homomorphism} of $F$-algebras $h : \pair\X f \to \pair\Y g$ is a
+function $h : \X \to \Y$ such that $h \circ f = g \circ \fmap h$.
+
+We interpret data types by \emph{initial} algebras, denoted by
+$\pair{\fix F}{(\roll : F \fix F \to \fix F)}$, whose defining
+universal property is that for every other $F$-algebra $\pair\X f$,
+there is a unique homomorphism $\fold f : \pair{\fix F}{\roll} \to
+\pair\X f$. This homomorphism interprets structurally recursive
+functions. For example, the initial $\struct[\Tree]$-algebra, which we
+label by $\pair{\Tree}{\roll[\Tree]}$, satisfies:
+\begin{align*}
+  \roll[\Tree] \injection_1\unitval = \Leaf
+  \qquad
+  \roll[\Tree] \injection_2\triple{\ell}{n}{r} = \Node\,{\ell}\,{n}\,{r}
+\end{align*}
+When readability is more important than precision, we are going
+to elide $\roll$, and identify e.g. $\injection_1\unitval$ with
+$\Leaf$, and $\injection_2\triple{\ell}{n}{r}$ with
+$\Node\,{\ell}\,{n}\,{r}$.
+
+For a given $F$-algebra $\pair\X f$, the universal property of the
+initial algebra becomes the recurrence:
+\[
+  \fold f\, \Leaf = f(\injection_1\unitval)
+  \qquad
+  \fold f\, (\Node\,{\ell}\,{n}\,{r}) = f(\injection_2\triple{\fold f\,\ell}n{\fold f\,r})
+\]
+Through the algebra $\pair{\naturals}{c}$, we can compute the number of nodes in a tree $t$ by $\fold c\, t$ since
+\[
+  \fold c\, \Leaf = 0
+  \qquad
+  \fold c\, (\Node\,{\ell}\,{n}\,{r}) = 1 + \fold c\, \ell + \fold c\, r
+\]
+
+\subsection{Initial equivariant algebras}
+\subseclabel{initial equivariant algebras}
+
+To transfer our framework to the context of data types, it is not
+sufficient to equip the initial $F$-algebra with a $\G$-action $(\act)
+: \G \to \fix F \to \fix F$, as this does not tell us what to do for
+other $F$-algebras. Instead, we take a more refined construct that
+describes the interaction of the group with the data type
+constructors:
+
+\begin{definition}
+  Let $\G$ be a group. A \emph{$\G$-symmetry-strong functor}~$F =
+  \pair{\carrier F}{\gstrength[\G][F]}$, or a \emph{$\G$-strong
+  functor} for short, is a functor $\carrier F : \Set \to \Set$
+  together with a \emph{$\G$-symmetry strength}~$\gstrength[\G][F]$,
+  or \emph{$\G$-strength} for short, which is a natural transformation
+  \(
+    \gstrength[\G][F]_{\X} : (\carrier\G \times \carrier F X) \to \carrier F(\carrier\G \times X)
+  \)
+  satisfying
+  \begin{align*}
+    \gstrength_{\X}(\unit, u) &= \carrier F(\fun x\pair-{\unit}x)\, u \\
+    \gstrength_{\X}(g\mul h, u) &=
+    \carrier F (\fun{\triple{g'}{h'}{x}}\pair{g'\mul h'}x)
+    (\gstrength_{G\times\X}(g,
+    \gstrength_{\X}(h, u)))
+  \end{align*}
+  for all $u \in \carrier F\X$ and for all $g,h \in \carrier\G$.
+\end{definition}
+
+Note that unlike group actions, symmetry strengths also feature the
+group in the codomain, which allows us to specify how to act on
+particular sub-terms.
+
+\begin{example}
+  \examplelabel{tree strengths}
+  We can imagine two different $\Sym 2$-actions on trees, one that
+  recursively flips the whole tree, and one that flips only the top
+  node, with corresponding strengths:
+  \begin{align*}
+    \swap \act
+    \parent{
+      \begin{tree diagram}
+        \& \& 3 \\
+        \& 2 \& \\
+        1 \& \& 4
+        \treeLink1322
+        \treeLink2231
+        \treeLink2233
+    \end{tree diagram}}
+    &=
+    \parent{
+      \begin{tree diagram}
+        3 \& \& \\
+        \& 2 \& \\
+        4 \& \& 1
+        \treeLink1122
+        \treeLink2231
+        \treeLink2233
+    \end{tree diagram}}
+    &
+    \swap {\act}'
+    \parent{
+      \begin{tree diagram}
+        \& \& 3 \\
+        \& 2 \& \\
+        1 \& \& 4
+        \treeLink1322
+        \treeLink2231
+        \treeLink2233
+    \end{tree diagram}}
+    &=
+    \parent{
+      \begin{tree diagram}
+        3 \& \& \\
+        \& 2 \& \\
+        1 \& \& 4
+        \treeLink1122
+        \treeLink2231
+        \treeLink2233
+    \end{tree diagram}}
+    \\
+    \gstrength\pair\swap{\Node\, \ell\, n\, r} &\definedby
+    \Node\, {\pair \swap r}\,n\,{\pair \swap \ell}
+    &
+    {\gstrength}'\pair\swap{\Node\, \ell\, n\, r}
+    &\definedby \Node\,{\pair \stet r}\,n\,{\pair \stet\ell}
+  \end{align*}
+  The first strength propagates $\swap$ to the subtrees,
+  while the second strength propagates $\stet$.
+
+  We only need to define the strength for $\swap$ since the first axiom
+  forces it at $\pair\stet u$ to be $\fmap(\fun x \pair\stet
+  x) u$, i.e.,
+  \(
+    \gstrength\pair\stet{\Node\, \ell\, n\, r} \definedby
+    {\gstrength}'\pair\stet{\Node\, \ell\, n\, r}
+    \definedby
+    \Node {\pair\stet\ell} n {\pair\stet r}
+  \).
+  For leaves, we define both strengths to act trivially
+  \(
+    \gstrength\pair g \Leaf \definedby
+    {\gstrength}'\pair g \Leaf
+    \definedby \Leaf
+  \).
+\end{example}
+
+\begin{remark}\remarklabel{cartesian vs symmetry strengths}
+  The notion of a symmetry strength is related to, but different from the
+  usual Cartesian or monoidal strength. Recall that a \emph{Cartesian
+  strength} for a functor $F : \Set \to \Set$ is a natural
+  transformation
+  \(
+    \strength[F]_{\Ctx, \X}  : \Ctx \times F\X \to F(\Ctx \times \X)
+  \)
+  satisfying
+  \(
+    \strength_{\terminal,
+      \X}(\unitval, u) = \fmap(\fun x\pair-{\unitval}x)u
+  \)
+  for all $u \in F\X$, and
+  \(
+    \strength_{\Ctx\times\Dtx, \X}((\ctx, \dtx), u) =
+    \fmap(\fun{\triple {\ctx'}{\dtx'}x}\pair{\pair {\ctx'}{\dtx'}}x)
+    \,\parent{\strength_{\Ctx, \Dtx\times\X}(
+    \ctx, \strength_{\Dtx, \X}(\dtx, u))}
+    \) for all $\ctx \in \Ctx$, and $\dtx \in \Dtx$.
+    (Cf.~\applemmaref[D.1]{Cartesian strengths are symmetric strengths} in the Appendix
+    for the diagrams.)
+  %
+  Every Cartesian strength is also a $\G$-strength, which leaves
+  constructors as they are and propagates the same group element into
+  the sub-terms. For example, for trees, it acts as:
+  \[
+    \strength_{\carrier\G, \X} \pair g \Leaf \definedby \Leaf
+    \qquad
+    \strength_{\carrier\G, \X} \pair g {\Node\,\ell\,n\,r}
+    \definedby \Node\,{\pair g\ell}\,n\,{\pair g r}
+  \]
+  Symmetry strengths are an instance of the more general
+  \emph{distributive laws} between a
+  monad and a functor~\cite{beck:distributive-laws}. We use this
+  perspective pervasively in our proofs (cf.~\appref[F]{cat
+    dev}). Here, the monad is the \emph{free $\G$-action} monad, a
+  special case of the \emph{Writer monad}, sometimes known as the \emph{complexity
+    monad}~\cite{cenciarelli-moggi:a-syntactic-approach-to-modularity-in-denotational-semantics}.
+  We use this monadic perspective in \subsecref{partial evaluation} and
+  \subsecref{indexed data types}.
+\end{remark}
+
+We use $\G$-symmetry strengths to lift any action on $\X$ to an action
+on $F\X$:
+\begin{lemma}
+  \lemmalabel{strength lifts actions}
+  Let $\G$ be a group and $F$ a $\G$-strong functor. Then, for every
+  $\G$-action $\A$, we have a $\G$-action $F\A$ given by:
+  \[
+  \carrier{F\A} \definedby \carrier F\,\carrier\A
+  \qquad\smash{
+    (\act[{F\A}]) : \carrier\G \times \carrier F\carrier\A \xto{\gstrength_{\carrier\A}}
+    \carrier F(\carrier\G \times \carrier\A) \xto{\fmap (\act[\A])} \carrier F\carrier\A}
+  \]
+  Furthermore, if $h : \A \equito \B$ is equivariant, so is $\fmap h : F \A \equito F \B$.
+\end{lemma}
+
+\begin{example}
+  The two tree symmetry strengths from \exampleref{tree strengths}
+  induce the two expected actions: action induced by the first strength
+  flips the node and propagates symmetry, while for the second strength, the action
+  only flips the top node and does not propagate the symmetry further.
+  Cartesian strengths induce the pointwise lifting of actions.
+\end{example}
+
+Symmetry-strong functors not only lift actions, but as we will see
+shortly, also uniquely determine actions on their initial algebras.
+Even more, the resulting algebra structure and the action are
+compatible in the following sense:
+
+\begin{definition}%
+  \definitionlabel{equivariant F-algebra}
+  Let $F$ be a $\G$-strong functor. An \emph{equivariant $F$-algebra}
+  $\pair \A f$ consists of a $\G$-action $\A$ and an equivariant map
+  $f : F \A \equito \A$, i.e., an $\carrier F$-algebra $\pair{\carrier\A}f$
+  such that:
+      \diagram{22}
+  An \emph{equivariant algebra homomorphism} $h : \pair\A f \equito \pair \B
+  g$ is simultaneously an $\carrier F$-homomorphism $h : \pair{\carrier\A}f \to
+  \pair{\carrier\B}g$ that is also equivariant $h : \A \equito \B$.
+\end{definition}
+
+Recall that initial algebra semantics supports a modular account of
+data types~\cite{swierstra:data-types-a-la-carte}: coproducts $F_1 \amalg
+F_2$ of functors are given pointwise by $(F_1 \amalg F_2) X = F_1 X \amalg F_2
+X$, and an algebra for this coproduct functor is given by an algebra
+structure for each functor over the same carrier set. This modularity
+extends to symmetry-strong functors and their equivariant algebras:
+%
+\begin{proposition}[modularity]\propositionlabel{modularity}
+  Let $F_1, F_2 : \Set \to \Set$ be $\G$-strong functors with symmetry strengths
+  $\gstrength_1, \gstrength_2$. The cotupled map
+  \(
+    \coseq{\strength_1, \strength_2}\pair g{\injection_ix}
+    \definedby
+    \injection_i\strength_i\pair g{x}
+  \)
+  is a $\G$-symmetry strength for the coproduct functor $\carrier F_1 \amalg \carrier F_2 : \Set \to \Set$.
+  Moreover, given an action $\A$, an equivariant algebra $f : (F_1
+  \amalg F_2) \A \equito \A$ for this strength amounts to a pair of
+  equivariant algebra structures $f_i : F_i\A \equito \A$.
+\end{proposition}
+
+Using (cf.~\appref[D]{algebraic data types}) an
+appropriate notion of parameterised initiality originally proposed by
+\citeauthor{bird-paterson:generalised-folds-for-nested-datatypes}~\cite{%
+  bird-paterson:generalised-folds-for-nested-datatypes},
+the symmetry strength lets us equip the initial algebra with an action
+that makes it the \emph{initial equivariant algebra}. Then, to define
+an equivariant homomorphism $h : \fix F \equito \A$, we need to define
+an equivariant $F$-algebra $g : F\A \equito \A$, possibly with
+the \WLOG construction.
+
+\begin{theorem}[equivariant initiality]
+  \theoremlabel{representation for algebras}
+  Let $F$ be a $\G$-strong functor and $\roll : \carrier F\fix
+  \carrier F \to \fix \carrier F$ the initial algebra of $\carrier F$ in $\Set$.
+  Then, there is a unique action $\fix F = \pair{\fix \carrier F}{(\act[\fix F])}$ satisfying
+      \diagram{50}
+  making $\pair{\fix F}\roll$ into an initial equivariant $F$-algebra, i.e., the initial $F$-algebra on $\G$-actions:
+  for any equivariant $F$-algebra ${f : F\A \equito A}$, the unique
+  $\carrier F$-homomorphism is equivariant: $\fold f : \fix F \equito
+  \A$.
+\end{theorem}
+
+\begin{example}\examplelabel{simply typed tree path}
+  \examplelabel{tree path}
+  To see all the modular building blocks in action, define the path lookup function
+  from \exampleref{tree example}. The mirroring symmetry of the type
+  $\TreePath$ is captured by the strength:
+  \begin{align*}
+    \strength[\TreePath]\pair g\Nil &\definedby \Nil
+    &
+    \strength[\TreePath]\pair g{d \:: x} &\definedby (g \act d) \:: \pair g x
+  \end{align*}
+  and we can compute that the action given by
+  \theoremref{representation for algebras}
+  satisfies:
+  \begin{align*}
+    g \act (d \:: p) &=
+    \big((\act) \compose (\id \times \roll)\big) \pair g{\injection_2\pair{d}{p}}
+    \explain*={equivariant algebra}
+    \big(\roll\compose {\struct[\TreePath](\act)} \compose \strength \big)\pair g{\injection_2\pair{d}{p}} \\&
+    \explain+={strength def}
+    \big(\roll\compose {\struct[\TreePath](\act)}\big)(\injection_2\pair{g \act d}{\pair g p}) =
+    \roll (\injection_2\pair{g \act d}{g \act p}) =
+    (g \act d) \:: g \act p
+    \end{align*}
+  A similar calculation for $\Nil$ shows we get the expected action
+  for $\TreePath$, and a similar set of calculations shows we get the
+  expected recursive action for $\Tree$ from the propagating strength
+  from \exampleref{tree strengths}.
+  We now construct $\lookup$ and simultaneously show it is
+  equivariant as a map \(
+    \TreePath \equito (\Tree \to \Maybe\naturals)
+  \).
+  By \theoremref{representation for
+  algebras}, we can instead define an equivariant algebra:
+  \[
+    \lookupElim : \struct[\TreePath](\Tree \to \Maybe\naturals) \equito
+    (\Tree \to \Maybe\naturals)
+  \]
+  Thanks to the Modularity \propositionref{modularity}, it suffices to define two
+  equivariant algebra structures for each case of summand of
+  $\struct[\TreePath] = \terminal \amalg \TreeLabel \times {-}$.
+
+  The $\Nil$ summand's algebra structure
+  \(
+    \lookupElim_{\Nil} : \terminal \equito (\Tree \to \Maybe\naturals)
+  \):
+  \[
+    \lookupElim_{\Nil}\unitval \, \Leaf \definedby \Nothing
+    \qquad
+    \lookupElim_{\Nil} \unitval \, {(\Node\, \ell\, n\, r)} \definedby \Just n
+  \]
+  To show that $\lookupElim_{\Nil}$ is equivariant, we refer to the fact that
+  currying preserves equivariance, and calculate the behaviour of the uncurried
+  version on the only interesting case:
+  \[
+    \lookupElim_{\Nil}\!\parent{\swap \act \pair\unitval{\Node\,\ell\,{n}\,r}}
+    =
+    \lookupElim_{\Nil}\!\pair\unitval{\Node\,\parent{\swap\act r}\,\!{n}\,\!\parent{\swap\act\ell}}
+    =
+    \Just n
+    =
+    \swap\act \Just n
+    \]
+  For $(\::)$, define the algebra
+  \(
+  \lookupElim_{(\::)} :
+  % need this workaround to get the font right, for some reason
+  \text{$\TreeLabel$} \times
+    (\Tree \to \Maybe\naturals) \equito (\Tree \to
+    \Maybe\naturals)
+  \).
+  Here, we use \WLOG reasoning, as stepping right is the same as
+  stepping left on the flipped tree with the rest of the path flipped.
+  Define the $\TreeLabel$-canoniser
+  \(
+  \canoniser' : \TreeLabel \equito \inv-{\Sym 2}
+  \) that ensures canonical steps are left steps, i.e.
+  \(
+    \canoniser' \Lft = \stet
+    \) and \(
+    \canoniser' \Rgt = \swap
+  \).
+  Then, extend it to a canoniser~$\canoniser$ for the whole domain
+  through projection via \lemmaref{projection canoniser}. Its
+  canonical elements are the tuples $\seq{\Lft, f}$,
+  where $f$ is the recursive call we make when traversing (necessarily left).
+  Thus, we eliminated the symmetric cases in the following
+  core function
+  \(
+  \lookLeft : \Canon\canoniser \to (\Tree \to \Maybe\naturals)
+  \):
+  \[
+    \lookLeft\seq{\Lft, f} \definedby \begin{cases}
+      \Leaf &\mapsto \Nothing \\
+      \Node \, \ell \, n \, r &\mapsto  f \ell
+    \end{cases}
+  \]
+  Now, we only need to assemble the pieces. As $\canoniser'$ is
+  strictly equivariant, so is $\canoniser$ by \lemmaref{equivariance
+  of projection canonisers}, and by \theoremref{all core functions
+  are partially equivariant}, all core functions are equivariant,
+  including $\lookLeft$. Thus $\lookupElim_{(\::)}$ is equivariant by
+  \theoremref{wlog-construction}. By \propositionref{modularity}, so
+  is $\lookupElim$, and by \theoremref{representation for
+  algebras} so is $\lookup$.
+
+  To see that $\lookup$ indeed matches the expected behaviour, let us
+  compute its behaviour on the symmetric case, recalling that the
+  exponential action conjugates, $(g \act f)(a) = g \act f(\inv g \act
+  a)$:
+  %
+  \begin{align*}
+    &\lookup \, (\Rgt \:: p) \, (\Node \, \ell \, n \, r)
+    =
+    \big(\fold(\lookupElim) \, (\Rgt \:: p)\big) (\Node \, \ell \, n \, r) \\
+    = {}
+    &\big(\lookupElim \, (\injection_2\pair\Rgt{\lookup\, p})\big) (\Node \, \ell \, n \, r)
+    =
+    \big(\swap \act \lookLeft\pair\Lft{\swap \act \lookup\, p}\big) (\Node \, \ell \, n \, r) \\
+    = {}
+    % &\swap \act \Big(\lookLeft\pair\Lft{\swap \act \lookup\, p}
+    %      \big(\swap \act (\Node \, \ell \, n \, r)\big)\Big) \\
+    % = {}
+    &\swap \act \Big(\lookLeft\pair\Lft{\swap \act \lookup\, p}
+        \big(\Node \, (\swap \act r) \, n \, (\swap \act \ell)\big)\Big) \\
+    = {}
+    &\swap \act \big( (\swap \act \lookup\, p)\,(\swap \act r) \big)
+    =
+    \swap \act \big( \swap \act (\lookup\, p \, (\swap \act \swap \act r)) \big)
+    =
+    \lookup \, p \, r
+    \tag*{\qedhere}
+  \end{align*}
+\end{example}
+
+\subsection{Data type traversals \WLOG{}}
+\subseclabel{wlog-traversals}
+The steps in \exampleref{simply typed tree path} are common, and we often
+traverse a data type in different ways but with the same canoniser.
+In this section, we present reusable abstractions that streamline these steps.
+
+\begin{definition}
+  Let $F$ be a $\G$-strong functor. A \emph{canoniser} for $F$ is a
+  natural transformation $\canoniser_{\X} : \carrier F\X \to
+  \carrier\G$. Each such canoniser induces the \emph{canonical
+  elements functor}:
+  \[
+  \Canon\canoniser : \Action\G \to \Set
+  \quad
+  (\Canon\canoniser)\A \definedby \Canon[F\A]{\canoniser_{\carrier\A}} \definedby
+  \set{
+    (\canoniser_{\carrier\A}u)\act[F\A] u \suchthat u \in \carrier F\carrier\A
+  }\quad
+  (\Canon\canoniser)h : \fun u (\carrier Fh)u
+  \]
+\end{definition}
+
+A canoniser $\canoniser$ thus induces a natural assignment of
+canonisers $\canoniser_{\carrier\A} : \carrier F\carrier\A \to
+\carrier \G$ for each lifted $\G$-action $F\A$.
+The naturality condition means canonisers are determined by their
+component at the singleton $\terminal$, i.e., by a canoniser for
+$\carrier F\terminal$. The unique extension of such a canoniser
+$\canoniser_{\terminal} : \carrier F\terminal \to \carrier\G$ to a
+canoniser for $F$ is given by the following composition
+$\canoniser_{\X} : \carrier F\X \xto{\carrier F\seq{}} \carrier
+F\terminal \xto{\canoniser_{\terminal}} \carrier\G$.
+
+\begin{example}\examplelabel{goLeft canoniser}
+  The $\Sym 2$-strong functor $F_{\TreePath}$ has the
+  canoniser (cf.~p.~\pageref{goLeft canoniser first occurrence})
+  and canonical elements:
+  \[
+  \goLeft\,\Nil \definedby \stet \defines \goLeft (\Lft\:: p)
+  \quad
+  \goLeft (\Rgt\:: p) \definedby \swap
+  \qquad
+  \Canon[\A]\goLeft \definedby
+  \set{\Nil, \Lft\:: a \suchthat a \in \carrier\A}
+  \tag*{\qedhere}
+  \]
+\end{example}
+
+We can now streamline the data we need to specify to traverse a
+symmetric data type using an algebra, or to reason about such
+traversals using symmetry:
+\begin{definition}
+  Let $F$ be a $\G$-strong functor and $\canoniser : \carrier F \to
+  \carrier\G$ a canoniser for it. A \emph{$\canoniser$-core
+  $F$-algebra} $\pair\A f$ consists of a $\G$-action $\A$ equipped
+  with a function $f : (\Canon\canoniser)\A \to \carrier\A$. It is
+  \emph{equivariant} when $f$ is equivariant $f :
+  \parent{(\Canon\canoniser)\A \subset F\A} \equito \A$. A
+  \emph{homomorphism} of equivariant $\canoniser$-core $F$-algebras $h
+  : \pair\A f \to \pair \B g$ is an equivariant map $h : \A \equito
+  \B$ satisfying: $h (f\, u) = g\, ((\Canon\canoniser) h\,u)$.
+\end{definition}
+
+We can rearrange the constructs in \exampleref{simply typed tree path}
+using these concepts:
+\begin{example}\examplelabel{simply typed lookup as core algebra}
+  We have the following equivariant $\goLeft$-core $F_{\TreePath}$-algebra:
+  \begin{gather*}
+  \lookupCore : (\Canon\goLeft)(\Tree \to \Triv{\Maybe\naturals}) \to
+  \carrier{\Tree \to \Triv{\Maybe\naturals}} = (\Tree\to\Maybe\naturals)
+  \\
+  \Nil \mapsto \begin{cases}
+    \Leaf            &\mapsto \Nothing \\
+    \Node \ell\,n\,r &\mapsto \Just n
+  \end{cases}
+  \qquad\quad
+  \parent{
+    \Lft\:: (\Tree\xto{\mathrm{rec} }\Maybe\naturals)
+  } \mapsto \begin{cases}
+    \Leaf &\mapsto \Nothing \\
+    \Node\,\ell\,n\,r &\mapsto \mathrm{rec}\,\ell
+  \end{cases}
+  \tag*{\qedhere}
+  \end{gather*}
+\end{example}
+
+These ingredients streamline the steps of \exampleref{simply typed tree path},
+using the portmanteau \underline{f}old w\underline{log}:
+\[
+\myfigbox{$
+\parent{\Canon[F\A]\canoniser_{\carrier\A} = (\Canon\canoniser)\A \xto f \carrier\A}
+\mapsto
+\parent{F\carrier \A \xto{\wlg(\canoniser_{\carrier\A}, f)} \carrier\A}
+\mapsto
+\parent{\flg[\A](\canoniser, f) :
+  \fix\carrier F \xto{\fold \wlg(\canoniser_{\carrier\A}, f)} \carrier \A}
+$}
+\]
+We chain \theoremref{wlog-construction} and the Equivariant Initiality \theoremref{representation for
+  algebras}:
+\begin{theorem}[core initiality]
+  \theoremlabel{representation for core algebras}
+  Let $F$ be a $\G$-strong functor, $\roll : \carrier F\fix
+  \carrier F \to \fix \carrier F$ an initial algebra of $\carrier F$,
+  and $\canoniser$ a canoniser for $F$. Then restricting $\roll$ to canonical elements
+  makes $\fix F$ into the initial $\canoniser$-core $F$-algebra
+  $\roll : (\Canon\canoniser)\fix F \equito \fix F$:
+  for any equivariant $\canoniser$-core $F$-algebra ${f :
+    (\Canon\canoniser)\A \equito A}$, the unique equivariant
+  $\canoniser$-core $F$-algebra homomorphism
+  into $f$ is:\/ $\flg(\canoniser, f) : \fix F \equito \A$.
+\end{theorem}
+
+This theorem implies, for example, that the $\lookup$ function from
+\exampleref{simply typed lookup as core algebra} is the unique
+equivariant $\goLeft$-core $F_{\TreePath}$-homomorphism given by
+$\flg$.
+
+\begin{example}\examplelabel{subtree projection}
+  We reuse the canoniser to define the \emph{subtree projection} function
+  \begin{gather*}
+  \subtree \definedby \flg(\goLeft, \subtreeCore): \TreePath \equito (\Tree \to \Maybe\Tree)
+    \\
+  \subtreeCore : (\Canon\goLeft)(\Tree \to \Maybe\Tree) \equito (\Tree \to \Maybe\Tree)
+  \\\!\!
+  \Nil\mapsto (t \mapsto \Just\,t)
+  \qquad
+  (\Lft\:: \Tree\xto{\mathrm{rec}}\Maybe\Tree) \mapsto \begin{cases}
+    \Leaf & \mapsto \Nothing \\
+    \Node\,\ell\,n\,r & \mapsto \mathrm{rec}\,\ell
+  \end{cases}
+  \tag*{\qedhere}
+  \end{gather*}
+\end{example}
+
+\subsection{Partially evaluating actions}
+\subseclabel{partial evaluation}
+
+Both $\lookup$ from \exampleref{simply typed tree path} and $\subtree$
+from \exampleref{subtree projection} give us the result we want. But
+implementations that naively follow our definitions
+will repeatedly flip their arguments, and the
+$\subtree$ implementation will also flip its result, leading to high time and space
+complexity. Faithful to our motivation, we only demonstrate which
+mathematical structures underlie a more efficient implementation, and
+leave a systematic account of performance engineering to future work.
+
+We use a general principle from modern partial evaluation folklore:
+instead of performing an expensive operation repeatedly, axiomatise
+its properties and design an efficient implementation for its free
+algebra. Then evaluate the free algebra back into the desired
+structure after partial evaluation. In our case, we shall build on top
+of the \emph{free action} $\gast \X$ on a set $\X$, given by
+$\carrier{\gast \X} = \carrier \G \times \X$ and $g \act[\gast \X]
+\pair h x = \pair {g \mul h} x$. The free action lets us
+accumulate the symmetries while leaving the input unchanged, and a
+pair $\pair h x \in \carrier{\gast \X}$ captures a delayed evaluation
+of $h \act[\A] x$ for some $\G$-action $\A$ with $\carrier{\A} = \X$.
+
+In particular, consider $\gast \fix F$, the free $\G$-action on
+the initial $F$-algebra. When at some point in a definition we want to
+inspect $\pair g t$, we should not simply unroll $t$, as that ignores the
+accumulated symmetries. We also do not want to compute $g \act t$
+in implementations, since that is inefficient. What we do instead is use the symmetry
+strength to act only on the first layer of the data type and
+propagate the action into a delayed evaluation of a subtree
+represented by the free-action monad:
+\[
+  \carrier{\gast \fix F}
+  =
+  \carrier \G \times \fix F
+  \xto{\carrier\G \times \unroll}
+  \carrier \G \times F \fix F
+  \xto{\gstrength[F]_{\fix F}}
+  F (\carrier \G \times \fix F)
+  =
+  F (\carrier{\gast \fix F})
+\]
+From \theoremref{representation for algebras}, we get $g \act t =
+\fmap(\act)(\strength \pair g t)$ (ignoring unrolling), meaning that
+the symmetry strength both gives us a symmetry-respecting pattern
+matching of a data type, and represents a symmetry-accumulating implementation that
+avoids inefficient repeated
+transformations.
+
+To see the construction in action, we can equivalently compute $\subtree \, p\, t$
+with the free action:
+\[
+\begin{array}{@{}l@{}l@{}}
+\subtree \, &p\, t =
+\\&\mathrm{let}\, \pair gs = \subtreeAux\,p \pair
+\stet t
+\\&
+\mathrel{\mathrm{in}} g\act s
+\end{array}
+\quad
+\begin{array}{@{}l@{}}
+\text{where: }\\
+\quad\subtreeAux : \TreePath
+\equito (\gast[\Sym 2] \Tree \to \gast[\Sym 2]\Maybe\Tree)\\
+\quad \subtreeAux = \flg(\goLeft, \subtreeAuxCore)
+\end{array}
+\]
+and $\subtreeAuxCore$
+is an equivariant $\goLeft$-core
+$F_{\TreePath}$-algebra over $\gast[\Sym 2] \Tree \to \gast[\Sym
+2]\Maybe\Tree$:
+%
+\begin{gather*}
+\subtreeAuxCore : \Canon\goLeft\parent{\gast[\Sym 2]\Tree \to \gast[\Sym 2]\Maybe\Tree}
+\to \parent{\gast[\Sym 2]\Tree \to \gast[\Sym 2]\Maybe\Tree}\\
+\begin{aligned}
+\Nil &\mapsto \parent{\fun{\pair gt} \pair g{\Just t}} \\
+\parent{
+    \Lft\::  \parent{\begin{array}{@{}l@{}}
+    \gast[\Sym 2] \Tree \xto{\mathrm{rec}}\\
+    \qquad\gast[\Sym 2]\Maybe\Tree
+  \end{array}}
+}&\mapsto \parent{\fun{\pair gt} \begin{cases}
+  \pair g \Nothing
+  & (\strength \pair gt = \Leaf) \\
+  \mathrm{rec}\pair{g_\ell}\ell  & (\strength \pair gt = \Node\, {\pair{g_\ell}\ell} \, n \, \pair{g_r}r)
+  \end{cases}}
+\end{aligned}
+\end{gather*}
+%
+Whether the tree in the last case is flipped or not, applying the
+strength ensures the correct sub-structure resides in the left
+sub-tree and $g_\ell$ appropriately propagates the symmetry. More
+importantly, an implementation of this design never flips the tree. For example, we have:
+\begin{align*}
+\subtreeAux&(\Rgt\::\Nil)\pair\stet{\Node\,\ell\,n\,r} \\&=
+\swap\act\subtreeAuxCore(\Lft\::\subtreeAux (\swap \act \Nil))(\swap \act \pair\stet{\Node\,\ell\,n\,r})\\&=
+\swap\act\subtreeAuxCore(\Lft\::\subtreeAux \Nil)\pair\swap{\Node\,\ell\,n\,r}\\&=
+\swap\act\subtreeAux \Nil\pair\swap r=
+\swap\act\pair\swap{\Just r} =
+\pair{\stet}{\Just r}
+\end{align*}
+%
+where in the reduction of $\subtreeAuxCore$, we used that $\strength
+\pair\swap{\Node\,\ell\,n\,r} = \Node\,\pair\swap r\,n\,\pair\swap
+\ell$. As we can see, the only evaluated actions were the free ones,
+and the subtree $r$, for example, remained unflipped throughout the
+argument.
+
+There are further opportunities for optimisation. For example, instead
+of stacking output symmetries $g \act -$ (in contrast to the input
+ones that get absorbed by the free action) we could combine them into
+a single symmetry as $g \act (h \act a) = (g \mul h) \act a$. In fact,
+in this specific example, we can go even further and ignore the output
+symmetries altogether. By the Core Initiality
+\theoremref{representation for core algebras}, we
+have $(\act[\Maybe\Tree])
+\compose \subtreeAux\,p\pair gt = \subtree\,p(g \act[\Tree]t)$.
+Furthermore, we can show that
+$\projection_1\parent{\subtreeAux\,p\,\pair gt} = g$, hence
+$\subtree\,p\,t = \projection_2\parent{\subtreeAux\,p\pair \stet t}$
+and the output symmetry is never used, but is merely a reasoning
+device for the correctness of the implementation.
+
+\subsection{Indexed data types}
+\subseclabel{indexed data types}
+
+In \exampleref{simply typed tree path}, we fell back to simple types,
+but thanks to the generality of the initial algebra semantics
+approach, a dependently-typed development follows the same lines and
+recovers the finer version from \exampleref{node lookup}.
+Moreover, it uncovers nuances that degenerate in the simply-typed case. For
+example, the notion of a symmetry strength must in fact be phrased in
+terms of the \emph{free action} $\gast \X$ over a family. The carrier
+of the free action
+coincides with the Cartesian product $\carrier\G \times \X$ in the
+simply-typed case, but differs in the indexed case.
+As we pointed out in \remarkref{cartesian vs symmetry strengths},
+viewing this product as
+the free-action monad also emphasises the role of the symmetry strength
+as a monad-functor distributive law.
+Once we explicate
+this structure, much of the development amounts to repeating the
+simply-typed development with the adjective `indexed' peppered
+throughout. \appref[A]{indexed adts} repeats the development, and we
+describe the changes here. \figref{indexed-datatypes-summary}
+summarises the difference between the simply typed theory and its
+dependently typed counterpart as follows. Where appropriate, we also
+describe the categorical concept.
+
+\figfile{indexed-datatypes-summary}{Summary of symmetric data type theory}
+
+Although the categorical theory does not capture all
+concepts, e.g.~canonisers, it suffices to assign to almost every concept its
+type. The theory includes indexed versions of the Modularity
+\propositionref{modularity}, the Equivariant Initiality
+\theoremref{representation for algebras} and Core Initiality
+\theoremref{representation for core algebras}.
+
+We generalise from the category $\Set$ to $\Fam_{\carrier\Ctx}$, the
+category of $\carrier\Ctx$-indexed sets and vertical maps.  The main
+technical device we use to generalise from $\Set$ to
+$\Fam_{\carrier\Ctx}$ is the free $\Ctx$-indexed $\G$-action
+adjunction between $\Fam_{\carrier\Ctx}$ and $\Action\G_{\Ctx}$---the
+category of $\Ctx$-indexed $\G$-sets and vertical equivariant maps.
+Its monadicity means we can capture its structure categorically, and
+we use the existence of a right adjoint $S$ to the resulting monad $T$
+over $\Fam_{\carrier\Ctx}$ in one of the proofs (cf.~\apptheoremref[F.4]{generalised parameterised initiality}).
+
+For $\G$-action $\Ctx$, we define, for each
+$\carrier\Ctx$-family $\X$, the \emph{free $\Ctx$-indexed $\G$-action over} $\X$:
+\begin{gather*}
+\carrier{\DPair{\mg}\G{\mg\act\X}}_{\ctx} \definedby
+\DPair{\mg}{\carrier\G}{\X_{\inv \mg \act \ctx}}
+\qquad
+g\iact{\ctx}\pair{h}{x : \X_{\inv h\act \ctx}} \definedby
+\pair{g\mul h}{x : \X_{\inv h \act \inv g \act g \act \ctx}}
+\end{gather*}
+We also define $\DFun{\mg}\G{\inv\mg\act\X}$,
+the \emph{cofree $\Ctx$-indexed $\G$-action over} $\X$.
+Its fibres are the dependent-function fibres
+\(
+\carrier{\DFun{\mg}\G{\inv\mg\act\X}}_{\ctx} \definedby
+\DFun{\mg}{\carrier\G}{\X_{\mg \act \ctx}}
+\), defined by:
+\[
+g\iact{\ctx}\parent{f : \DFun{\g[3]}{\carrier\G}\X_{\g[3]\act\ctx}}
+\definedby\fun h f(h\mul g) \in \DFun{\mg[2]}{\carrier\G}\X_{\mg[2]\act g\act\ctx}
+\]
+They are the two adjoints to
+the forgetful functor from $\Ctx$-indexed actions to $\Ctx$-indexed families:
+\begin{theorem}\theoremlabel{descent}
+  For a $\G$-action $\Ctx$ and family $\carrier\Ctx \types \X$, the
+  map $\Ctx \types \fun x\pair\unit x : \X \to
+  \carrier{\DPair\mg\G(\mg\act\X)}$ is the universal $\Ctx$-indexed
+  $\G$-action over $\X$.  The map
+  $\carrier\Ctx\types\eval\pair{-}\unit :
+  \carrier{\DFun\mg\G{\inv\mg\act\X}} \to \X$ is the universal
+  $\Ctx$-indexed $\G$-action under $\X$. The resulting two adjunctions
+  are (co)monadic.
+\end{theorem}
+This theorem generalises the non-indexed case, where
+$\carrier\G\times\X$ has the structure of the free $\G$-action over
+$\X$.  The existence of the adjoints and their (co)monadicity follow
+from abstract reasons. Let: $\oint F$ be the Grothendieck
+construction for a presheaf $F : \opposite{\mathbb C} \to \Set$;
+$\abs{\mathcal C}$ be the discrete category underlying a category
+$\mathcal C$, and $\hat{\mathbb C}$ the presheaf category of $\mathbb
+C$. Consider a $\G$-action~$\Ctx$ as a presheaf over the category with one
+object and morphisms the $\G$-elements. We then have the following two equivalences. First, $\Ctx$-indexed actions
+are equivalent to presheaves over $\oint\Ctx$
+\(
+\Action\G_{\Ctx}\simeq \widehat{\oint\Ctx}
+\). Forgetting the functorial action then recovers the category of
+$\carrier\Ctx$-indexed families, a presheaf category itself:
+\(
+\Fam_{\carrier\Ctx} \simeq \widehat{\oint{\carrier\Ctx}} = \mspace{-5mu}\widehat{\ {\abs{\oint\Ctx}}\ }
+\).
+The forgetful functor $\Action\G_{\Ctx} \to \Fam_{\carrier\Ctx}$
+arises as precomposition by $J: {\oint\Ctx} \from \abs{{\oint\Ctx}} $.
+Consequently, the two adjoints are given by (co)end
+formulae, and their monadicity follows by surjectivity of this
+functor~\cite[Prop.~1.1]{fiore-menni:reflective-kleisli-subcategories}.
+This situation is exploited by
+\citeauthor{fiore-szamozvancev:soas-theory} to account for
+mathematical and computational representations of abstract syntax with
+binding and substitution~\cite{fiore-szamozvancev:formal-soas,%
+  fiore-szamozvancev:soas-theory,%
+  szamozvancev:thesis}.
+One can use the coend formula to calculate the explicit descriptions
+we gave the two adjoints. We show directly
+(cf.~\appref[E]{indexed data types}) that these descriptions are the
+adjoints, and for completeness, we also show monadicity and comonadicity using
+Beck's theorem. We then have the situation in \figref{marcelo situation}.
+Therefore, $P$ is a monad, $E$ is a comonad, and $P \leftadjointto E$.
+Moreover, $P^2 \definedby P\compose P \leftadjointto E^2$.
+\begin{figure}
+  \diagram{30}
+  \caption{Categorical situation for indexed $\G$-action}\figlabel{marcelo situation}
+\end{figure}

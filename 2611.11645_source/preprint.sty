@@ -1,0 +1,346 @@
+% preprint.sty: arXiv-like preprint style with a modern finish (sans
+% headings, an accent colour, booktabs-like tables).
+\NeedsTeXFormat{LaTeX2e}
+\ProvidesPackage{preprint}[2026/11/07 Preprint style]
+
+% ── Page and fonts ───────────────────────────────────────────────────────
+\RequirePackage[a4paper, left=2.7cm, right=2.7cm, top=2.9cm, bottom=2.7cm,
+  headheight=12pt, headsep=\dimexpr0.62cm+6.8pt\relax, footskip=1cm]{geometry}
+\RequirePackage[T1]{fontenc}
+\RequirePackage[utf8]{inputenc}
+\RequirePackage[english]{babel}
+\RequirePackage{XCharter}
+\RequirePackage[lf]{FiraSans}
+\RequirePackage[lf]{FiraMono}
+\RequirePackage{anyfontsize}
+\RequirePackage[protrusion=true, expansion=false, tracking=true]{microtype}
+\RequirePackage{xcolor}
+\RequirePackage{graphicx}
+\RequirePackage{tikz}
+\RequirePackage{eso-pic}
+\RequirePackage{fancyhdr}
+\RequirePackage{titlesec}
+\RequirePackage{needspace}
+\RequirePackage{fontawesome5}
+\RequirePackage{enumitem}
+\RequirePackage{caption}
+\RequirePackage{tabularray}
+\RequirePackage{ragged2e}
+\RequirePackage[hyphens]{url}
+\RequirePackage[bottom]{footmisc}
+\RequirePackage[section]{placeins}  % floats stay within their section
+
+% ── Palette ──────────────────────────────────────────────────────────────
+\definecolor{accent}{HTML}{3346C4}
+\definecolor{ink}{HTML}{191919}
+\definecolor{inksoft}{HTML}{696969}
+\definecolor{rulecolor}{HTML}{CDCDCD}
+\definecolor{codebg}{HTML}{F2F2F2}
+\definecolor{stamp}{HTML}{AAAAAA}
+
+% Font helpers.
+\newcommand\semibold{\fontseries{sb}\selectfont}
+\newcommand\sfsize[2]{\fontsize{#1}{#2}\selectfont}
+
+% Body text: Charter 10.5pt, no first-line indent, small gap between paragraphs.
+\makeatletter
+\renewcommand\normalsize{%
+  \@setfontsize\normalsize{10.5}{17.2}%
+  \abovedisplayskip 8pt plus 2pt minus 4pt
+  \belowdisplayskip \abovedisplayskip
+  \abovedisplayshortskip 0pt plus 2pt
+  \belowdisplayshortskip 4pt plus 2pt minus 2pt}
+\makeatother
+\normalsize
+\setlength\parindent{0pt}
+\setlength\parskip{4.1pt plus 1pt}
+\setlength\topskip{10.3pt}
+\widowpenalty=10000
+\clubpenalty=10000
+\AtBeginDocument{\color{ink}}
+\emergencystretch=1.5em
+\frenchspacing
+
+% ── Metadata ─────────────────────────────────────────────────────────────
+\makeatletter
+\newcommand\shorttitle[1]{\def\@shorttitle{#1}}
+\newcommand\status[1]{\def\@status{#1}}
+\newcommand\paperdate[1]{\def\@paperdate{#1}}
+\newcommand\keywords[1]{\def\@keywords{#1}}
+\newcommand\msc[1]{\def\@msc{#1}}
+\shorttitle{}\status{}\paperdate{}\keywords{}\msc{}
+% Marks of the title block, in superscript. In the list below the authors,
+% marks sit in a box as wide as the widest one, so the texts line up.
+\newcommand\@mark[1]{\textsuperscript{\textcolor{accent}{#1}}}
+\newcommand\@mailmark{\@mark{\faEnvelope[regular]}}
+\newcommand\@listmark[1]{{\sbox0{\@mailmark}\makebox[\wd0][r]{\@mark{#1}}}\,}
+% \affiliation{mark}{institution}
+\newcommand\@affiliations{}
+\newcommand\affiliation[2]{\g@addto@macro\@affiliations{\@listmark{#1}#2\par}}
+% \authorentry[*]{Name}{affiliation marks}{email}{ORCID}; the star marks the
+% corresponding author.
+\newif\if@corresponding
+\newcommand\@authorlist{}
+\NewDocumentCommand\authorentry{s m m m m}{%
+  \IfBooleanT{#1}{\global\@correspondingtrue}%
+  \g@addto@macro\@authorlist{\@authorbox{#1}{#2}{#3}{#4}{#5}}}
+\newcommand\@authorbox[5]{%
+  \begin{minipage}[t]{\dimexpr(\linewidth-16pt)/2\relax}
+    \raggedright
+    {\sffamily\sfsize{10.5}{13}\semibold #2\@mark{#3\IfBooleanT{#1}{,\,\faEnvelope[regular]}}%
+      \ifx\relax#5\relax\else\hspace{3pt}\orcidlink{#5}\fi}\\[-4.7pt]
+    {\ttfamily\sfsize{7.8}{10}\href{mailto:#4}{\textcolor{inksoft}{#4}}}%
+  \end{minipage}\hspace{16pt}}
+\makeatother
+
+% ── Header and stamp ─────────────────────────────────────────────────────
+\makeatletter
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[L]{\sffamily\sfsize{7.5}{9}\color{inksoft}\@shorttitle}
+\fancyhead[R]{\sffamily\sfsize{7.5}{9}\semibold\color{accent}\thepage}
+\renewcommand\headrule{{\color{rulecolor}\vspace{0pt}\hrule height 0.4pt width\headwidth}}
+\fancypagestyle{firstpage}{\fancyhf{}\renewcommand\headrule{}}
+% Vertical stamp in the left margin of the first page, as on arXiv.
+\newcommand\@stamp{%
+  \AddToShipoutPictureFG*{%
+    \AtPageLowerLeft{%
+      \put(\LenToUnit{\dimexpr1.05cm-0.4pt},\LenToUnit{\dimexpr0.5\paperheight-1.8pt}){%
+        \makebox[0pt][l]{\rotatebox{90}{\makebox[0pt][c]{%
+          \ttfamily\fontsize{8}{10}\selectfont\color{stamp}%
+          \textls[50]{\@status\ifx\@paperdate\empty\else, \@paperdate\fi}}}}}}}}
+\makeatother
+
+% ── Headings ─────────────────────────────────────────────────────────────
+\setcounter{secnumdepth}{2}
+\titleformat{\section}
+  {\sffamily\sfsize{12.5}{15}\semibold\color{ink}}
+  {{\bfseries\color{accent}\thesection}\hspace{9pt}}{0pt}{}
+\titleformat{name=\section, numberless}
+  {\sffamily\sfsize{12.5}{15}\semibold\color{ink}}{}{0pt}{}
+\titlespacing*{\section}{0pt}{11.8pt plus 3pt minus 2pt}{-2.1pt plus 1pt}
+\titleformat{\subsection}
+  {\sffamily\sfsize{10.5}{13}\semibold\color{ink}}
+  {{\color{accent}\thesubsection}\hspace{7pt}}{0pt}{}
+\titlespacing*{\subsection}{0pt}{4.7pt plus 2pt minus 2pt}{-4.6pt plus 1pt}
+
+% Part separator (Part I, Part II), outside the section numbering.
+% It never ends a page: it starts a new page unless the part heading, the
+% section heading below it and a few lines of text fit on the current one.
+\newcommand\paperpart[2]{%
+  \par\needspace{\dimexpr110pt+3\baselineskip\relax}%
+  \addvspace{31.1pt plus 4pt}%
+  \begin{minipage}{\linewidth}
+    {\sffamily\sfsize{8}{10}\semibold\color{inksoft}\textls[120]{PART #1}}%
+    \hspace{10pt}{\color{rulecolor}\leaders\hrule height 2.8pt depth -2.3pt\hfill}\par
+    \vspace{12.3pt}
+    {\sffamily\sfsize{15}{18}\semibold\color{ink}#2\par}
+  \end{minipage}\par\nobreak
+  \vspace{4.4pt}\csname @nobreaktrue\endcsname}
+
+% Group label (the layers of design principles).
+\newcommand\kicker[1]{%
+  \par\addvspace{5.1pt}%
+  {\sffamily\sfsize{9}{11}\semibold\color{inksoft}#1\par}\nobreak
+  \vspace{0pt}}
+
+% Numbered item with a bold title.
+\newcommand\numbereditem[3]{%
+  \par\addvspace{0pt}%
+  {\setlength\parskip{0pt}%
+   \hangindent=1.4em \hangafter=0 \noindent\llap{\makebox[1.4em][l]{#1.}}%
+   \textbf{#2} #3\par}%
+  \vspace{-0.1pt}}
+
+% ── Lists ────────────────────────────────────────────────────────────────
+\setlist{itemsep=0pt, parsep=0pt, topsep=0pt, partopsep=0pt}
+\setlist[itemize]{label=\textcolor{inksoft}{\textbullet}, leftmargin=*, labelindent=2pt, labelsep=7pt}
+% Term list: bold term, then the description, with a hanging indent.
+\newenvironment{terms}{\par\begingroup\setlength\parskip{0pt}%
+  \def\item[##1]{\par\hangindent=2em \hangafter=1 \noindent\textbf{##1}\hspace{0.6em}\ignorespaces}}
+  {\par\endgroup}
+
+% ── Inline code ──────────────────────────────────────────────────────────
+\makeatletter
+\DeclareRobustCommand\code[1]{{%
+  \edef\@codesize{\fpeval{0.688*\f@size}}%
+  \tikz[baseline=(t.base)]{%
+    \node[inner xsep=2.5pt, inner ysep=0pt, anchor=base,
+      text height=0.68\dimexpr\@codesize pt\relax, text depth=0pt] (t)
+      {\ttfamily\fontsize{\@codesize}{\@codesize}\selectfont #1};
+    \fill[codebg, rounded corners=2pt, overlay]
+      ([yshift=-2pt]t.south west) rectangle ([yshift=2pt]t.north east);
+    \node[inner xsep=2.5pt, inner ysep=0pt, anchor=base, overlay] at (t.base)
+      {\ttfamily\fontsize{\@codesize}{\@codesize}\selectfont #1};}}}
+\makeatother
+
+% ── Figures ──────────────────────────────────────────────────────────────
+% Shared by the TikZ figures in figures/*.tex.
+\makeatletter
+\usetikzlibrary{arrows.meta, calc}
+\definecolor{fteal}{HTML}{0F8A7E}
+\definecolor{famber}{HTML}{C7841A}
+\definecolor{frose}{HTML}{C2456B}
+\definecolor{fviolet}{HTML}{7A4CC2}
+\colorlet{fslate}{black!56.86}       % luma(110)
+\colorlet{accentsoft}{accent!10!white}
+% Greys named by their luma (0-255), as in the original drawings.
+\@for\@l:={110,120,130,150,160,170,175,180,200,205,215,238,240,250}\do{%
+  \definecolor{luma\@l}{gray}{\fpeval{\@l/255}}}
+% Sans and mono text at a given size. Both record the cap height in
+% \figcap: figure labels run from the cap height down to the lowest glyph.
+\newdimen\figcap
+\newcommand\ff[1]{\sffamily\fontsize{#1}{\fpeval{1.339*#1}}\selectfont
+  \global\figcap=\fpeval{0.689*#1}pt\relax}
+\newcommand\fm[1]{\ttfamily\fontsize{#1}{#1}\selectfont
+  \global\figcap=\fpeval{0.689*#1}pt\relax}
+% Size change inside a label, which keeps the label's cap height.
+\newcommand\fs[1]{\fontsize{#1}{\fpeval{1.339*#1}}\selectfont}
+\tikzset{
+  lbl/.style={inner sep=0pt, text height=\figcap},
+  textbox/.style 2 args={inner xsep=#1pt, inner ysep=#2pt},
+  % Every figure keeps a thin margin around its drawing.
+  paperfigure/.style={execute at end picture={\path
+    ([shift={(-0.25bp,-0.25bp)}]current bounding box.south west)
+    ([shift={(0.25bp,0.25bp)}]current bounding box.north east);}},
+  % Filled triangular tip, #1 times the default size of the original drawings.
+  tip/.style={-{Triangle[length=\fpeval{5.67*#1}pt 1.92, width=\fpeval{4.25*#1}pt 1.2]}},
+}
+% Two-line label (#1 = l or r alignment), with the same box model.
+\newcommand\figtwolines[3]{\setbox1\hbox{#2}\ht1=\figcap \setbox2\hbox{#3}%
+  \dimen0=\ifdim\wd1>\wd2 \wd1\else\wd2\fi
+  \vbox{\baselineskip=\fpeval{1.339*\f@size}pt
+    \hbox to \dimen0{\if#1r\hfil\fi\box1\if#1l\hfil\fi}%
+    \hbox to \dimen0{\if#1r\hfil\fi\box2\if#1l\hfil\fi}}}
+% \figradius{font}{text}{padding}{radius} sets \figr to the corner radius
+% of a padded text box, reduced to half its height when needed, so that a
+% large radius gives a pill.
+\newcommand\figradius[4]{\setbox0\hbox{\pgfinterruptpicture#1#2\endpgfinterruptpicture}%
+  \edef\figr{\fpeval{min(#4, (\the\figcap+\the\dp0)/2 + #3)}pt}}
+\makeatother
+% Inline code inside figures: grey rounded background that does not
+% change the line height.
+\newcommand\figcode[3]{\edef\figcapsaved{\the\figcap}% size, fill, text
+  \tikz[baseline=(t.base)]{%
+    \node[lbl, inner xsep=2pt, anchor=base] (t) {\phantom{\fm{#1}#3}};
+    \fill[#2, rounded corners=2pt, overlay]
+      ([yshift=-1.5pt]t.south west) rectangle ([yshift=1.5pt]t.north east);
+    \node[lbl, inner xsep=2pt, anchor=base] at (t.base) {\fm{#1}#3};}%
+  \global\figcap=\figcapsaved\relax}
+% Screenshot with rounded corners and a thin border. Optional arguments:
+% the fractions of the image width cropped on the left and on the right.
+% Then the file, the visible width and the kept fraction of the height.
+\NewDocumentCommand\screenshot{O{0} O{0} m m m}{\begingroup
+  \edef\shotv{\fpeval{\the\dimexpr#4\relax}}% visible width, in pt
+  \edef\shotw{\fpeval{\shotv/(1-#1-#2)}}% image width, in pt
+  \setbox0\hbox{\includegraphics[width=\shotw pt]{#3}}%
+  \edef\shoth{\fpeval{\the\ht0*#5}}% visible height, in pt
+  \begin{tikzpicture}[paperfigure]
+    \begin{scope}
+      \clip[rounded corners=4pt] (0,0) rectangle (\shotv pt,-\shoth pt);
+      \node[inner sep=0pt, anchor=north west] at (\fpeval{-#1*\shotw} pt,0) {\usebox0};
+    \end{scope}
+    \draw[rulecolor, line width=0.5pt, rounded corners=4pt] (0,0) rectangle (\shotv pt,-\shoth pt);
+  \end{tikzpicture}\endgroup}
+
+% ── Footnotes ────────────────────────────────────────────────────────────
+\renewcommand\footnoterule{{\color{rulecolor}\kern-3pt\hrule width 0.3\columnwidth height 0.5pt\kern 6pt}}
+\setlength{\skip\footins}{13pt plus 2pt minus 1pt}
+\makeatletter
+\newcommand\@supmark[1]{\raisebox{0.42em}{\fontsize{\fpeval{0.6*\f@size}}{0}\selectfont #1}}
+\renewcommand\@makefnmark{\hbox{\@supmark{\@thefnmark}}}
+\renewcommand\@makefntext[1]{\noindent\hspace{1em}\@supmark{\@thefnmark}#1}
+\renewcommand\footnotesize{\@setfontsize\footnotesize{8.5}{14.9}}
+\makeatother
+
+% ── Floats and captions ──────────────────────────────────────────────────
+\DeclareCaptionFont{capfont}{\sffamily\fontsize{8.5}{11.5}\selectfont\color{inksoft}}
+\DeclareCaptionFont{caplabel}{\bfseries\color{accent}}
+\DeclareCaptionLabelSeparator{gap}{\hspace{4pt}}
+\captionsetup{font=capfont, labelfont=caplabel, labelsep=gap,
+  justification=raggedright, singlelinecheck=false, skip=7.4pt}
+\captionsetup[table]{position=top, skip=4.4pt}
+\setlength\textfloatsep{12.4pt plus 2pt minus 2pt}
+\setlength\floatsep{16pt plus 3pt minus 3pt}
+\setlength\intextsep{16pt plus 3pt minus 3pt}
+% Bottom floats sit on the bottom margin.
+\RequirePackage{etoolbox}
+\makeatletter
+\patchcmd{\@cflb}{\vskip \textfloatsep}{\vskip\dimexpr\textfloatsep\relax\@plus1fil}{}{\PackageWarning{preprint}{Could not patch bottom floats}}
+\makeatother
+\AtBeginEnvironment{table}{\vspace*{-2.1pt}}
+\renewcommand\topfraction{0.9}
+\renewcommand\bottomfraction{0.8}
+\renewcommand\textfraction{0.1}
+\renewcommand\floatpagefraction{0.8}
+\setcounter{topnumber}{1}
+\setcounter{bottomnumber}{2}
+\setcounter{totalnumber}{3}
+
+% Booktabs-like tables: thick top and bottom rules, thin grey rules between rows.
+\NewTblrEnviron{papertable}
+\SetTblrInner[papertable]{
+  rowsep=2.7pt, colsep=6pt, stretch=0.8,
+  hline{1} = {0.9pt, ink}, hline{2} = {0.5pt, inksoft},
+  hline{3-Y} = {0.3pt, rulecolor}, hline{Z} = {0.9pt, ink},
+  row{1} = {font=\sffamily\fontsize{8}{10}\selectfont\semibold},
+  cells = {font=\fontsize{8.6}{13.2}\selectfont},
+}
+\newcommand\rowhead[1]{{\sffamily\fontsize{7.8}{10}\selectfont\semibold #1}}
+
+% ── Links and cross-references ───────────────────────────────────────────
+\RequirePackage[colorlinks=true, linkcolor=accent, citecolor=accent,
+  urlcolor=accent, pdfusetitle]{hyperref}
+\RequirePackage{orcidlink}
+\newcommand\secref[1]{\hyperref[#1]{\S\ref*{#1}}}
+\newcommand\figref[1]{\hyperref[#1]{\textcolor{ink}{Figure~\ref*{#1}}}}
+\newcommand\tabref[1]{\hyperref[#1]{\textcolor{ink}{Table~\ref*{#1}}}}
+
+% ── Bibliography ─────────────────────────────────────────────────────────
+% BibTeX with IEEEtran.bst; each key is cited in its own brackets, "[4], [5]".
+\urlstyle{same}
+\RequirePackage{letltxmacro}
+\makeatletter
+\LetLtxMacro\@origcite\cite
+\DeclareRobustCommand\cite[1]{{\color{accent}\def\@csep{}%
+  \@for\@ck:=#1\do{\@csep\@origcite{\@ck}\def\@csep{, }}}}
+\renewcommand\@biblabel[1]{[#1]}
+\renewenvironment{thebibliography}[1]
+  {\section*{\refname}%
+   \fontsize{9}{14.8}\selectfont\RaggedRight\hbadness=10000 % ragged lines before unbreakable identifiers are fine
+   \list{\@biblabel{\@arabic\c@enumiv}}%
+     {\setlength\leftmargin{23.5pt}\setlength\labelwidth{23.5pt}\setlength\labelsep{0pt}%
+      \setlength\itemsep{3.5pt}\setlength\parsep{0pt}\setlength\topsep{0pt}%
+      \renewcommand*\makelabel[1]{##1\hss}%
+      \usecounter{enumiv}\let\p@enumiv\@empty\renewcommand\theenumiv{\@arabic\c@enumiv}}%
+   \sloppy\clubpenalty4000\widowpenalty4000\sfcode`\.\@m}
+  {\def\@noitemerr{\@latex@warning{Empty `thebibliography' environment}}\endlist}
+\makeatother
+
+% ── Title block ──────────────────────────────────────────────────────────
+\makeatletter
+\renewenvironment{abstract}
+  {\begin{list}{}{\leftmargin=0.07\linewidth \rightmargin=\leftmargin
+     \listparindent=0pt \itemindent=0pt \parsep=2pt \topsep=0pt}\item\relax
+   {\centering\sffamily\fontsize{9}{11}\selectfont\semibold Abstract\par}\vspace{4.3pt}%
+   \fontsize{9}{14}\selectfont}
+  {\ifx\@keywords\empty\else\par\vspace{6.7pt}{\raggedright\fontsize{8.5}{11}\selectfont
+     \textit{Keywords:} \@keywords.\par}\fi
+   \ifx\@msc\empty\else\par\vspace{2pt}{\raggedright\fontsize{8.5}{11}\selectfont
+     \textit{MSC 2020:} \@msc.\par}\fi
+   \end{list}\vspace{8pt}}
+\renewcommand\maketitle{%
+  \thispagestyle{firstpage}\ifx\@status\empty\else\@stamp\fi\vspace*{-18.1pt}
+  \begingroup\raggedright
+  \ifx\@status\empty\else
+    {\sffamily\fontsize{7.5}{9}\selectfont\bfseries\color{accent}\textls[160]{\MakeUppercase{\@status}}\par}%
+    \vspace{1.6pt}\fi
+  {\sffamily\fontsize{21}{23.4}\selectfont\bfseries\color{ink}\hyphenpenalty=10000 \@title\par}%
+  \vspace{11.1pt}%
+  \noindent\@authorlist\par
+  \vspace{15.2pt}%
+  {\sffamily\fontsize{8.5}{11.5}\selectfont\color{inksoft}\@affiliations
+    \if@corresponding\@listmark{\faEnvelope[regular]}Corresponding author\par\fi}%
+  \endgroup
+  \vspace{15.3pt}}
+\makeatother

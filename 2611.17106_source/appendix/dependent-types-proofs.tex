@@ -1,0 +1,595 @@
+\section{Dependent types: further details}
+\applabel{dependent types}
+
+We begin by establishing the correctness of the action over the
+Grothendieck construction $\coprod_{\carrier\Ctx}\A$, as we will use
+its properties pervasively, e.g., when extending contexts.
+
+\begin{proof}[of \propositionref{Grothendieck action}]%
+  Take a $\Ctx$-indexed action $\A$ and define an action on
+  $\coprod_{\carrier\Ctx} \carrier\A$ by:
+  \[
+  g \act \pair{\ctx : \carrier\Ctx}{a : \carrier\A_{\ctx}}
+  \definedby \pair{g \act \ctx}{g \iact{\ctx} a : \carrier\B (g \act \ctx)}
+  \]
+  Since $\projection_1(g \act\pair\ctx a) = g \act \ctx = \projection_1\pair\ctx a$,
+  the projection is equivariant
+  $\projection_1 : \coprod_{\Ctx}\A \equito \Ctx$.
+
+  Conversely, given an action $\coprod_{\Ctx}\A$ as in the assumption,
+  define $g \iact{\ctx} a \definedby \projection_2(g \act
+  \pair{\ctx}{a})$. This definition is a well-typed dependent function $\ctx : \Ctx \types (\iact{}) : (g : \carrier\G) \to A\ctx \to A (g \act \ctx)$:
+  \[
+  g \iact\ctx a \in A\parent{\projection_1(g \act \pair \ctx a)} =
+  A\parent{\g \act \ctx}
+  \]
+  It also satisfies the two conditions for an indexed action. The unit axiom:
+  \[
+  \unit \iact \ctx a = \projection_2 (\unit \act \pair \ctx a) = \projection_2\pair\ctx a = a
+  \]
+  The multiplication axiom:
+  \begin{align*}
+  h \iact{g \act \ctx} (g \iact \ctx a)
+  &=
+  \projection_2\parent{h \act
+    \pair{g\act \ctx}
+         {\projection_2\parent{g \act \pair \ctx a}}}
+  \\&
+  \explain={$\projection_1$ equivariant}
+  \projection_2\parent{h \act
+    \pair{\projection_1\parent{g\act \pair\ctx a}}
+         {\projection_2\parent{g \act \pair \ctx a}}}
+  \\&
+  \explain={extensionality of pairs}
+  \projection_2\parent{h \act \parent{g \act \pair \ctx a}}
+  =
+  \projection_2\parent{(h \mul g) \act \pair \ctx a}
+  =
+  (h \mul g) \iact\ctx a
+  \end{align*}
+  and so we have an indexed action. The two constructions are inverse
+  to each other.
+\end{proof}
+
+The following example lets us work more formally with concrete
+examples:
+
+\begin{example}\examplelabel{equivariant Grothendieck}
+The Grothendieck construction extends equivariantly to equivariant
+terms and maps.  It sends equivariant terms $\Ctx \types t : \A$ to
+equivariant sections \((\fun \ctx \pair{\ctx}{t_{\ctx}}) : \Ctx
+\equito \coprod_{\Ctx}\A \). It sends a dependent equivariant function
+$\Ctx \types f : \DFun\x\A \B$ to the following equivariant map
+$\parent{\fun{\pair\ctx a}\pair{\ctx, \For x a}{f_{\ctx}a}} :
+\coprod_{\Ctx}\A \equito \coprod_{\Ctx, \x : \A}\B$.
+\end{example}
+
+Next, we establish the indexed action axioms for the family of
+dependent functions, and the indexed equivariance of related
+operations.
+
+\begin{lemma}\lemmalabel{dependent function action}
+  The indexed action structure over the family of dependent functions
+  is an action, evaluation is equivariant, and currying and uncurrying
+  preserve equivariance.
+\end{lemma}
+\begin{proof}
+  Indeed, the action axioms hold by calculating with the correct
+  indices as in the ordinary case. Similarly for evaluation:
+  \[
+  \eval(g\iact{\ctx} f,\x)_{g\act \ctx, \For \x g\iact\ctx a}
+  =
+  g \iact{} f(\inv g \iact{} g \iact{} a)
+  =
+  g \iact{} fa
+  =
+  g\iact{}\eval(f, \x)_{\ctx, \For\x a}
+  \]
+  The bijective correspondence is given as in the set-theoretic
+  case. If $t$ is equivariant, then:
+  \begin{align*}
+  (\fun{\x:\A}t)_{g \act \ctx}a &=
+  g \iact{} t_{g\act \ctx, \For\x a}
+  =
+  g \iact{} t_{g\act \ctx, \For\x (g \act (\inv g \act a))}
+  \\&\explain={equivariance}
+  g \iact{} g\iact{} t_{\ctx, \For\x (\inv g \act a)}
+  =
+  (g \iact{} (\fun{\x : \A}t)_{\ctx})a
+  \end{align*}
+  Therefore $(\fun{\x:\A}t)_{g \act \ctx} = (g \iact{} (\fun{\x : \A}t)_{\ctx})$.
+
+  Conversely, if $\fun{(\x:\A)}t$ is equivariant, then since
+  $\eval\pair{-}\x$ is equivariant, $t$ is.
+\end{proof}
+
+
+
+We now turn to prove the indexed counterpart to the \WLOG{}
+Representation \theoremref{wlog-construction}:
+
+\begin{proof}[of \theoremref{indexed-wlog-construction}]%
+  We can prove this theorem directly, but it may be more interesting
+  to reduce it to the ordinary representation theorem. Applying the
+  Grothendieck construction to the situation, we have:
+  \begin{itemize}
+  \item
+    $\G$-actions $\coprod_{\Ctx}\A$ and $\coprod_{\Ctx, \x : \A}\B$;
+  \item canoniser $\canoniser' \definedby \fun{\pair\ctx a}\canoniser_{\ctx}a :
+    \carrier{\coprod_{\Ctx}\A} \to \carrier\G$;
+  \item below we show that $\Canon{\canoniser'} = \set{\pair\ctx a \suchthat
+    a \in \Canon{\canoniser, \ctx}} \defines \coprod_{\Ctx}\Canon{\canoniser}$;
+  \item core function $f' \definedby
+    \parent{\fun{\pair\ctx a}\pair{(\ctx, \For\x a)}{f_{\ctx}a}}
+    : \Canon{\canoniser'} \to \carrier{\coprod_{\Ctx,\x:\A}\B}$;
+  \item we have that $\wlg(\canoniser', f'; \pair\ctx a) =
+    \pair{(\ctx, \For\x a)}{\wlg(\canoniser, f)_{\ctx}a}$;
+  \item the core function $f'$ is equivariant iff $f$ is
+    (by \exampleref{equivariant Grothendieck});
+  \item below we show that $\wlg(\canoniser', f')$ is equivariant iff
+    $\wlg(\canoniser, f)$ is equivariant;
+  \item below we show that the function term $\carrier\Ctx \types g : \DFun\x{\carrier\A}{\carrier\B}$
+    extends $f$ along $\Ctx \types \Canon{\canoniser} \subset \A$ iff
+    the function $\fun {\pair\ctx a}\pair-{(\ctx, \For\x a)}{g_{\ctx}a}
+    : \coprod_{\carrier\Ctx}{\carrier\A}
+    \to \coprod_{\carrier\Ctx, \x : \carrier\A}\carrier\B$ extends
+    $f'$ along $\Canon{\canoniser'}\subset
+    \coprod_{\carrier\Ctx}\carrier\A$.
+  \end{itemize}
+  The theorem follows by unpacking and re-packing definitions in both directions. Let's discharge the outstanding proof obligations.
+
+  Let $\pair\ctx a$ be canonical for $\canoniser'$, so $\pair\ctx a =
+  (\canoniser_{\ctx}a') \act\pair{\ctx'}{a'}$. Then $\ctx' =
+  \inv*{\canoniser a'}\act \ctx$ and $a' \in \A_{\inv*{\canoniser
+      a'}\act \ctx}$, so $a \in (\Canon\canoniser)_{\ctx}$, and so
+  $\pair\ctx a \in \coprod_{\Ctx}\Canon{\canoniser}$. These
+  implications are invertible, proving the converse.
+
+  Next, we show that the Grothendieck construction preserves the \WLOG
+  extension:
+  \begin{align*}
+  \wlg(\canoniser', f'; \pair\ctx a) &=
+  \inv*{\canoniser'\pair\ctx a} \act
+    f'(\parent{\canoniser'\pair\ctx a}\act \pair\ctx a)
+  \\&=
+  \inv*{\canoniser_{\ctx} a} \act
+    f'((\canoniser_{\ctx} a)\act \pair\ctx a)
+  \\&=
+  \inv*{\canoniser_{\ctx} a} \act
+    f'\pair{(\canoniser_{\ctx} a)\act\ctx}{(\canoniser_{\ctx} a) \iact{} a}
+  \\&=
+  \inv*{\canoniser_{\ctx} a} \act
+  \pair{\parent{(\canoniser_{\ctx} a)\act\ctx,
+                  \For\x((\canoniser_{\ctx} a) \iact{} a)}}
+       {f_{(\canoniser_{\ctx} a)\act\ctx}{(\canoniser_{\ctx} a) \iact{} a}}
+  \\&=
+  \pair{\parent{\ctx,
+                  \For\x a}}
+       {\inv*{\canoniser_{\ctx} a} \act
+         f_{(\canoniser_{\ctx} a)\act\ctx}{(\canoniser_{\ctx} a) \iact{} a}}
+  \\&=
+  \pair{\parent{\ctx,
+                  \For\x a}}
+       {\wlg(\canoniser, f)_{\ctx}a}
+  \end{align*}
+  In addition, by \exampleref{equivariant Grothendieck}, one \WLOG
+  extension is equivariant iff the other is equivariant.
+
+  The final bullet point follows by functoriality of the Grothendieck
+  construction.
+\end{proof}
+
+We now establish the bread-and-butter properties facilitating smooth
+dependently-typed symmetric programming and symmetric propositional
+reasoning. We start with dependent-function abstraction:
+
+\begin{lemma}[abstraction]
+  Function abstraction of an equivariant term $\Ctx, \x : \A \types t
+  : \B$ is both:
+  \begin{itemize}
+  \item an equivariant term $\Ctx \types \parent{\fun{(\x:\A)}t} : \DFun\x\A\B$.
+  \item an equivariant function $\Ctx \types \parent{\fun{(\x:\A)}t} : \EFun\x\A\B$.
+  \end{itemize}
+\end{lemma}
+\begin{proof}
+  Calculate, ignoring indices (as those type-check):
+  \begin{align*}
+    \parent{g\act(\fun{\x:\A}t)}_{\ctx}\ma
+    &\explain{=}{action on\\dep. functions}
+  g \act ((\fun{\x:\A}t)(\inv g \act \ma))
+  \explain={abstraction def}
+  g \act t_{\ctx, \For\x(\inv g \act \ma)}
+  \explain={$t$ equivariant}
+  t_{g \act \ctx, \For\x(g \act \inv g \act \ma)}
+  \\&=
+  t_{g \act \ctx, \For\x \ma}
+  =
+  (\fun{\x : \A}t)_{g\act\ctx} \ma
+  \end{align*}
+  showing abstraction is an equivariant term. It is also an
+  equivariant function, for:
+  \[
+  (\fun{\x:\A}t)_{g\act\ctx}(g \act \ma)
+  \explain={abstraction def}
+  t_{g\act\ctx, \For \x{g\act\ma}}
+  \explain={$t$ equivariant}
+  g \act t_{\ctx, \For\x\ma}
+  \]
+  as we wanted.
+\end{proof}
+
+Substitution using an equivariant substitution preserves equivariance:
+
+\begin{lemma}[reindexing and substitution]
+Reindexing by an equivariant function $\msubst : \Ctx
+\to \Dtx$ sends equivariant terms $\Dtx \types s : \B$ to equivariant
+terms $\Ctx \types \subst s\msubst : \subst \B\msubst$, and moreover
+every equivariant term $\Ctx \types t : \subst\B\msubst$ induces an
+equivariant substitution $(\msubst, \For\y t) : \Ctx \equito (\Dtx, \y :
+\B)$.
+\end{lemma}
+\begin{proof}
+  Calculate:
+  \[
+    g\act \subst s\msubst_{\ctx}
+    \explain={reindexing def}
+    g\act s_{\msubst\ctx}
+    \explain*={$s$ equivariant}
+    s_{g\act \msubst\ctx}
+    \explain={$\msubst$ equivariant}
+    s_{\msubst(g\act \ctx)}
+    =
+    \subst s\msubst_{g\act \ctx}
+  \]
+  and so $\subst s\msubst$ is equivariant. Next, calculate:
+  \begin{align*}
+  (\msubst, \For\y t)(g \act \ctx)
+  &\explain={substitution def}
+  (\msubst(g\act\ctx), \For\y t_{g \act \ctx})
+  \explain={$t$ equivariant}
+  (\msubst(g\act\ctx), \For\y g\act t_{\ctx})
+  \explain={action on context extension}
+  g\act (\msubst\ctx, \For\y t_{\ctx})
+  \\&=
+  g\act((\msubst, \For\y t)\ctx)
+  \end{align*}
+  and so $(\msubst, \For\y t) : \Ctx \equito (\Dtx, \y : \B)$.
+\end{proof}
+
+Dependent pairing also preserves equivariant terms:
+
+\begin{lemma}[dependent pairing]
+  Two equivariant terms $\Ctx \types t : \A$ and $\Ctx \types s :
+\subst\B{\For\x t}$ induce an equivariant term $\Ctx \types \dpair ts
+: \DPair\x\A\B$.
+\end{lemma}
+\begin{proof}
+  Calculate:
+  \[
+  (g \act (\dpair ts))_{\ctx}
+  =
+  (\dpair{g \act t_{\ctx}}{g \act s_{\ctx, \For\x t_{\ctx}}})
+  \explain={$t$, $s$ equivariant}
+  (\dpair{t_{g \act \ctx}}{s_{g\act\ctx, \For\x (g \act t_{\ctx})}})
+  \]
+  as we wanted.
+\end{proof}
+
+We now turn to propositions:
+
+\begin{lemma}[subfamilies]
+Each equivariant proposition $\Ctx, \x : \A \types \phi : \Prop$
+induces an indexed action on the subfamily $\Ctx \types \set{\x : \A
+  \suchthat \phi}$ that lifts $\A$ along the subset inclusions.
+Equivariant terms $\Ctx \types t : \A$ satisfying $\phi$ lift to
+equivariant terms inhabiting the associated subspace i.e., $\Ctx
+\types \lift t : \set{\x : \A \suchthat \phi}$.
+\end{lemma}
+\begin{proof}
+  Equivariance means that if $a \in \carrier\A_{\ctx}$ satisfies
+  $\phi$, then so does $g \act a$. Therefore $g \iact\ctx a \in
+  \set{\x : \A \suchthat \phi}$, and the action lifts.  For
+  equivariance of the lifted term, use injectivity of the coercion
+  function $\Ctx \types \coerce \definedby \fun \ma \ma : \set{\x : \A
+    \suchthat \phi} \equito \A$:
+  \[
+  \coerce_{g \act \ctx} (g \act (\lift t)_{\ctx}) \explain={$\coerce$ equivariance}
+  g \act \coerce_{\ctx} \lift t_{\ctx} \explain={coercion}
+  g \act t_{\ctx} \explain={$t$ equivariant}
+  t_{g\act\ctx} =
+  \coerce_{g\act \ctx} (\lift t)_{g\act\ctx}
+  \]
+  and so $g \act (\lift t)_{\ctx} = (\lift t)_{g\act\ctx}$.
+\end{proof}
+
+We use these facts implicitly when conducting reasoning:
+
+\begin{lemma}
+The logical connectives are equivariant $(\land), (\lor) : \Prop^2 \equito \Prop$,
+$(\lnot) : \Prop \equito \Prop$, as well as the quantifiers $\forall,\exists :
+(\A \to\Prop) \equito \Prop$.
+\end{lemma}
+\begin{proof}
+  The logical connectives operate between trivial actions hence
+  equivariant.  For the quantifiers, assume $\forall t = \Tru$, and
+  so, for each $\ma \in \carrier\A_{\ctx}$, we have $t(\inv g \act
+  \ma) = \Tru$, i.e.:
+  \[
+  \forall (g \act t) = \forall \x . t(\inv g \act
+  \x) = \Tru
+  \] Conversely, if $\forall (g \act t)$, then by
+  instantiating with $g \act \ma$ we have that $t\ma = t(\inv g \act g
+  \act \ma) = \Tru$. Therefore $\forall t = \forall g \act t$. A
+  similar argument holds for $\exists$, or by use of de Morgan.
+\end{proof}
+
+We conclude our treatment of propositions by explicating how symmetric
+reasoning \WLOG{} often manifests---via a property invariant under the
+symmetry of interest:
+
+\begin{proof}[of \lemmaref{core functions to propositions invariance}]%
+  Take canonical $a$ and $g \iact\ctx a$. By type-checking, $g \iact{}
+  f_{\ctx} a, f_{\ctx}(g \iact{} a)$ prove the same proposition,
+  namely $\phi_{g\act\ctx, \For\x(g \iact{} a)}$.  Therefore, $g
+  \iact{} f_{\ctx} a = f_{\ctx}(g \iact{} a)$.
+\end{proof}
+
+In some concrete cases, working with the entire group of permutations
+incurs a combinatorial explosion. Group theorists often generate the
+group from a smaller set of symmetries, and then only work with those.
+%
+As we briefly mentioned in the main text,
+a group $\G$ is \emph{generated} by a subset $S \subset
+\carrier\G$ when $\G$ is the smallest subgroup of $\G$ containing $S$, equivalently,
+when every $\carrier\G$-element is the multiplication of
+$\carrier\G$-elements or their inverses.
+For example, the symmetry group $\Sym 3$ is generated by
+the two transpositions $(1 \, 2)$ and $(2 \, 3)$.
+We have an indexed variation of a well-known lemma:
+\begin{lemma}\lemmalabel{equivariance by generators}
+  Let $\Ctx \types \A$ and $\Ctx, \x : \A \types \B$ be indexed
+  $\G$-actions.  If $S$ generates $\G$ and $\carrier\Ctx \types f :
+  \DFun\x{\carrier\A}{\carrier\B}$ is equivariant w.r.t.~symmetries in
+  $S$, then $f$ is equivariant $\Ctx \types f : \EFun\x{\A}{\B}$. When
+  $\B = \Prop$ and $\inv{\bracks{S}} \subset S$,
+  it suffices to show lax/oplax equivariance, i.e.:
+  \[
+  \parent{\forall g \in S, \forall \x. f(g\act \x) \implies f \x}
+  \lor
+  \parent{\forall g \in S, \forall \x. f(g\act \x) \impliedby f \x}
+  \]
+\end{lemma}
+\begin{proof}[of \lemmaref{equivariance by generators}]
+  Let $H \subset \carrier\G$ be the set of symmetries that $f$
+  respects. Then $S \subset H$. Since $f (e \act a) = f a = e \act (f a)$, we have:
+  $e \in H$. Take $h \in H$ we have:
+  \[
+  f(h \act a) = h \act (fa) \implies f (\inv h \act a) =
+  \inv h \act f(h \act (\inv h \act a)) = \inv h \act (f a)
+  \]
+  so $\inv h \in H$.
+  Take $g,h \in H$ and then:
+  \[
+  f ((g \mul h) \act a) = f (g \act (h \act a)) = g \act (f (h \act
+  a)) = g \act (h \act (f a)) = (g \mul h)\act (f a)
+  \]
+  so $g \mul h \in H$.
+  Thus $H \subset \carrier\G$ is a subgroup containing $S$, and so $H
+  = \carrier\G$.
+
+  When $\B = \Prop$ and $\inv{\bracks{S}} \subset S$, by substituting
+  $\For\x{\inv g \act a}$ we have:
+  \[
+  f x \iff f (\inv g \act (g \act x))
+  \explain\implies{$\inv{\bracks{S}} \subset S$}
+  f (g \act x)
+  \]
+  For the left disjunct, $f$ is in fact equivariant for
+  symmetries in $S$.  Similarly for the right disjunct.
+\end{proof}
+
+We now turn to study equivariant canonisers. It turns out that the
+indexed setting is fruitful for this purpose. We first show that the
+indexed action of \emph{distinguishable symmetries} $\G/\A$ from
+\definitionref{indistinguishability} is well-defined:
+
+\begin{lemma}\lemmalabel{distinguishable symmetry action well-defined}
+  Let $\A$ be a $\G$-action. The action over distinguishable symmetries $\G/\A$
+  is congruent w.r.t.~indistinguishability, hence is well-defined.
+\end{lemma}
+\begin{proof}
+  Assume $s_1 \stabeq a s_2$. Calculate:
+  \[
+  (s_1 \mul \inv g)\act (g \act a) = s_1 \act a = s_2 \act a
+  = (s_2 \mul \inv g)\act (g \act a)
+  \]
+  and so $s_1\mul \inv g \stabeq{g \act a} s_2\mul \inv g$, and the
+  action is well-defined.
+\end{proof}
+
+In \subsecref{equivariant canonisers} we mentioned in passing the
+stabiliser family alongside the indexed actions of the orbits and the
+indistinguishable symmetries. The stabilisers also form an indexed
+action:
+\begin{example}
+  The \emph{stabiliser} family has all the symmetries fixing an index
+  $a \in \carrier\A$ as the fibre over it: $a : \carrier\A \types
+  \stabilise[\G] a \definedby \set{s \in \carrier\G \suchthat s \act a
+    = a}$.
+  The stabiliser has an $\A$-indexed action:
+  \[
+  g \iact a{s} \definedby s \mul \inv g \in \stabilise{g \act a}\quad
+  \text{since}\quad s \mul \inv g \act (g \act a) = s \act a = a
+  \tag*{\qedhere}
+  \]
+\end{example}
+
+\goodbreak
+
+We now prove our reformulation of the famous Orbit-Stabiliser
+\theoremref{orbit stabiliser}:
+\begin{proof}[of \theoremref{orbit stabiliser}]%
+  The bijectivity of $\phi$ is the well-known theorem. We show equivariance:
+  \begin{align*}
+  \phi_{g \act x}(g \iact x [h]_{\stabeq x})
+  &\explain={action on $\G / \A$} \phi_{g \act x}([h \mul \inv g]_{\stabeq {g \act x}})
+  = (h \mul \inv g) \act (g \act x)
+  = h \act x
+  \explain={action on $\OrbitOf{x}$} g \iact x (h \act x)
+  \\&= g \iact x \phi_{x}[h]_{\stabeq x}
+  \end{align*}
+  and we conclude as inverses of equivariant functions are equivariant.
+\end{proof}
+
+Next, we characterise equivariant canonisers as those for which
+stable and equivariant core functions coincide. First, an observation:
+
+\begin{lemma}
+  \lemmalabel{equivariant canoniser weakly immediate}
+  Let $\canoniser : \carrier\A \to \carrier\G$ be an equivariant
+  canoniser for a $\G$-action $\A$. For every canonical element $a \in
+  \Canon\canoniser$, we have
+  \(
+  \canoniser a \stabeq a \unit
+  \).
+\end{lemma}
+\begin{proof}
+  Since $a$ is canonical, there is some $b \in \carrier\A$ such that
+  $a = (\canoniser b)\act b$. Since $\canoniser$ is equivariant, we have:
+  \[
+  \canoniser a = \canoniser((\canoniser b) \act b)
+  \explain*{\stabeq{a}}{equivariance\\$(\canoniser b)\act b = a$}
+  (\canoniser b) \mul \inv*{\canoniser b}
+  = \unit
+  \]
+  as we wanted.
+\end{proof}
+
+Now, for the proof:
+
+\begin{proof}[\theoremref{all stable core functions are equivariant}]%
+  First, assume $\canoniser : (a : \A) \equito (\G/\A)a$ is
+  equivariant, and consider any stable core function $f :
+  \Canon\canoniser \to \B$. We show that $f$ is equivariant.
+
+  Consider any canonical $g \act a, a \in \Canon{\canoniser}$. Since
+  $\canoniser$ is equivariant, by \lemmaref{equivariant canoniser
+    weakly immediate}, we have $\canoniser a \stabeq a \unit$ and so
+  $\canoniser a \in \stabilise a$.  By equivariance, we have:
+  \[
+  g \act[\G/\A] [\canoniser a]_{\stabeq a}
+  =
+  [\canoniser(g \act a)]_{\stabeq{g \act a}}
+  \explain={\lemmaref{equivariant canoniser weakly immediate} for $\g \act a$}
+  [\unit]_{\stabeq{\g \act a}}
+  \implies
+  \bracks{\canoniser a}_{\stabeq a}
+  = \inv g \act \bracks\unit_{\stabeq{g \act a}}
+  = \bracks g_{\stabeq a}
+  \]
+  and so $g \stabeq a \canoniser a \in \stabilise a$ and so $g \in
+  \stabilise a \subset \stabilise {f a}$. Therefore:
+  \[
+  f(g \act a)
+  \explain={$g \in \stabilise a$}
+  f a
+  \explain*={$g \in \stabilise{f a}$}
+  g \act f a
+  \]
+  and so $f$ is equivariant.
+
+  Conversely, assume that every stable core function is equivariant. We need
+  to show the canoniser is equivariant.
+  The proof adapts the argument in \theoremref{all core functions are partially equivariant}. Since we now have the indexed action
+  vocabulary, the proof simplifies somewhat.
+
+  Take the $\A$-indexed action $\B \definedby \G/\A$, and the following
+  core function:
+  \[
+  f : \DFun\x{\Canon{\canoniser}} (\G/\A)\x
+  \qquad
+  f a \definedby [\unit]_{\stabeq a}
+  \]
+  It is stable. Indeed, take any canonical $a \in \Canon{\canoniser}$
+  and a stabilising symmetry $g \in \stabilise a$. Since $\stabilise
+  a$ is a sub-group, $\inv g \in \stabilise a$, and so $[\inv g]_{\stabeq a} =
+  [\unit]_{\stabeq a}$. Calculate:
+  \[
+  g \iact[\G/\A] a (f a)
+  =
+  g \iact[\G/\A] a [\unit]_{\stabeq a}
+  =
+  \bracks{\unit\mul\inv g}_{\stabeq{g \act a}}
+  \explain={$g \in \stabilise a$}
+  \bracks{\inv g}_{\stabeq a}
+  =
+  [\unit]_{\stabeq a}
+  =
+  f a
+  \]
+  Therefore $g \in \stabilise{f a}$, and so $\stabilise a \subset
+  \stabilise{f a}$, and so $f$ is stable.
+
+  By assumption, $f$ is equivariant, and by the Indexed Representation
+  \theoremref{indexed-wlog-construction} we have an equivariant
+  $\wlg(\canoniser,f) : \EFun\x\A (\G/\A)\x$. We will show that
+  $\wlg(\canoniser,f) = \parent{\fun a\bracks{\canoniser a}_{\stabeq a}}$ and therefore
+  $\canoniser$ is equivariant.
+
+  Take any $a \in \carrier\A$ and calculate:
+  \[
+  \wlg(\canoniser, f)a = \inv*{\canoniser a}\act f(\canoniser a\act a)
+  =
+  \inv*{\canoniser a}\act \bracks\unit_{\stabeq{\canoniser a\act a}}
+  =
+  \bracks{\inv*{\inv*{\canoniser a}}}_{\stabeq{(\inv*{\canoniser a}) \act \canoniser a\act a}}
+  =
+  \bracks{\canoniser a}_{\stabeq a}
+  \]
+  Therefore $\wlg(\canoniser,f) = \bracks{\canoniser a}_{\stabeq a}$, as we wanted.
+\end{proof}
+
+We conclude this section by proving that every action has an
+equivariant canoniser. Recall that a \emph{transversal} of an action
+is a (dependent) function $t : (a : \carrier \A) \to \G\act\bracks a$
+that picks a representative for the orbit of its input: $t a = t b$
+iff $\G\act\bracks a = \G\act\bracks b$.
+
+\begin{proof}[\theoremref{equivariant canoniser choice}]%
+  Consider the family of orbits $\x : \A \types \OrbitOf\x$, and use
+  the axiom of choice to choose a transversal: $t : \DFun\x\A
+  \OrbitOf\x$.  For each $a \in \carrier\A$, the elements $a$ and $t\,a \in
+  \OrbitOf a$ are symmetric, and so there is some symmetry $g \in
+  \carrier\G$ such that $g \act a = t\,a$. Use the axiom of choice to
+  choose a canoniser $\canoniser : \A \to \carrier\G$ such that
+  $\canoniser a \act a = t\,a$. We will show this canoniser is
+  equivariant.
+
+  Take any element $a \in \carrier\A$ and symmetry $g \in \carrier\G$.
+  Then $g \act a$ and $a$ are in the same orbit, and therefore $t(g \act a) = t\,a$.
+  Calculate:
+  \[
+  \parent{\canoniser(g \act a) \mul g}\act a
+  =
+  \canoniser(g \act a) \act (g\act a)
+  =
+  t(g \act a)
+  =
+  t\,a
+  =
+  \canoniser a \act a
+  \]
+  Therefore, $\canoniser(g \act a) \mul g \stabeq a \canoniser a$, and so
+  $\bracks{\canoniser(g \act a) \mul g}_{\stabeq a} = \bracks{\canoniser a}_{\stabeq a}$.
+  Calculate:
+  \[
+  \bracks{\canoniser(g\act a)}_{\stabeq{g \act a}}
+  =
+  \bracks{\canoniser(g\act a)\mul g \mul \inv g}_{\stabeq{g \act a}}
+  =
+  g \act \bracks{\canoniser(g\act a)\mul g}_{\stabeq a}
+  =
+  g \act \bracks{\canoniser a}_{\stabeq a}
+  \]
+  and so $\canoniser$ is equivariant.
+\end{proof}

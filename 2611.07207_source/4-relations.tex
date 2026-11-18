@@ -1,0 +1,263 @@
+\section{Equational Completeness}
+%
+\label{Sect:Completeness}
+
+This section proves that $E$ is a complete equational theory for $\CatHQC$ with respect to the semantic interpretation $\sem{-}_H$.
+The proof begins by showing that the equational theory is complete for the sub-language $\Core$ of $\CatHQC$ consisting of global phase gates, single qubit rotations, and controls in the $Z$-basis.
+The idea of this proof is to leverage the completeness of $( \Sigma_{\CatCQC}, Q )$ with respect to $\sem{-}_C$.
+We will first consider the simpler case, in which $( \Sigma_{\CatCQC}, Q )$ is a merely a prop presentation, as opposed to a controlled prop presentation.
+\begin{enumerate}
+\item Construct a functor $\encoder: \Core \to \CatCQC$ such that $\sem{\encoder( - )}_C = \sem{-}_H$.
+      This means that if $\sem{U}_H = \sem{V}_H$, then $\sem{\encoder(U)}_C = \sem{\encoder(V)}_C$, which implies that $\encoder( U ) \approx_Q \encoder( V )$.
+\item Construct a functor $\decoder: \CatCQC \to \Core$ which respects the relations in $Q$.
+      This means that for each relation $( X, Y ) \in Q$ used to prove $\encoder( U ) \approx_Q \encoder( V )$, there is a corresponding sequence of relations $\decoder( X ) \approx_E \decoder( Y )$.
+\item Ensure that $W \approx_E \decoder( \encoder( W ) )$ for all $W \in \Mor( \CatHQC )$.
+      This is because the decoder can only prove that $\decoder( \encoder( U ) ) \approx_E \decoder( \encoder( V ) )$. 
+\end{enumerate}
+Unfortunately, $\CatCQC$ is a free controlled prop, so $\decoder( - )$ must map into the quotient $\Core / E$, as opposed to $\Core$.
+This means that $\decoder( - )$ maps each circuit in $\CatCQC$ to an equivalence class of circuits in $\Core$, from which representative circuits must be chosen.
+%This proof methodology is illustrated in \cref{????} and restated in the following theorem.
+
+\begin{theorem}
+    \label{Thm:Completeness1}
+    Let $( \Gamma, Q )$ be a controlled prop presentation which is complete with respect to the interpretation $\sem{-}_\Gamma: P_C( \Gamma ) \to \mathcal{C}$, and $( \Sigma, E )$ be a prop presentation equipped with a control functor $C: P( \Sigma ) / E \to P( \Sigma ) / E$ and a prop functor $\sem{-}_\Sigma: P( \Sigma ) \to \mathcal{C}$.
+    Assume that there exists a prop functor $\encoder: P( \Sigma ) \to P_C( \Gamma )$ and a controlled prop functor $\decoder: P_C( \Gamma ) \to ( P( \Sigma ) / E, C )$ such that the following properties hold.
+    \begin{enumerate}
+    \item If $x \in \Sigma$, then $\sem{\encoder(x)}_\Gamma = \sem{x}_\Sigma$.
+    \item If $( X, Y ) \in Q$, then there exists $X^* \in \decoder( X )$ and $Y^* \in \decoder( Y )$ such that $X^* \approx_E Y^*$.
+    \item If $x \in \Sigma$, then there exists $f \in \decoder( \encoder ( x ) )$ such that $x \approx_E f$.
+    \end{enumerate}
+    Then $( \Sigma, E )$ is complete with respect to the semantic interpretation $\sem{-}_\Sigma$.
+\end{theorem}
+
+It remains to show that the completeness results extend to all of $\CatHQC$.
+The basic idea is to show that for each $U \in \Mor( \CatHQC )$, there exists a $V \in \Mor( \Core )$ such that $U \approx_E V$.
+This means that every circuit in $\CatHQC$ can be rewritten to a circuit in $\Core$, in which $E$ is already known to be complete.
+%This procedure is illustrated in \cref{?????} and restated in the following theorem.
+
+\begin{theorem}
+    \label{Thm:Completeness2}
+    Let $\Sigma \subseteq \Gamma$ be prop signatures with an equation theory $( \Sigma, E )$ that is sound and complete with respect to $\sem{-}: P( \Gamma ) \to \mathcal{C}$.
+    If for each $g \in \Gamma$, there exists a $f\in P( \Sigma )$ such that $g \approx_E f$, then $( \Gamma, E )$ is a complete equational theory with respect to $\sem{-}$.
+\end{theorem}
+
+\vspace{1em}
+\noindent
+\textbf{Constructing the Sub-Language}.
+%
+The sub-language is constructed inductively, starting from the gate set
+$\Sigma_{\Core}^0 =
+    \{
+        \scalebox{0.65}{\circimg{tikz-cache/encoder__eqn6_lhs.pdf}}
+    \}
+    \cup
+    \{
+        \scalebox{0.65}{\circimg{tikz-cache/encoder__eqn1_lhs.pdf}}
+        ,
+        \scalebox{0.65}{\circimg{tikz-cache/encoder__eqn2_lhs.pdf}}
+        ,
+        \scalebox{0.65}{\circimg{tikz-cache/encoder__eqn4_lhs.pdf}}
+        ,
+        \scalebox{0.65}{\circimg{tikz-cache/encoder__eqn5_lhs.pdf}}
+        ,
+        \scalebox{0.65}{\circimg{tikz-cache/encoder__eqn3_lhs.pdf}}
+        :
+        \alpha \in \mathbb{R}
+    \}$.
+The construction then proceeds as follows.
+First, a free prop category $\Core[n] = P( \Sigma_{\Core}^n ) $ is constructed for each control depth $n \in \mathbb{N}$.
+The category at control depth $n$ is then closed under a single application of the control functor, by setting $\Sigma_{\Core}^{n+1} = \Sigma_{\Core}^n \cup \{ \scalebox{0.65}{\circimg{tikz-cache/dagger__term1.pdf}} \odot U : U \in \Mor( \Core[n] ) \}$ for each $n \in \mathbb{N}$.
+This yields an infinite diagram of chain of inclusions, as in \cref{Sect:Semantics}.
+The categorical colimit of this sequence will be denoted $\Core$.
+This means $\Core = P( \Sigma_{\Core} )$ where $\Sigma_{\Core} = \bigcup_{n=0}^{\infty} \Sigma_{\Core}^n$.
+Clearly $C( - )$ restricts to $\Core / E$, since $\scalebox{0.65}{\circimg{tikz-cache/dagger__term1.pdf}} \odot U$ is a representative of $C( \pi_E( U ) )$.
+
+\begin{lemma}
+    \label{Lem:CRestrict}
+    The functor $C: \CatHQC / E \to \CatHQC / E$ restricts to $\Core / E$.
+\end{lemma}
+
+Unfortunately, $( \dagger )$ does not restrict to $\Core$ since $U \odot V \in \Mor( \Core )$ does not imply that $( U \odot V ) \exparr (-1) \in \Mor( \Core )$.
+However, there does exist a prop functor $\ddagger: \Core \to \Core^\text{op}$ such that $U^\ddagger \approx_E U^\dagger$ for all $U \in \Mor( \Core )$.
+It follows from \cref{Lem:FuncDefFam} that the equations $d_0( g ) = g^\dagger$ and $d_{n+1}( \scalebox{0.65}{\circimg{tikz-cache/dagger__term1.pdf}} \odot U ) = \scalebox{0.65}{\circimg{tikz-cache/dagger__term1.pdf}} \odot d_n( U )$ define a prop functor $\ddagger: \Core \to \Core^{\text{op}}$.
+
+\begin{lemma}
+    \label{Lem:CoreDag}
+    If $U \in \Mor( \Core )$, then $U^\ddagger \approx_E U^\dagger$.
+\end{lemma}
+
+\vspace{1em}
+\noindent
+\textbf{Constructing the Encoder}.
+%
+The encode will be defined by the following set of equations, together with the inductive rule $e_{n+1}( \scalebox{0.65}{\circimg{tikz-cache/dagger__term1.pdf}} \odot U ) = C( e_n( U ) )$ defined for each $n \in \mathbb{N}$.
+\begin{align*}
+    e_0\left( \scalebox{0.65}{\circimg{tikz-cache/encoder__eqn1_lhs.pdf}} \right)
+    &=
+    \scalebox{0.65}{\circimg{tikz-cache/encoder__eqn1_rhs.pdf}}
+    & % --------------------------------------------------------
+    e_0\left( \scalebox{0.65}{\circimg{tikz-cache/encoder__eqn2_lhs.pdf}} \right)
+    &=
+    \scalebox{0.65}{\circimg{tikz-cache/encoder__eqn2_rhs.pdf}}
+    & % --------------------------------------------------------
+    e_0\left( \scalebox{0.65}{\circimg{tikz-cache/encoder__eqn3_lhs.pdf}} \right)
+    &=
+    \scalebox{0.65}{\circimg{tikz-cache/encoder__eqn3_rhs.pdf}}
+    \\ % --------------------------------------------------------
+    e_0\left( \scalebox{0.65}{\circimg{tikz-cache/encoder__eqn4_lhs.pdf}} \right)
+    &=
+    \scalebox{0.65}{\circimg{tikz-cache/encoder__eqn4_rhs.pdf}}
+    & % --------------------------------------------------------
+    e_0\left( \scalebox{0.65}{\circimg{tikz-cache/encoder__eqn5_lhs.pdf}} \right)
+    &=
+    \scalebox{0.65}{\circimg{tikz-cache/encoder__eqn5_rhs.pdf}}
+    & % --------------------------------------------------------
+    e_0\left( \scalebox{0.65}{\circimg{tikz-cache/encoder__eqn6_lhs.pdf}} \right)
+    &=
+    \scalebox{0.65}{\circimg{tikz-cache/encoder__eqn6_lhs.pdf}}
+\end{align*}
+It follows immediately from \cref{Lem:FuncDefFam} that this defines a prop functor $\encoder: \Core \to \CatCQC$.
+Moreover, this prop functor preserves the semantics of $\CatHQC$.
+For gates in $\Sigma_{\Core}^0$, this follows by a direct matrix computation.
+For gates in $\Sigma_{\Core}^{n+1} \setminus \Sigma_{\Core}^n$, this follows from \cref{Thm:GenCtrlNF}.
+
+\begin{lemma}
+    \label{Lem:Encoder}
+    If $g \in \Sigma_{\Core}$, then $\sem{\encoder(g)}_C = \sem{g}_H$.
+\end{lemma}
+
+\vspace{1em}
+\noindent
+\textbf{Constructing the Decoder}.
+%
+Let $\decoder: \CatCQC \to ( \Core / E, C )$ be the unique controlled prop functor defined by the equations $\decoder( \scalebox{0.65}{\circimg{tikz-cache/decoder__eqn1.pdf}} ) = \pi_E( \scalebox{0.65}{\circimg{tikz-cache/decoder__eqn1.pdf}} )$ and $\decoder( \scalebox{0.65}{\circimg{tikz-cache/decoder__eqn2_lhs.pdf}} ) = \pi_E\left( \scalebox{0.65}{\circimg{tikz-cache/decoder__eqn2_rhs.pdf}} \right)$.
+The relations $Q( 1 )$, $Q( 2 )$, and $Q( 5 )$ appear in the set of relations for $\CatHQC$, and are therefore respected by $\decoder( - )$.
+The relation $Q( 4 )$ is also respected by $\decoder( - )$ since it is an instance of unitarity.
+The relations $Q( 6 )$ through to $Q( 9 )$ also hold since $C( - )$ is conjugated.
+To show that relation $Q( 3 )$ is also respected, it suffices to prove \cref{Lemma:CNot}.
+
+\begin{lemma}
+    \label{Lemma:CNot}
+    The following equations hold.
+    \begin{align*}
+        \scalebox{0.65}{\circimg{tikz-cache/cnot__rep.pdf}}
+        &\in
+        \decoder\left( \scalebox{0.65}{\circimg{tikz-cache/cnot__class.pdf}} \right)
+        &
+        \scalebox{0.65}{\circimg{tikz-cache/cnot__rep.pdf}}
+        &\approx_E
+        \scalebox{0.65}{\circimg{tikz-cache/cnot__simp.pdf}}
+    \end{align*}
+\end{lemma}
+
+\begin{lemma}
+    \label{Lem:Decoder}
+    If $( X, Y ) \in Q$, then $X^* \approx_E Y^*$ for some $X^* \in \decoder( X )$ and $Y^* \in \decoder( Y )$.
+\end{lemma}
+
+\vspace{1em}
+\noindent
+\textbf{Round-Trip Translation}.
+%
+At this point, an encoder $\encoder: \Core \to \CatCQC$ and a decoder $\decoder: \CatCQC \to \Core / E$ have been established.
+It remains to be shown that $\pi_E( g ) = \decoder( \encoder( g ) )$ for each $g \in \Sigma_{\Core}$.
+Since $\decoder( - )$ is a free control functor, then it suffices to prove the condition for $g \in \mathcal{G}_0$.
+This follows via routine derivations and consequently establishes completeness.
+
+\begin{lemma}
+    \label{Lem:RoundTrip}
+    If $g \in \Sigma_{\Core}$, then there exists $U \in \decoder( \encoder( g ) )$ such that $g \approx_E U$.
+\end{lemma}
+
+\begin{theorem}
+    \label{Thm:CoreComplete}
+    $( \Sigma_{\Core}, E )$ is complete with respect to the semantic interpretation $\sem{-}_H$.
+\end{theorem}
+
+\subsection{Completeness for the Full Language}
+%
+\label{Sect:Completeness:Full}
+
+It remains to be shown that every circuit in $\CatHQC$ can be reduced to a circuit in $\Core$.
+The proof begins by showing that this is possible when a set of primitive gates is added to $\Core$.
+This new language is denoted $\CoreExt[0]$.
+The proof then proceeds by induction on $\CoreExt[n]$, in which each step adds increasingly more complex gates to $\CoreExt[n]$.
+At each step of the proof, it is shown how a reduction procedure for $\CoreExt[n]$ can be used to obtain a reduction procedure for $\CoreExt[ n + 1 ]$.
+Formally, let $\Sigma_{\CoreExt}^0 = \Sigma_{\Core} \cup \Sigma_{\mathbf{Prim}}$ and $\CoreExt[0] = P( \Sigma_{\CoreExt}^0 )$.
+Then for each $n \in \mathbb{N}$, let $\Sigma_{\CoreExt}^{n+1} = \Sigma_{\CoreExt}^n \cup \Tower( \CoreExt[n] ) \cup \Power( \CoreExt[n] )$ with $\Core[n+1] = P( \Sigma_{\CoreExt}^n )$.
+It is not hard to see that $\Sigma_{\CatHQC}^n \subseteq \Sigma_{\CoreExt}^n \subseteq \Sigma_{\CatHQC}$ for each $n \in \mathbb{N}$.
+It follows that the categorical colimit of this sequence is $\CatHQC$.
+
+\vspace{1em}
+\noindent
+\textbf{The Base Reduction}.
+%
+The only gates which appear in $\CoreExt[0]$ but not in $\Core$ are the primitive rotation gates free from exponents.
+Of course, the relation $\HqcPowId$ in $E$ allows for these gate to be rewritten to the form $( g \exparr 1 )$.
+This motivates the following reduction.
+\begin{align*}
+    r_0( \scalebox{0.65}{\circimg{tikz-cache/reduce__eqn1_lhs.pdf}} )
+    &=
+    \scalebox{0.65}{\circimg{tikz-cache/reduce__eqn1_rhs.pdf}}
+    &
+    r_0( \scalebox{0.65}{\circimg{tikz-cache/reduce__eqn2_lhs.pdf}} )
+    &=
+    \scalebox{0.65}{\circimg{tikz-cache/reduce__eqn2_rhs.pdf}}
+    &
+    r_0( \scalebox{0.65}{\circimg{tikz-cache/reduce__eqn3_lhs.pdf}} )
+    &=
+    \scalebox{0.65}{\circimg{tikz-cache/reduce__eqn3_rhs.pdf}}
+    &
+    r_0( \scalebox{0.65}{\circimg{tikz-cache/reduce__eqn4_lhs.pdf}} )
+    &=
+    \scalebox{0.65}{\circimg{tikz-cache/reduce__eqn4_rhs.pdf}}
+\end{align*}
+\vspace{-2em}
+\begin{align*}
+    r_0( \scalebox{0.65}{\circimg{tikz-cache/dagger__term5.pdf}} )
+    &=
+    \scalebox{0.65}{\circimg{tikz-cache/dagger__term5.pdf}}
+    &
+    r_0( U \exparr \alpha )
+    &=
+    U \exparr \alpha
+    &
+    r_0( U \odot V )
+    &=
+    U \odot V
+\end{align*}
+Then by \cref{Lem:FuncDefPart}, these equations define a unique prop functor $\Reduce_0: \CoreExt[0] \to \Core$ with the property that $U \approx_E \Reduce_0( U )$ for each $U \in \Mor( \CoreExt[0] )$.
+
+\vspace{1em}
+\noindent
+\textbf{The Inductive Construction}.
+%
+Assume that there exists a functor $\Reduce_n: \CoreExt[n] \to \Core$ with the property that $U \approx_E \Reduce_n( U )$ for each $U \in \Mor( \CoreExt[n] )$. 
+The goal of this step is to construct a new functor $\Reduce_{n+1}: \CoreExt[n+1] \to \Core$ such that $U \approx_E \Reduce_{n+1}( U )$ for each $U \in \Mor( \CoreExt[n+1] )$.
+Of course, the new gates in $\CoreExt[n+1]$ are gates of the form $U \odot V$ and $U \exparr \alpha$ where $U \in \CoreExt[n]$ and $V \in \CoreExt[n]$.
+For simplicity, we will consider the case of exponentiation.
+Since $U \in \CoreExt[n]$, then $( U \exparr \alpha )$ rewrites to $( V \exparr \alpha )$ where $V = \Reduce_n( U )$.
+It is not hard to show that $\Core$ is universal for unitary qubit quantum computation.
+Then means that there exists a circuit $P$ and a diagonal circuit $\Lambda$ such that $\sem{P^\ddagger \circ \Lambda \circ P}_H = \sem{V}_H$.
+Since $E$ is complete for $\Core$ with respect to $\sem{-}_H$, then $V \approx_E P^\ddagger \circ \Lambda \circ P$.
+It then follows from relations $\HqcPowDag$, $\HqcPowCong$, and \cref{Lem:CoreDag} that $U \exparr \alpha \approx_E P^\ddagger \circ ( \Lambda \exparr \alpha ) \circ P$.
+Using relation $\HqcPowId$ and $\HqcPowExpand$, it is then possible to reduce $ ( \Lambda \exparr \alpha )$ to a diagonal circuit in $\Core$.
+A similar procedure can be carried out for $U \odot V$, using relations $\HqcCtrlExpand$ and $\HqcCtrlMerge$.
+These procedures are stated formally in~\cref{App:Routines} with proofs of termination, and are denoted $\Drop_n( U, \alpha )$ and $\Expand_n( U, V )$, respectively.
+Using these procedures, the following reduction is obtained.
+\begin{equation*}
+    r_{n+1}( g ) = \begin{cases}
+        r_n( g ) & \text{if } g \in \Sigma_{\CoreExt}^n
+        \\
+        \Expand_{n+1}( g ) & \text{if } g \in \Tower( \CoreExt[n] ) \cap \Mor( \CoreExt[n + 1] )
+        \\
+        \Drop_{n+1}( U, \alpha ) & \text{if } g = U \exparr \alpha \text{ for } U \in \Mor( \CoreExt[n] ) \text{ and } \alpha \in \mathbb{R}
+    \end{cases}
+\end{equation*}
+This defines a unique prop functor $\Reduce_{n+1}: \CoreExt[n+1] \to \Core$ with the property that $U \approx_E \Reduce_{n+1}( U )$ for each $U \in \Mor( \CoreExt[n+1] )$.
+
+\begin{theorem}
+    \label{Thm:HQCComplete}
+    $( \Sigma_{\CatHQC}, E )$ is complete with respect to the semantic interpretation $\sem{-}_H$.
+\end{theorem}
+
