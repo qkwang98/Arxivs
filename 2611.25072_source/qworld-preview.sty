@@ -1,0 +1,844 @@
+%% qworld-preview.sty --- Preview extension module for the QWorld package
+%% A LaTeX extension providing experimental features for typesetting
+%% string diagrams in monoidal, rigid, braided, and symmetric categories.
+%%
+%% Copyright (C) 2025 Niina Ryota
+%%
+%% This work may be distributed and/or modified under the conditions of the
+%% LaTeX Project Public License (LPPL), version 1.3c or later.
+%% The latest version of this license is in:
+%%   https://www.latex-project.org/lppl.txt
+%% and version 1.3c or later is part of all distributions of LaTeX
+%% version 2005/12/01 or later.
+%%
+%% This work has the LPPL maintenance status "maintained".
+%%
+%% The Current Maintainer of this work is Niina Ryota.
+%%
+%% This work consists of the following files:
+%%   qworld-preview.sty
+%%
+%% --------------------------------------------------------------------
+%% Purpose
+%% --------------------------------------------------------------------
+%% This module provides experimental features requested by users of the
+%% QWorld package.  It extends QWorld with:
+%%
+%%   * Arrowless primitives: \qcapraw, \qcupraw
+%%   * Arrow decorations for \qbraid, \qbraidinv, \qsym
+%%   * Convenience arrow macros: \qarrow, \qarrowrev, \qarrowup, \qarrowdown
+%%
+%% The preview module is implemented as a non-intrusive layer on top of
+%% QWorld. Only a minimal part of QWorld's internal drawing routine is
+%% overridden, while all core geometry (port generation, shapes, layout,
+%% numbering) remains untouched.
+%%
+%% As a result, documents using qworld-preview remain forward-compatible:
+%% future releases of QWorld will not break diagrams created with this
+%% module. Once the interface stabilizes, these features will be merged
+%% into a future minor release of QWorld with identical user-level behavior.
+%%
+%% --------------------------------------------------------------------
+%% Requirements
+%% --------------------------------------------------------------------
+%% This module requires:
+%%   QWorld v1.1.2 or later
+%%
+%% --------------------------------------------------------------------
+%% Modification Policy
+%% --------------------------------------------------------------------
+%% - Any modifications must not be distributed under the original name.
+%% - Modified versions must clearly state that they are derived from this work.
+%% - The original author (Niina Ryota) must always be credited.
+%%
+%% --------------------------------------------------------------------
+%% Version
+%% --------------------------------------------------------------------
+%%   qworld-preview v0.1.0 (experimental)
+
+\NeedsTeXFormat{LaTeX2e}
+\ProvidesPackage{qworld-preview}[2025/11/24 v0.1.0 Preview extension for QWorld]
+
+% -------------------------------------------------------------
+% Loading The Main Package
+% -------------------------------------------------------------
+\@ifpackageloaded{qworld}{}{%
+  \RequirePackage{qworld}
+}
+
+% -------------------------------------------------------------
+% Preview Module Warning
+% -------------------------------------------------------------
+\PackageWarning{qworld_preview}{
+  This is a PREVIEW extension. 
+  These commands will remain available in future releases,
+  but internal behavior may change.
+}
+
+\makeatletter
+
+\newcounter{numdecorate}
+
+\ifdefined\qcapraw
+\else
+    \def\qcapraw{\qworld@preview@box@cap}
+\fi
+
+\ifdefined\qcupraw
+\else
+    \def\qcupraw{\qworld@preview@box@cup}
+\fi
+
+\ifdefined\qarrowup
+\else
+    \def\qarrowup{\qworld@preview@arrowup}
+\fi
+
+\ifdefined\qarrow
+\else
+    \def\qarrow{\qworld@preview@arrowup}
+\fi
+
+\ifdefined\qarrowdown
+\else
+    \def\qarrowdown{\qworld@preview@arrowdown}
+\fi
+
+\ifdefined\qarrowrev
+\else
+    \def\qarrowrev{\qworld@preview@arrowdown}
+\fi
+
+\AtEndOfPackage{
+  \def\qbraid{\qworld@preview@box@braid}
+  \def\qbraidinv{\qworld@preview@box@braidinv}
+  \def\qsym{\qworld@preview@box@symmetry}
+}
+
+\NewDocumentCommand{\qworld@preview@arrowup}{O{}}
+{
+    \qworld@id[arrowtype=->, #1]
+}
+\NewDocumentCommand{\qworld@preview@arrowdown}{O{}}
+{
+    \qworld@id[arrowtype=<-, #1]
+}
+
+\NewDocumentCommand{\qworld@preview@box@cap}{O{at=qworldat}}
+{
+    \qworld@preview@box@process[capraw]{#1}
+}
+
+\NewDocumentCommand{\qworld@preview@box@cup}{O{at=qworldat}}
+{
+    \qworld@preview@box@process[cupraw]{#1}
+}
+
+\NewDocumentCommand{\qworld@preview@box@braid}{O{at=qworldat}}
+{
+    \qworld@preview@box@process[braid]{#1}
+}
+
+\NewDocumentCommand{\qworld@preview@box@braidinv}{O{at=qworldat}}
+{
+    \qworld@preview@box@process[braidinv]{#1}
+}
+
+\NewDocumentCommand{\qworld@preview@box@symmetry}{O{at=qworldat}}
+{
+    \qworld@preview@box@process[sym]{#1}
+}
+
+\pgfkeys{
+    /qworld/preview/box/.cd, 
+    at/.store in=\previewboxat,
+    id/.store in=\previewboxid,
+    index/.store in=\previewLuminousIndex,
+    show id/.store in=\previewboxshowid,
+    horizontal length/.store in=\previewboxhorilen,
+    vertical length/.store in=\previewboxverlen,
+    hlen/.store in=\previewboxhlen,
+    vlen/.store in=\previewboxvlen,
+    num L/.store in=\previewbraidfsc,
+    num R/.store in=\previewbraidbsc,
+    frame color/.store in=\previewframecolor,
+    dom color/.store in=\previewdomcolor,
+    cod color/.store in=\previewcodcolor,
+    L color/.store in=\previewleftcolor,
+    R color/.store in=\previewrightcolor,
+    L color output/.store in=\previewleftcoloroutput,
+    R color output/.store in=\previewrightcoloroutput,
+    arrowtype/.store in=\previewarrowtype,
+    dom arrowtype/.store in=\previewdomarrowtype,
+    cod arrowtype/.store in=\previewcodarrowtype,
+    internal invocation/.store in=\previewinternalinvocation,
+    p/.store in=\previewnumPorts,
+    n/.store in=\previewnumPortsN,
+    s/.store in=\previewnumPortsS,
+    e/.store in=\previewnumPortsE,
+    w/.store in=\previewnumPortsW,
+    P/.store in=\previewPorts,
+    N/.store in=\previewPortsN,
+    S/.store in=\previewPortsS,
+    W/.store in=\previewPortsW,
+    E/.store in=\previewPortsE,
+    braid smoothness/.store in=\previewbraidsmoothness,
+    dual angle/.store in=\previewdualangle,% Begin The Preview Mode
+    arrows/.store in=\qarrows, % End The Preview Mode
+    at/.default={qworldat},
+    id/.default={},
+    index/.default={},
+    show id/.default={notentered},
+    horizontal length/.default={},
+    vertical length/.default={},
+    hlen/.default={},
+    vlen/.default={},
+    num L/.default={1},
+    num R/.default={1},
+    frame color/.default={black},
+    dom color/.default={notentered},
+    cod color/.default={notentered},
+    L color/.default={black},
+    R color/.default={black},
+    L color output/.default={black},
+    R color output/.default={black},
+    arrowtype/.default={},
+    dom arrowtype/.default={},
+    cod arrowtype/.default={},
+    internal invocation/.default={0},
+    p/.default={notentered},
+    n/.default={notentered},
+    s/.default={notentered},
+    w/.default={notentered},
+    e/.default={notentered},
+    P/.default={notentered},
+    N/.default={notentered},
+    S/.default={notentered},
+    W/.default={notentered},
+    E/.default={notentered},
+    braid smoothness/.default={0.975},
+    dual angle/.default={89},% Begin The Preview Mode
+    arrows/.default={notentered} % End The Preview Mode
+}
+\newcommand{\qworld@preview@box@process}[2][box]{
+    \def\qworld@preview@box@type{#1}
+    \pgfkeys{/qworld/preview/box/.cd,  
+    at={qworldat},
+    id={},
+    index={},
+    show id={notentered},
+    horizontal length={notentered},
+    vertical length={1},
+    hlen={notentered},
+    vlen={notentered},
+    num L={1},
+    num R={1},
+    frame color={black},
+    dom color={notentered},
+    cod color={notentered},
+    L color={black},
+    R color={black},
+    L color output={black},
+    R color output={black},
+    arrowtype={},
+    dom arrowtype={},
+    cod arrowtype={},
+    internal invocation=0,
+    p={notentered},
+    n={notentered},
+    s={notentered},
+    w={notentered},
+    e={notentered},
+    P={notentered},
+    N={notentered},
+    S={notentered},
+    W={notentered},
+    E={notentered},
+    braid smoothness={0.99},
+    dual angle={89},
+    arrows={notentered},
+    #2}
+
+    % Begin The Preview Mode
+    \def\qworld@preview@box@type@tangle{TRUE}
+    % End The Preview Mode
+
+    \ifthenelse{\equal{\previewdomcolor}{notentered}}{
+        \ifthenelse{\equal{\previewcodcolor}{notentered}}{
+            \pgfkeys{/qworld/preview/box/.cd,  
+                L color output=\previewleftcolor,
+                R color output=\previewrightcolor
+            }
+        }{
+            \pgfkeys{/qworld/preview/box/.cd, 
+                R color output=\previewcodcolor,
+                L color output=\previewcodcolor
+            } 
+        }
+    }{
+        \ifthenelse{\equal{\previewcodcolor}{notentered}}{
+            \pgfkeys{/qworld/preview/box/.cd,  
+                R color=\previewdomcolor,
+                L color=\previewdomcolor
+            }
+        }{
+            \pgfkeys{/qworld/preview/box/.cd,  
+                R color=\previewdomcolor,
+                L color=\previewdomcolor,
+                R color output=\previewcodcolor,
+                L color output=\previewcodcolor
+            } 
+        }
+    }
+
+    \ifthenelse{\equal{\previewboxshowid}{notentered}}
+    {}{
+        \pgfkeys{/qworld/preview/box/.cd,  index={true}} 
+    }
+    \ifthenelse{\equal{\previewboxhlen}{notentered}}
+    {}{
+        \pgfkeys{/qworld/preview/box/.cd,  horizontal length=\previewboxhlen} 
+    }
+    \ifthenelse{\equal{\previewboxvlen}{notentered}}
+    {}{
+        \pgfkeys{/qworld/preview/box/.cd,  vertical length=\previewboxvlen} 
+    }
+    \ifthenelse{\equal{\previewLuminousIndex}{true}\or\equal{\previewLuminousIndex}{True}\or\equal{\previewLuminousIndex}{TRUE}}
+    {
+        \pgfkeys{/qworld/preview/box/.cd,  name={\theqworldnumeros}}
+    }{}
+    \ifx\previewdomarrowtype\empty
+        \pgfkeys{/qworld/preview/box/.cd,  dom arrowtype=\previewarrowtype}
+    \fi
+    \ifx\previewcodarrowtype\empty
+        \pgfkeys{/qworld/preview/box/.cd,  cod arrowtype=\previewarrowtype}
+    \fi
+    \ifthenelse{
+        \equal{\qworld@preview@box@type}{cap}\or\equal{\qworld@preview@box@type}{caprev}\or % Begin The Preview Mode
+        \equal{\qworld@preview@box@type}{capraw}\or % End The Preview Mode
+        \equal{\qworld@preview@box@type}{effect}\or\equal{\qworld@preview@box@type}{scalar}
+    }{
+        \pgfkeys{/qworld/preview/box/.cd,  n=0}
+        \ifthenelse{
+            \equal{\qworld@preview@box@type}{cap}\or\equal{\qworld@preview@box@type}{caprev} % Begin The Preview Mode
+            \or\equal{\qworld@preview@box@type}{capraw} % End The Preview Mode
+        }{
+            \ifthenelse{\equal{\previewnumPortsS}{notentered}}{
+                \pgfkeys{/qworld/preview/box/.cd,  s=2}
+            }{}
+        }{}
+    }{}
+    \ifthenelse{
+        \equal{\qworld@preview@box@type}{cup}\or\equal{\qworld@preview@box@type}{cuprev}\or % Begin The Preview Mode
+        \equal{\qworld@preview@box@type}{cupraw}\or% End The Preview Mode
+        \equal{\qworld@preview@box@type}{state}\or\equal{\qworld@preview@box@type}{scalar}
+    }{
+        \pgfkeys{/qworld/preview/box/.cd,  s=0}
+        \ifthenelse{
+            \equal{\qworld@preview@box@type}{cup}\or\equal{\qworld@preview@box@type}{cuprev} % Begin The Preview Mode
+            \or\equal{\qworld@preview@box@type}{cupraw}% End The Preview Mode
+        }{
+            \ifthenelse{\equal{\previewnumPortsN}{notentered}}{
+                \pgfkeys{/qworld/preview/box/.cd,  n=2}
+            }{}
+        }{}
+    }{}
+    \ifthenelse{\equal{\previewbraidfsc}{0}}
+    {
+        \def\previewbraidfsc{1}
+        \def\lstrandtype{dashed}
+    }{
+        \def\lstrandtype{}
+    }
+    \ifthenelse{\equal{\previewbraidbsc}{0}}
+    {
+        \def\previewbraidbsc{1}
+        \def\rstrandtype{dashed}
+    }{
+        \def\rstrandtype{}
+    }
+    \ifthenelse{\equal{\qworld@preview@box@type}{braid}\or\equal{\qworld@preview@box@type}{braidinv}\or\equal{\qworld@preview@box@type}{sym}}
+    {
+        \pgfkeys{/qworld/preview/box/.cd,  p={\fpeval{\previewbraidfsc+\previewbraidbsc}}}
+    }{}
+    \ifthenelse{\equal{\previewnumPorts}{notentered}}
+    {}{
+        \pgfkeys{/qworld/preview/box/.cd,  n=\previewnumPorts, s=\previewnumPorts}
+    }
+    \ifthenelse{\equal{\previewnumPorts}{0}}
+    {
+        \pgfkeys{/qworld/preview/box/.cd,  n=0, s=0}
+    }{}
+    \ifthenelse{\equal{\previewnumPortsS}{0}}
+    {
+        \pgfkeys{/qworld/preview/box/.cd,  s=1, S={}}
+    }{}
+    \ifthenelse{\equal{\previewnumPortsN}{0}}
+    {
+        \pgfkeys{/qworld/preview/box/.cd,  n=1, N={}}
+    }{}
+    \ifthenelse{\equal{\previewPorts}{notentered}}
+    {}{
+        \pgfkeys{/qworld/preview/box/.cd,  S=\previewPorts, N=\previewPorts}
+    }
+    \ifthenelse{\equal{\previewPortsS}{notentered}}
+    {
+        \ifthenelse{\equal{\previewnumPortsS}{notentered}}
+        {
+            \pgfkeys{/qworld/preview/box/.cd, s=1, S={1}}
+        }{
+            \pgfkeys{/qworld/preview/box/.cd,  S={1,...,\fpeval{\previewnumPortsS}}}
+        }
+    }{
+    }
+    \ifthenelse{\equal{\previewPortsN}{notentered}}
+    {
+        \ifthenelse{\equal{\previewnumPortsN}{notentered}}
+        {
+            \pgfkeys{/qworld/preview/box/.cd, n=1, N={1}}
+        }{
+            \pgfkeys{/qworld/preview/box/.cd,  N={1,...,\fpeval{\previewnumPortsN}}}
+        }
+    }{
+    }
+    \setcounter{qworld@box@port@num@S}{0}
+    \def\qworldmaxS{0}
+    \ifthenelse{\equal{\previewPortsS}{{}}\or\equal{\previewPortsS}{}}
+    {}{
+        \foreach\qworldindex in \previewPortsS
+        {
+            \stepcounter{qworld@box@port@num@S}
+        }
+        \foreach \qworldindex in\previewPortsS
+        {
+            \ifnum\qworldmaxS<\qworldindex
+                \xdef\qworldmaxStemp{\qworldindex}
+            \fi
+            \xdef\qworldmaxS{\qworldmaxStemp}
+        }
+    }
+    \def\qworld@card@ports@S{\fpeval{\theqworld@box@port@num@S}}
+
+    \setcounter{qworld@box@port@num@N}{0}
+    \def\qworldmaxN{0}
+    \ifthenelse{\equal{\previewPortsN}{{}}\or\equal{\previewPortsN}{}}
+    {}{
+        \foreach\qworldindex in \previewPortsN
+        {
+            \stepcounter{qworld@box@port@num@N}
+        }
+        \foreach \qworldindex in\previewPortsN
+        {
+            \ifnum\qworldmaxN<\qworldindex
+                \xdef\qworldmaxNtemp{\qworldindex}
+            \fi
+            \xdef\qworldmaxN{\qworldmaxNtemp}
+        }
+    }
+
+    \def\qworld@card@ports@N{\theqworld@box@port@num@N}
+    \ifthenelse{\equal{\previewnumPortsN}{notentered}\or\equal{\previewnumPortsN}{{notentered}}}
+    {
+        \ifthenelse{\equal{\previewPortsN}{}\or\equal{\previewPortsN}{{}}}
+        {
+            \pgfkeys{/qworld/preview/box/.cd,  n=1}
+        }{
+            \pgfkeys{/qworld/preview/box/.cd,  n=\qworldmaxN}
+        }
+    }{}
+
+    \ifthenelse{\equal{\previewnumPortsS}{notentered}\or\equal{\previewnumPortsS}{{notentered}}}
+    {
+        \ifthenelse{\equal{\previewPortsS}{}\or\equal{\previewPortsS}{{}}}
+        {
+            \pgfkeys{/qworld/preview/box/.cd,  s=1}
+        }{
+            \pgfkeys{/qworld/preview/box/.cd,  s=\qworldmaxS}
+        }
+    }{}
+    \ifnum\previewnumPortsN<\qworldmaxN
+        \pgfkeys{/qworld/preview/box/.cd,  n=\qworldmaxN}
+    \fi
+    \ifnum\previewnumPortsS<\qworldmaxS
+        \pgfkeys{/qworld/preview/box/.cd,  s=\qworldmaxS}
+    \fi
+    \def\qworldwireScorrection{0}
+    \def\qworldwireNcorrection{0}
+    \ifthenelse{\equal{\previewboxhorilen}{notentered}}
+    {
+        \def\qworld@margin@s{1}
+        \def\qworld@margin@n{1}
+        \pgfkeys{/qworld/preview/box/.cd,  horizontal length={\fpeval{max(1,\qworld@margin@s*(\previewnumPortsS-1)+1,\qworld@margin@n*(\previewnumPortsN-1)+1)}}}
+    }{
+        \ifnum\previewnumPortsS=1
+            \def\qworldwireScorrection{\fpeval{0.5*\previewboxhorilen-0.5*\qworld@wire@interval}}
+        \fi
+        \ifnum\previewnumPortsN=1
+            \def\qworldwireNcorrection{\fpeval{0.5*\previewboxhorilen-0.5*\qworld@wire@interval}}
+        \fi
+        \def\qworld@margin@s{\fpeval{(\previewboxhorilen-\qworld@wire@interval)/(max(1,\previewnumPortsS-1))}}
+        \def\qworld@margin@n{\fpeval{(\previewboxhorilen-\qworld@wire@interval)/(max(1,\previewnumPortsN-1))}}
+    }
+    \coordinate (SW-\theqworldnumeros) at (\previewboxat);
+    \coordinate (SE-\theqworldnumeros) at ([shift={(\previewboxhorilen,0)}]SW-\theqworldnumeros);
+    \coordinate (NE-\theqworldnumeros) at ([shift={(0,\previewboxverlen)}]SE-\theqworldnumeros);
+    \coordinate (NW-\theqworldnumeros) at (SW-\theqworldnumeros |- NE-\theqworldnumeros);
+    \coordinate (N-\theqworldnumeros) at ($(NE-\theqworldnumeros)!0.5!(NW-\theqworldnumeros)$);
+    \coordinate (S-\theqworldnumeros) at ($(SE-\theqworldnumeros)!0.5!(SW-\theqworldnumeros)$);
+    \coordinate (W-\theqworldnumeros) at ($(NW-\theqworldnumeros)!0.5!(SW-\theqworldnumeros)$);
+    \coordinate (E-\theqworldnumeros) at ($(NE-\theqworldnumeros)!0.5!(SE-\theqworldnumeros)$);
+    \coordinate (C-\theqworldnumeros) at ($(N-\theqworldnumeros)!0.5!(S-\theqworldnumeros)$);
+    \ifx\previewboxid\empty
+    \else
+        \coordinate (SW-\previewboxid) at (SW-\theqworldnumeros);
+        \coordinate (SE-\previewboxid) at (SE-\theqworldnumeros);
+        \coordinate (NE-\previewboxid) at (NE-\theqworldnumeros);
+        \coordinate (NW-\previewboxid) at (NW-\theqworldnumeros);
+        \coordinate (N-\previewboxid) at (N-\theqworldnumeros);
+        \coordinate (S-\previewboxid) at (S-\theqworldnumeros);
+        \coordinate (W-\previewboxid) at (W-\theqworldnumeros);
+        \coordinate (E-\previewboxid) at (E-\theqworldnumeros);
+        \coordinate (C-\previewboxid) at (C-\theqworldnumeros);
+    \fi
+    \ifnum\previewnumPortsS>0
+        \foreach \qworldindex in {1,...,\previewnumPortsS}
+        {
+            \coordinate (s-\qworldindex-\theqworldnumeros) at ([shift={({\fpeval{(0.5*\qworld@wire@interval)+((\qworldindex-1)*\qworld@margin@s)+\qworldwireScorrection}},{\fpeval{\qworld@box@fillrate@vertical}})}]\previewboxat);
+            \coordinate (S-\qworldindex-\theqworldnumeros) at (SW-\theqworldnumeros -| s-\qworldindex-\theqworldnumeros);
+            \ifx\previewboxid\empty
+            \else
+                \coordinate (s-\qworldindex-\previewboxid) at (s-\qworldindex-\theqworldnumeros);
+                \coordinate (S-\qworldindex-\previewboxid) at (S-\qworldindex-\theqworldnumeros);
+            \fi
+        }
+    \else
+        \coordinate (s-1-\theqworldnumeros) at ([shift={({\fpeval{(0.5*\qworld@wire@interval)}},{\fpeval{\qworld@box@fillrate@vertical}})}]\previewboxat);
+        \coordinate (S-1-\theqworldnumeros) at (SW-\theqworldnumeros -| s-1-\theqworldnumeros);
+        \ifx\previewboxid\empty
+        \else
+            \coordinate (s-1-\previewboxid) at (s-1-\theqworldnumeros);
+            \coordinate (S-1-\previewboxid) at (S-1-\theqworldnumeros);
+        \fi
+    \fi
+    \ifnum\previewnumPortsN>0
+        \foreach \qworldindex in {1,...,\previewnumPortsN}
+        {
+            \coordinate (n-\qworldindex-\theqworldnumeros) at ([shift={({\fpeval{(0.5*\qworld@wire@interval)+((\qworldindex-1)*\qworld@margin@n)+\qworldwireNcorrection}},{\fpeval{\previewboxverlen-\qworld@box@fillrate@vertical}})}]\previewboxat);
+            \coordinate (N-\qworldindex-\theqworldnumeros) at (NW-\theqworldnumeros -| n-\qworldindex-\theqworldnumeros);
+            \ifx\previewboxid\empty
+            \else
+                \coordinate (n-\qworldindex-\previewboxid) at (n-\qworldindex-\theqworldnumeros);
+                \coordinate (N-\qworldindex-\previewboxid) at (N-\qworldindex-\theqworldnumeros);
+            \fi
+        }
+    \else
+        \coordinate (n-1-\theqworldnumeros) at ([shift={({\fpeval{0.5*\qworld@wire@interval}},{\fpeval{\previewboxverlen-\qworld@box@fillrate@vertical}})}]\previewboxat);
+        \coordinate (N-1-\theqworldnumeros) at (NW-\theqworldnumeros -| n-1-\theqworldnumeros);
+        \ifx\previewboxid\empty
+        \else
+            \coordinate (n-1-\previewboxid) at (n-1-\theqworldnumeros);
+            \coordinate (N-1-\previewboxid) at (N-1-\theqworldnumeros);
+        \fi
+    \fi
+    \coordinate (n-\theqworldnumeros) at (N-\theqworldnumeros |- n-1-\theqworldnumeros);
+    \coordinate (s-\theqworldnumeros) at (S-\theqworldnumeros |- s-1-\theqworldnumeros);
+    \ifx\previewboxid\empty
+    \else
+        \coordinate (n-\previewboxid) at (n-\theqworldnumeros);
+        \coordinate (s-\previewboxid) at (s-\theqworldnumeros);
+    \fi
+    \setcounter{qworld@box@port@num@S@temp}{0}
+    \ifnum\qworld@card@ports@S>0
+        \ifthenelse{\equal{\qworld@preview@box@type@tangle}{FALSE}}{
+            \foreach\qworldindex in \previewPortsS
+            {
+                \stepcounter{qworld@box@port@num@S@temp}
+                \ifnum\theqworld@box@port@num@S@temp>\previewbraidfsc
+                    \draw[\qworld@thickness, \previewdomarrowtype, \previewrightcolor] (S-\qworldindex-\theqworldnumeros)--(s-\qworldindex-\theqworldnumeros);
+                \else
+                    \draw[\qworld@thickness, \previewdomarrowtype, \previewleftcolor] (S-\qworldindex-\theqworldnumeros)--(s-\qworldindex-\theqworldnumeros);
+                \fi
+                \coordinate (i-\theqworld@box@port@num@S@temp-\theqworldnumeros) at (s-\qworldindex-\theqworldnumeros);
+                \coordinate (I-\theqworld@box@port@num@S@temp-\theqworldnumeros) at (S-\qworldindex-\theqworldnumeros);
+                \ifx\previewboxid\empty
+                \else
+                    \coordinate (i-\theqworld@box@port@num@S@temp-\previewboxid) at (i-\theqworld@box@port@num@S@temp-\theqworldnumeros);
+                    \coordinate (I-\theqworld@box@port@num@S@temp-\previewboxid) at (I-\theqworld@box@port@num@S@temp-\theqworldnumeros);
+                \fi
+            }
+        }{
+            \foreach\qworldindex in \previewPortsS
+            {
+                \stepcounter{qworld@box@port@num@S@temp}
+                \coordinate (i-\theqworld@box@port@num@S@temp-\theqworldnumeros) at (s-\qworldindex-\theqworldnumeros);
+                \coordinate (I-\theqworld@box@port@num@S@temp-\theqworldnumeros) at (S-\qworldindex-\theqworldnumeros);
+                \ifx\previewboxid\empty
+                \else
+                    \coordinate (i-\theqworld@box@port@num@S@temp-\previewboxid) at (i-\theqworld@box@port@num@S@temp-\theqworldnumeros);
+                    \coordinate (I-\theqworld@box@port@num@S@temp-\previewboxid) at (I-\theqworld@box@port@num@S@temp-\theqworldnumeros);
+                \fi
+            }
+        }
+    \fi
+    \setcounter{qworld@box@port@num@N@temp}{0}
+    \ifnum\qworld@card@ports@N>0
+        \ifthenelse{\equal{\qworld@preview@box@type@tangle}{FALSE}}{
+            \foreach\qworldindex in \previewPortsN
+            {
+                \stepcounter{qworld@box@port@num@N@temp}
+                \ifnum\theqworld@box@port@num@N@temp>\previewbraidbsc
+                    \draw[\qworld@thickness, \previewcodarrowtype, \previewleftcoloroutput] (n-\qworldindex-\theqworldnumeros)--(N-\qworldindex-\theqworldnumeros);
+                \else
+                    \draw[\qworld@thickness, \previewcodarrowtype, \previewrightcoloroutput] (n-\qworldindex-\theqworldnumeros)--(N-\qworldindex-\theqworldnumeros);
+                \fi
+                \coordinate (o-\theqworld@box@port@num@N@temp-\theqworldnumeros) at (n-\qworldindex-\theqworldnumeros);
+                \coordinate (O-\theqworld@box@port@num@N@temp-\theqworldnumeros) at (N-\qworldindex-\theqworldnumeros);
+                \ifx\previewboxid\empty
+                \else
+                    \coordinate (o-\theqworld@box@port@num@N@temp-\previewboxid) at (o-\theqworld@box@port@num@N@temp-\theqworldnumeros);
+                    \coordinate (O-\theqworld@box@port@num@N@temp-\previewboxid) at (O-\theqworld@box@port@num@N@temp-\theqworldnumeros);
+                \fi
+            }
+        }{
+            \foreach\qworldindex in \previewPortsN
+            {
+                \stepcounter{qworld@box@port@num@N@temp}
+                \coordinate (o-\theqworld@box@port@num@N@temp-\theqworldnumeros) at (n-\qworldindex-\theqworldnumeros);
+                \coordinate (O-\theqworld@box@port@num@N@temp-\theqworldnumeros) at (N-\qworldindex-\theqworldnumeros);
+                \ifx\previewboxid\empty
+                \else
+                    \coordinate (o-\theqworld@box@port@num@N@temp-\previewboxid) at (o-\theqworld@box@port@num@N@temp-\theqworldnumeros);
+                    \coordinate (O-\theqworld@box@port@num@N@temp-\previewboxid) at (O-\theqworld@box@port@num@N@temp-\theqworldnumeros);
+                \fi
+            }
+        }
+    \fi
+    
+    % Begin The Preview Mode
+
+    \ifthenelse{\equal{\qarrows}{notentered}}{
+    \ifthenelse{\equal{\qworld@preview@box@type}{braid}}
+    {
+        \foreach\qworldindexx in {1,...,\previewbraidbsc}
+        {
+            \def\i{\fpeval{round(\qworldindexx+\previewbraidfsc)}}
+            \coordinate (qworldvertexA) at ($(I-\i-\theqworldnumeros)!{\fpeval{1-\previewbraidsmoothness}}!(C-\theqworldnumeros)$);
+            \coordinate (qworldvertexB) at ($(C-\theqworldnumeros)!{\fpeval{\previewbraidsmoothness}}!(O-\qworldindexx-\theqworldnumeros)$);
+            \draw [\qworld@thickness,\rstrandtype, \previewrightcolor] (I-\i-\theqworldnumeros) ..controls (qworldvertexA |- C-\theqworldnumeros) and (qworldvertexB |- C-\theqworldnumeros)..(O-\qworldindexx-\theqworldnumeros);
+        }
+        \foreach\qworldindexx in {1,...,\previewbraidfsc}
+        {
+            \def\i{\fpeval{round(\qworldindexx+\previewbraidbsc)}}
+            \coordinate (qworldvertexA) at ($(I-\qworldindexx-\theqworldnumeros)!{\fpeval{1-\previewbraidsmoothness}}!(C-\theqworldnumeros)$);
+            \coordinate (qworldvertexB) at ($(C-\theqworldnumeros)!{\fpeval{\previewbraidsmoothness}}!(O-\i-\theqworldnumeros)$);
+            \draw [ultra thick, draw = white, double = white, double distance =\pgflinewidth] 
+            (I-\qworldindexx-\theqworldnumeros) ..controls (qworldvertexA |- C-\theqworldnumeros) and (qworldvertexB |- C-\theqworldnumeros)..(O-\i-\theqworldnumeros);
+            \draw [\qworld@thickness, draw = white, double = \previewleftcolor, double distance =\pgflinewidth,\lstrandtype] 
+            (I-\qworldindexx-\theqworldnumeros) ..controls (qworldvertexA |- C-\theqworldnumeros) and (qworldvertexB |- C-\theqworldnumeros)..(O-\i-\theqworldnumeros);
+        }
+    }{}
+    \ifthenelse{\equal{\qworld@preview@box@type}{braidinv}}
+    {
+        \foreach\qworldindexx in {1,...,\previewbraidfsc}
+        {
+            \def\i{\fpeval{round(\qworldindexx+\previewbraidbsc)}}
+            \coordinate (qworldvertexA) at ($(I-\qworldindexx-\theqworldnumeros)!{\fpeval{1-\previewbraidsmoothness}}!(C-\theqworldnumeros)$);
+            \coordinate (qworldvertexB) at ($(C-\theqworldnumeros)!{\fpeval{\previewbraidsmoothness}}!(O-\i-\theqworldnumeros)$);
+            \draw [\qworld@thickness,\lstrandtype, \previewleftcolor] (I-\qworldindexx-\theqworldnumeros) ..controls (qworldvertexA |- C-\theqworldnumeros) and (qworldvertexB |- C-\theqworldnumeros)..(O-\i-\theqworldnumeros);
+        }
+        \foreach\qworldindexx in {1,...,\previewbraidbsc}
+        {
+            \def\i{\fpeval{round(\qworldindexx+\previewbraidfsc)}}
+            \coordinate (qworldvertexA) at ($(I-\i-\theqworldnumeros)!{\fpeval{1-\previewbraidsmoothness}}!(C-\theqworldnumeros)$);
+            \coordinate (qworldvertexB) at ($(C-\theqworldnumeros)!{\fpeval{\previewbraidsmoothness}}!(O-\qworldindexx-\theqworldnumeros)$);
+            \draw[ultra thick,draw = white, double = white, double distance = \pgflinewidth,\rstrandtype]
+            (I-\i-\theqworldnumeros) ..controls (qworldvertexA |- C-\theqworldnumeros) and (qworldvertexB |- C-\theqworldnumeros)..(O-\qworldindexx-\theqworldnumeros);
+            \draw[\qworld@thickness,draw = white, double = \previewrightcolor, double distance = \pgflinewidth,\rstrandtype]
+            (I-\i-\theqworldnumeros) ..controls (qworldvertexA |- C-\theqworldnumeros) and (qworldvertexB |- C-\theqworldnumeros)..(O-\qworldindexx-\theqworldnumeros);
+        }
+    }{}
+    \ifthenelse{\equal{\qworld@preview@box@type}{sym}}
+    {
+        \foreach\qworldindexx in {1,...,\previewbraidbsc}
+        {
+            \def\i{\fpeval{round(\qworldindexx+\previewbraidfsc)}}
+            \coordinate (qworldvertexA) at ($(I-\i-\theqworldnumeros)!{\fpeval{1-\previewbraidsmoothness}}!(C-\theqworldnumeros)$);
+            \coordinate (qworldvertexB) at ($(C-\theqworldnumeros)!{\fpeval{\previewbraidsmoothness}}!(O-\qworldindexx-\theqworldnumeros)$);
+            \draw [\qworld@thickness,\rstrandtype, \previewrightcolor] (I-\i-\theqworldnumeros) ..controls (qworldvertexA |- C-\theqworldnumeros) and (qworldvertexB |- C-\theqworldnumeros)..(O-\qworldindexx-\theqworldnumeros);
+        }
+        \foreach\qworldindexx in {1,...,\previewbraidfsc}
+        {
+            \def\i{\fpeval{round(\qworldindexx+\previewbraidbsc)}}
+            \coordinate (qworldvertexA) at ($(I-\qworldindexx-\theqworldnumeros)!{\fpeval{1-\previewbraidsmoothness}}!(C-\theqworldnumeros)$);
+            \coordinate (qworldvertexB) at ($(C-\theqworldnumeros)!{\fpeval{\previewbraidsmoothness}}!(O-\i-\theqworldnumeros)$);
+            \draw [\qworld@thickness,\lstrandtype, \previewleftcolor] (I-\qworldindexx-\theqworldnumeros) ..controls (qworldvertexA |- C-\theqworldnumeros) and (qworldvertexB |- C-\theqworldnumeros)..(O-\i-\theqworldnumeros);
+        }
+    }{}
+    }{%
+    \ifthenelse{\equal{\qworld@preview@box@type}{braid}}
+    {%
+        \setcounter{numdecorate}{1}%
+        \foreach\qworldindexx in \qarrows
+        {
+            \ifnum \previewbraidfsc<\thenumdecorate
+            \def\i{\fpeval{\thenumdecorate-\previewbraidfsc}}
+            \coordinate (qworldvertexA) at ($(I-\thenumdecorate-\theqworldnumeros)!{\fpeval{1-\previewbraidsmoothness}}!(C-\theqworldnumeros)$);
+            \coordinate (qworldvertexB) at ($(C-\theqworldnumeros)!{\fpeval{\previewbraidsmoothness}}!(O-\i-\theqworldnumeros)$);
+            \ifthenelse{\equal{\qworldindexx}{+}}{
+                \draw [->, \qworld@thickness,\rstrandtype, \previewrightcolor] (I-\thenumdecorate-\theqworldnumeros) ..controls (qworldvertexA |- C-\theqworldnumeros) and (qworldvertexB |- C-\theqworldnumeros)..(O-\i-\theqworldnumeros);
+            }{
+                \draw [<-, \qworld@thickness,\rstrandtype, \previewrightcolor] (I-\thenumdecorate-\theqworldnumeros) ..controls (qworldvertexA |- C-\theqworldnumeros) and (qworldvertexB |- C-\theqworldnumeros)..(O-\i-\theqworldnumeros);
+            }
+            \fi %
+            \stepcounter{numdecorate}
+        }%
+        \setcounter{numdecorate}{1}%
+        \foreach\qworldindexx in \qarrows
+        {
+            \ifnum \thenumdecorate<\fpeval{\previewbraidfsc+1}
+            \def\i{\fpeval{\thenumdecorate+\previewbraidbsc}}
+            \coordinate (qworldvertexA) at ($(I-\thenumdecorate-\theqworldnumeros)!{\fpeval{1-\previewbraidsmoothness}}!(C-\theqworldnumeros)$);
+            \coordinate (qworldvertexB) at ($(C-\theqworldnumeros)!{\fpeval{\previewbraidsmoothness}}!(O-\i-\theqworldnumeros)$);
+            \ifthenelse{\equal{\qworldindexx}{+}}{
+            \draw [ultra thick, draw = white, double = white, double distance =\pgflinewidth] 
+            (I-\thenumdecorate-\theqworldnumeros) ..controls (qworldvertexA |- C-\theqworldnumeros) and (qworldvertexB |- C-\theqworldnumeros)..(O-\i-\theqworldnumeros);
+            \draw [->, \qworld@thickness, \previewleftcolor, \lstrandtype] 
+            (I-\thenumdecorate-\theqworldnumeros) ..controls (qworldvertexA |- C-\theqworldnumeros) and (qworldvertexB |- C-\theqworldnumeros)..(O-\i-\theqworldnumeros);
+            }{
+            \draw [ultra thick, draw = white, double = white, double distance =\pgflinewidth] 
+            (I-\thenumdecorate-\theqworldnumeros) ..controls (qworldvertexA |- C-\theqworldnumeros) and (qworldvertexB |- C-\theqworldnumeros)..(O-\i-\theqworldnumeros);
+            \draw [<-, \qworld@thickness, \previewleftcolor, \lstrandtype] 
+            (I-\thenumdecorate-\theqworldnumeros) ..controls (qworldvertexA |- C-\theqworldnumeros) and (qworldvertexB |- C-\theqworldnumeros)..(O-\i-\theqworldnumeros);
+            }
+            \fi %
+            \stepcounter{numdecorate}
+        }
+    }{}
+    \ifthenelse{\equal{\qworld@preview@box@type}{braidinv}}
+    {%
+        \setcounter{numdecorate}{1}%
+        \foreach\qworldindexx in \qarrows
+        {
+            \ifnum \thenumdecorate<\fpeval{\previewbraidfsc+1}
+            \def\i{\fpeval{\thenumdecorate+\previewbraidbsc}}
+            \coordinate (qworldvertexA) at ($(I-\thenumdecorate-\theqworldnumeros)!{\fpeval{1-\previewbraidsmoothness}}!(C-\theqworldnumeros)$);
+            \coordinate (qworldvertexB) at ($(C-\theqworldnumeros)!{\fpeval{\previewbraidsmoothness}}!(O-\i-\theqworldnumeros)$);
+            \ifthenelse{\equal{\qworldindexx}{+}}{
+                \draw [->, \qworld@thickness,\lstrandtype, \previewleftcolor] (I-\thenumdecorate-\theqworldnumeros) ..controls (qworldvertexA |- C-\theqworldnumeros) and (qworldvertexB |- C-\theqworldnumeros)..(O-\i-\theqworldnumeros);
+            }{
+                \draw [<-, \qworld@thickness,\lstrandtype, \previewleftcolor] (I-\thenumdecorate-\theqworldnumeros) ..controls (qworldvertexA |- C-\theqworldnumeros) and (qworldvertexB |- C-\theqworldnumeros)..(O-\i-\theqworldnumeros);
+            }
+            \fi%
+            \stepcounter{numdecorate}%
+        }
+        \setcounter{numdecorate}{1}%
+        \foreach\qworldindexx in \qarrows
+        {
+            \ifnum \previewbraidfsc<\thenumdecorate
+            \def\i{\fpeval{\thenumdecorate-\previewbraidfsc}}
+            \coordinate (qworldvertexA) at ($(I-\thenumdecorate-\theqworldnumeros)!{\fpeval{1-\previewbraidsmoothness}}!(C-\theqworldnumeros)$);
+            \coordinate (qworldvertexB) at ($(C-\theqworldnumeros)!{\fpeval{\previewbraidsmoothness}}!(O-\i-\theqworldnumeros)$);
+            \ifthenelse{\equal{\qworldindexx}{+}}{
+            \draw[ultra thick,draw = white, double = white, double distance = \pgflinewidth,\rstrandtype]
+            (I-\thenumdecorate-\theqworldnumeros) ..controls (qworldvertexA |- C-\theqworldnumeros) and (qworldvertexB |- C-\theqworldnumeros)..(O-\i-\theqworldnumeros);
+            \draw[->, \qworld@thickness, \previewrightcolor, \rstrandtype]
+            (I-\thenumdecorate-\theqworldnumeros) ..controls (qworldvertexA |- C-\theqworldnumeros) and (qworldvertexB |- C-\theqworldnumeros)..(O-\i-\theqworldnumeros);
+            }{
+            \draw[ultra thick,draw = white, double = white, double distance = \pgflinewidth,\rstrandtype]
+            (I-\thenumdecorate-\theqworldnumeros) ..controls (qworldvertexA |- C-\theqworldnumeros) and (qworldvertexB |- C-\theqworldnumeros)..(O-\i-\theqworldnumeros);
+            \draw[<-, \qworld@thickness, \previewrightcolor, \rstrandtype]
+            (I-\thenumdecorate-\theqworldnumeros) ..controls (qworldvertexA |- C-\theqworldnumeros) and (qworldvertexB |- C-\theqworldnumeros)..(O-\i-\theqworldnumeros);
+            }
+            \fi%
+            \stepcounter{numdecorate}%
+        }
+    }{}
+    \ifthenelse{\equal{\qworld@preview@box@type}{sym}}
+    {
+        \setcounter{numdecorate}{1}%
+        \foreach\qworldindexx in \qarrows
+        {
+            \ifnum \previewbraidfsc<\thenumdecorate
+            \def\i{\fpeval{\thenumdecorate-\previewbraidfsc}}
+            \coordinate (qworldvertexA) at ($(I-\thenumdecorate-\theqworldnumeros)!{\fpeval{1-\previewbraidsmoothness}}!(C-\theqworldnumeros)$);
+            \coordinate (qworldvertexB) at ($(C-\theqworldnumeros)!{\fpeval{\previewbraidsmoothness}}!(O-\i-\theqworldnumeros)$);
+            \ifthenelse{\equal{\qworldindexx}{+}}{
+                \draw [->, \qworld@thickness,\rstrandtype, \previewrightcolor] (I-\thenumdecorate-\theqworldnumeros) ..controls (qworldvertexA |- C-\theqworldnumeros) and (qworldvertexB |- C-\theqworldnumeros)..(O-\i-\theqworldnumeros);
+            }{
+                \draw [<-, \qworld@thickness,\rstrandtype, \previewrightcolor] (I-\thenumdecorate-\theqworldnumeros) ..controls (qworldvertexA |- C-\theqworldnumeros) and (qworldvertexB |- C-\theqworldnumeros)..(O-\i-\theqworldnumeros);
+            }
+            \fi %
+            \stepcounter{numdecorate}
+        }%
+        \setcounter{numdecorate}{1}%
+        \foreach\qworldindexx in \qarrows
+        {
+            \ifnum \thenumdecorate<\fpeval{\previewbraidfsc+1}
+            \def\i{\fpeval{\thenumdecorate+\previewbraidbsc}}
+            \coordinate (qworldvertexA) at ($(I-\thenumdecorate-\theqworldnumeros)!{\fpeval{1-\previewbraidsmoothness}}!(C-\theqworldnumeros)$);
+            \coordinate (qworldvertexB) at ($(C-\theqworldnumeros)!{\fpeval{\previewbraidsmoothness}}!(O-\i-\theqworldnumeros)$);
+            \ifthenelse{\equal{\qworldindexx}{+}}{
+            \draw [->, \qworld@thickness, \previewleftcolor, \lstrandtype] 
+            (I-\thenumdecorate-\theqworldnumeros) ..controls (qworldvertexA |- C-\theqworldnumeros) and (qworldvertexB |- C-\theqworldnumeros)..(O-\i-\theqworldnumeros);
+            }{
+            \draw [<-, \qworld@thickness, \previewleftcolor, \lstrandtype] 
+            (I-\thenumdecorate-\theqworldnumeros) ..controls (qworldvertexA |- C-\theqworldnumeros) and (qworldvertexB |- C-\theqworldnumeros)..(O-\i-\theqworldnumeros);
+            }
+            \fi %
+            \stepcounter{numdecorate}
+        }
+    }{}
+    }
+
+    % End The Preview Mode
+
+    \ifthenelse{\equal{\qworld@preview@box@type}{cap}}
+    {
+        \foreach \qworldi in {1,...,\qworld@card@ports@S}{
+            \def\qworldj{\fpeval{\qworld@card@ports@S-\qworldi+1}}
+            \ifnum\qworldi<\qworldj
+                \draw[midarrow,\qworld@thickness,\previewframecolor]
+                    (I-\qworldi-\theqworldnumeros) to [out={\previewdualangle},in={\fpeval{180-\previewdualangle}}] (I-\qworldj-\theqworldnumeros);
+            \fi
+        }
+    }{}
+    \ifthenelse{\equal{\qworld@preview@box@type}{cup}}
+    {
+        \foreach \qworldi in {1,...,\qworld@card@ports@N}{
+            \def\qworldj{\fpeval{\qworld@card@ports@N-\qworldi+1}}
+            \ifnum\qworldi<\qworldj
+                \draw[midarrow,\qworld@thickness,\previewframecolor]
+                    (O-\qworldi-\theqworldnumeros) to [out={\fpeval{-1*\previewdualangle}},in={\fpeval{\previewdualangle-180}}] (O-\qworldj-\theqworldnumeros);
+            \fi
+        }
+    }{}
+    % Begin The Preview Mode
+    \ifthenelse{\equal{\qworld@preview@box@type}{capraw}}
+    {
+        \foreach \qworldi in {1,...,\qworld@card@ports@S}{
+            \def\qworldj{\fpeval{\qworld@card@ports@S-\qworldi+1}}
+            \ifnum\qworldi<\qworldj
+                \draw[\qworld@thickness,\previewframecolor]
+                    (I-\qworldi-\theqworldnumeros) to [out={\previewdualangle},in={\fpeval{180-\previewdualangle}}] (I-\qworldj-\theqworldnumeros);
+            \fi
+        }
+    }{}
+    \ifthenelse{\equal{\qworld@preview@box@type}{cupraw}}
+    {
+        \foreach \qworldi in {1,...,\qworld@card@ports@N}{
+            \def\qworldj{\fpeval{\qworld@card@ports@N-\qworldi+1}}
+            \ifnum\qworldi<\qworldj
+                \draw[\qworld@thickness,\previewframecolor]
+                    (O-\qworldi-\theqworldnumeros) to [out={\fpeval{-1*\previewdualangle}},in={\fpeval{\previewdualangle-180}}] (O-\qworldj-\theqworldnumeros);
+            \fi
+        }
+    }{}
+    % End The Preview Mode
+    \coordinate (qworldat) at (SE-\theqworldnumeros);
+    \ifnum\previewinternalinvocation=0
+        \stepcounter{qworldnumeros}
+    \fi
+}
+
+\makeatother
+\endinput
