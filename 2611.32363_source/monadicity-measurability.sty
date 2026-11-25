@@ -1,0 +1,607 @@
+%% ============================
+%%  monadicity-measurability.sty
+%%  Style for "Noncommutative measurability as a monadic
+%%  reflection of C*-algebras"
+%% ============================
+\NeedsTeXFormat{LaTeX2e}[2018/12/01]
+\ProvidesPackage{monadicity-measurability}
+  [2026/05/26 v1.0 Style for Noncommutative measurability as a monadic reflection of C*-algebras]
+
+% The EMS package owns typography in the JEMS entry point.
+\newif\ifjems
+\@ifpackageloaded{ems-journal-jems}{\jemstrue}{\jemsfalse}
+
+%% ============================
+%%  REQUIRED PACKAGES
+%% ============================
+\ifjems\else
+\RequirePackage[utf8]{inputenc}
+\RequirePackage[english]{babel}
+\RequirePackage[T1]{fontenc}
+\RequirePackage[svgnames]{xcolor}
+\fi
+\RequirePackage{microtype}
+\RequirePackage{calc}
+\ifjems\else
+\RequirePackage{setspace}
+\fi
+\RequirePackage{savesym}
+
+\ifjems\else
+\RequirePackage{amsmath}
+\RequirePackage{amssymb}
+\RequirePackage{amsfonts}
+\RequirePackage{amsthm}
+\fi
+\RequirePackage{mathtools}
+\RequirePackage{mathrsfs}
+\RequirePackage{bbm}
+\RequirePackage{hyphenat}
+\RequirePackage{tensor}
+\RequirePackage{stackrel}
+\RequirePackage{turnstile}
+\RequirePackage{wasysym}
+
+\RequirePackage{tikz}
+\RequirePackage{tikz-cd}
+\RequirePackage[all,2cell]{xy}\UseAllTwocells
+\RequirePackage{tcolorbox}
+
+\ifjems\else
+\RequirePackage{booktabs}
+\RequirePackage{array}
+\RequirePackage[labelfont=bf]{caption}
+\RequirePackage[pagebackref,draft=false]{hyperref}
+\fi
+\RequirePackage{multirow}
+\RequirePackage{hhline}
+
+\RequirePackage[capitalize,noabbrev]{cleveref}
+\RequirePackage{thmtools} %added so cleveref keeps the labels as intended.
+
+\ifjems\else
+\RequirePackage[a4paper,heightrounded,left=2.7cm,right=2.7cm,top=3cm,bottom=3cm]{geometry}
+\RequirePackage{fancyhdr}
+\RequirePackage{enumitem}
+\RequirePackage{url}
+\fi
+\RequirePackage{epigraph}
+\RequirePackage{lipsum}
+\RequirePackage{verbatim}
+\RequirePackage{calligra}
+\RequirePackage{todonotes}
+\RequirePackage{adjustbox}
+\RequirePackage{xparse,xstring}
+\RequirePackage{xspace}
+
+%% ============================
+%%  PACKAGE SETUP
+%% ============================
+\usetikzlibrary{shapes,cd,decorations.pathmorphing,matrix,arrows,calc}
+
+\tcbuselibrary{most}
+\ifjems\else
+\tcolorboxenvironment{quote}{%
+  blanker,%
+  before skip=10pt,%
+  after skip=10pt,%
+  borderline west={6mm}{5pt}{gray!15},%
+  breakable%
+}
+
+\hypersetup{%
+  bookmarksnumbered=true,%
+  bookmarksopen=true,%
+  breaklinks=true,%
+  colorlinks,%
+  citecolor=black,%
+  linkcolor=black,%
+  urlcolor=black%
+}
+\fi
+
+\tikzset{commutative diagrams/.cd,arrow style=tikz,diagrams={>=Straight Barb}}
+
+\ifjems\else
+\linespread{1.1}
+\fi
+
+%% ============================
+%%  LAYOUT
+%% ============================
+\ifjems\else
+\setlist{nolistsep}
+\fi
+\setlist[enumerate]{label=(\roman*)}
+\setlist[enumerate,2]{label=(\alph*)}
+
+\ifjems\else
+\pagestyle{fancy}
+\setlength{\headheight}{14pt}
+\renewcommand{\headrulewidth}{0pt}
+\makeatletter
+\newcommand{\runtitle}{\@title}
+\makeatother
+\fancyhf{}
+\fancyhead[OL]{\footnotesize\nouppercase\leftmark}
+\fancyhead[ER]{\footnotesize\textsc\runtitle}
+\fancyhead[EL,OR]{\thepage}
+\fi
+
+\setcounter{tocdepth}{1}
+
+% Shared author data, rendered through each class's metadata interface.
+% Arguments: index, given name, surname, initials, institution, city, country, email.
+\newcommand{\paperauthor}[8]{%
+  \ifjems
+    \emsauthor{#1}{\givenname{#2}\surname{#3}\mrid{}\zblid{}\orcid{}}{#4~#3}%
+    \Emsaffil{#1}{\organisation{#5}\city{#6}\country{#7}\affemail{#8}}%
+  \else
+    \author{#2 #3}%
+    \email{#8}%
+    \ifstrempty{#5}{\address{#6, #7}}{\address{#5, #6, #7}}%
+  \fi
+}
+
+% Keep the acknowledgment text in one place, but put it before the
+% bibliography in JEMS, with financial support in the EMS funding environment.
+\newcommand{\paperendmatter}{}
+\newcommand{\paperfundingtext}{}
+\NewDocumentEnvironment{paperacknowledgments}{+b}{%
+  \ifjems
+    \gappto\paperendmatter{\begin{ack}#1\end{ack}\paperfundingtext}%
+  \else
+    \subsection*{Acknowledgments}#1%
+  \fi
+}{}
+\NewDocumentEnvironment{paperfunding}{+b}{%
+  \ifjems
+    \gappto\paperfundingtext{\begin{funding}#1\end{funding}}%
+  \else
+    #1%
+  \fi
+}{}
+
+%% ============================
+%%  DELIMITERS
+%% ============================
+\DeclarePairedDelimiter\abs{\lvert}{\rvert}
+\DeclarePairedDelimiter\norm{\lVert}{\rVert}
+\makeatletter
+\let\oldabs\abs
+\def\abs{\@ifstar{\oldabs}{\oldabs*}}
+\let\oldnorm\norm
+\def\norm{\@ifstar{\oldnorm}{\oldnorm*}}
+\makeatother
+
+%% ============================
+%%  THEOREM ENVIRONMENTS
+%% ============================
+\numberwithin{equation}{section}
+
+\ifjems
+\theoremstyle{plain}
+\else
+\theoremstyle{definition}
+\fi
+\newtheorem{theorem}{Theorem}[section]
+\Crefname{theorem}{Theorem}{Theorems}
+\newtheorem{corollary}[theorem]{Corollary}
+\Crefname{corollary}{Corollary}{Corollaries}
+\newtheorem{lemma}[theorem]{Lemma}
+\Crefname{lemma}{Lemma}{Lemmas}
+\newtheorem{proposition}[theorem]{Proposition}
+\Crefname{proposition}{Proposition}{Propositions}
+\newtheorem{conjecture}[theorem]{Conjecture}
+\Crefname{conjecture}{Conjecture}{Conjectures}
+\newtheorem{propdef}[theorem]{Proposition/Definition}
+\Crefname{propdef}{Proposition/Definition}{Propositions/Definitions}
+\newtheorem{fact}[theorem]{Fact}
+
+\theoremstyle{definition}
+\newtheorem{definition}[theorem]{Definition}
+\Crefname{definition}{Definition}{Definitions}
+\newtheorem{proposeddef}[theorem]{Tentative Definition}
+\newtheorem{figr}[theorem]{Figure}
+\newtheorem{example}[theorem]{Example}
+\newtheorem{remark}[theorem]{Remark}
+\Crefname{remark}{Remark}{Remarks}
+\newtheorem*{nb}{NB}
+\newtheorem{notation}[theorem]{Notation}
+\newtheorem{convention}[theorem]{Convention}
+\Crefname{convention}{Convention}{Conventions}
+\newtheorem{defnp}[theorem]{Definition/Proposition}
+\newtheorem{setup}[theorem]{Setup}
+
+%% cleveref resolution (Nov 2024 update fix)
+% EMS supplies its own shared-counter compatibility patch and theorem spacing.
+\ifjems\else
+\makeatletter
+\def\cref@thmoptarg[#1]#2#3#4{%
+    \ifhmode\unskip\unskip\par\fi%
+    \normalfont%
+    \trivlist%
+    \let\thmheadnl\relax%
+    \let\thm@swap\@gobble%
+    \thm@notefont{\fontseries\mddefault\upshape}%
+    \thm@headpunct{.}%
+    \thm@headsep 5\p@ plus\p@ minus\p@\relax%
+    \thm@space@setup%
+    #2%
+    \@topsep \thm@preskip%
+    \@topsepadd \thm@postskip%
+    \def\@tempa{#3}\ifx\@empty\@tempa%
+      \def\@tempa{\@oparg{\@begintheorem{#4}{}}[]}%
+    \else%
+      \refstepcounter[#1]{#3}%
+      \@namedef{cref@#3@alias}{#1}%
+      \def\@tempa{\@oparg{\@begintheorem{#4}{\csname the#3\endcsname}}[]}%
+    \fi%
+    \@tempa}
+\makeatother
+
+\renewcommand*{\backref}[1]{$\uparrow$\,#1}
+\fi
+
+%% ============================
+%%  ALPHABET SHORTCUTS
+%% ============================
+\ExplSyntaxOn
+
+\clist_new:N \g_fouche_upper_clist
+\clist_gset:Nn \g_fouche_upper_clist { A,B,C,D,E,F,G,H,I,J,K,L,M,N,O,P,Q,R,S,T,U,V,W,X,Y,Z }
+
+\clist_new:N \g_fouche_lower_clist
+\clist_gset:Nn \g_fouche_lower_clist { a,b,c,d,e,f,g,h,i,j,k,l,m,n,o,p,q,r,s,t,u,v,w,x,y,z }
+
+\clist_new:N \g_fouche_greek_clist
+\clist_gset:Nn \g_fouche_greek_clist { alpha,beta,gamma,delta,epsilon,zeta,eta,theta,iota,kappa,lambda,mu,nu,xi,pi,rho,sigma,tau,upsilon,phi,chi,psi,omega,varphi,varpi,varepsilon,varrho,vartheta,Gamma,Delta,Theta,Lambda,Xi,Pi,Sigma,Upsilon,Phi,Chi,Psi,Omega }
+
+\clist_new:N \g_fouche_both_clist
+\clist_concat:NNN \g_fouche_both_clist \g_fouche_upper_clist \g_fouche_lower_clist
+
+\clist_new:N \g_fouche_categories_clist
+\clist_gset:Nn \g_fouche_categories_clist { Ab, Alg, Ban, BSD, Card, cat, Cat, Bij, CAT, cgHaus, Ch, CMnd, CMon, Comon, CW, Der, EM, End, Ext, Fin, fHilb, Fld, Foo, Fuk, fVect, Fzy, Gal, Grp, gVec, Nat, Haus, Het, Ho, Kl, Lat, Mag, coAlg, KSW, LAdj, Mac, Met, Mfd, Mnd, Mod, Mly, Mre, Acc, Mon, Ins, Ord, Par, PInj, POrd, Pre, Pro, Prof, Quot, Quux, coKl, Rel, Ring, Rot, Set, Sgp, Sp, Spec, sSet, Sub, SW, Top, Tor, Inj, Unif, Vect, ArithCat, AbCat, SAbCat, Span, coSpan, PedBaireC, Meas, Stoch, cPedBaireC, BaireMeas, BaireStoch, CHaus }
+
+\clist_new:N \g_fouche_operators_clist
+\clist_gset:Nn \g_fouche_operators_clist { lan, Lan, LAN, lft, Lft, LFT, ran, Hom, Ran, RAN, Rft, Yan, RFT, rft, op, co, coop, coker, glim}
+
+\cs_new_protected:Npn \fouche_makeabbrev:nnN #1 #2 #3
+{
+    \clist_map_inline:Nn { #3 }
+    {
+        % Preserve existing font-package symbols (notably newtx's bsc and Top).
+        \cs_if_exist:cF { #2 }
+          { \cs_new_protected:cpn { #2 } { #1 { ##1 } } }
+    }
+}
+
+\cs_new_protected:Npn \fouche_make_macro_abbrev:nnN #1 #2 #3
+{
+    \clist_map_inline:Nn { #3 }
+    {
+        \cs_new_protected:cpn { #2 } { #1 { \csname ##1\endcsname } }
+    }
+}
+
+\fouche_makeabbrev:nnN { \textbf } { bf#1 } \g_fouche_both_clist
+\fouche_makeabbrev:nnN { \boldsymbol } { bs#1 } \g_fouche_both_clist
+\fouche_makeabbrev:nnN { \mathsf } { sf#1 } \g_fouche_both_clist
+\fouche_makeabbrev:nnN { \mathfrak } { fk#1 } \g_fouche_both_clist
+\fouche_makeabbrev:nnN { \underline } { un#1 } \g_fouche_both_clist
+
+\fouche_makeabbrev:nnN { \mathcal } { cl#1 } \g_fouche_upper_clist
+\fouche_makeabbrev:nnN { \mathbb } { bb#1 } \g_fouche_upper_clist
+
+\fouche_makeabbrev:nnN { \mathbf } { #1 } \g_fouche_categories_clist
+\fouche_makeabbrev:nnN { \mathrm } { #1 } \g_fouche_operators_clist
+
+\DeclareMathAlphabet{\mybb}{U}{BOONDOX-ds}{m}{n}
+\fouche_makeabbrev:nnN { \mybb } { mb#1 } \g_fouche_lower_clist
+
+\fouche_make_macro_abbrev:nnN { \boldsymbol } { bs#1 } \g_fouche_greek_clist
+
+\ExplSyntaxOff
+
+%% ============================
+%%  UTILITY MACROS
+%% ============================
+\def\To{\Rightarrow}
+
+\newcommand{\arXivPreprint}[1]{\href{http://arxiv.org/abs/#1}{arXiv:#1} preprint}
+
+\newlength{\seplen}
+\setlength{\seplen}{5pt}
+\newlength{\sepwid}
+\setlength{\sepwid}{.4pt}
+\def\firstblank{\,\rule{\seplen}{\sepwid}\,}
+\def\sndblank{\firstblank\llap{\raisebox{2pt}{\firstblank}}}
+
+\newcommand{\celtag}[2][dr]{\ar[#1,white,"#2"{black,description}]}
+
+\newcommand{\id}{\operatorname{id}}
+\let\xto\xrightarrow
+\let\xot\xleftarrow
+
+\newcommand{\rot}[3][c]{\rotatebox[origin=#1]{#2}{$#3$}}
+\newcommand{\rotarrow}[2][c]{\rot{#1}{#2}{\Rightarrow}}
+
+% newtxmath already supplies the diagonal double arrows.
+\providecommand{\Nearrow}{\rotarrow{45}}
+\providecommand{\Nwarrow}{\rotarrow{135}}
+\providecommand{\Searrow}{\rotarrow{-45}}
+\providecommand{\Swarrow}{\rotarrow{225}}
+\newcommand{\Sarrow}{\rotarrow{-90}}
+\newcommand{\Narrow}{\rotarrow{90}}
+
+\newcommand{\bsmat}{\begin{smallmatrix}}
+\newcommand{\esmat}{\end{smallmatrix}}
+
+\def\cate#1{\mathbf{#1}}
+
+\newcommand{\pto}{\mathop{\ooalign{\hfil\kern-2pt$\mapstochar$\hfil\cr\hfil$\longrightarrow$\hfil}}}
+
+\newcommand{\adjunct}[2]{\nsststile{#2}{#1}}
+
+\newcommand{\putbib}[2]{%
+    \bibliography{#1}{}%
+    \bibliographystyle{#2}%
+}
+
+\tikzstyle{pro} = [%
+    decoration={markings,mark=at position 0.5 with {\draw[-] (0,-1.25pt) -- (0,1.25pt);}},%
+    postaction={decorate}%
+]
+
+\newcommand*{\Scale}[2][4]{\scalebox{#1}{\ensuremath{#2}}}%
+
+\def\lrc{%
+    \begin{tikzpicture}[scale=.33]%
+        \draw[-] (0,0) -| (1,1);%
+    \end{tikzpicture}%
+}
+\def\dopb{{\begin{tikzpicture}[scale=.375] \draw (0,0) -| (1,1);\end{tikzpicture}}}
+\NewDocumentCommand{\xpb}{O{dr}}{\ar@{}[#1]|(.375){\dopb}}
+\def\dopo{{\begin{tikzpicture}[scale=.375] \draw (0,0) |- (1,1);\end{tikzpicture}}}
+\NewDocumentCommand{\xpo}{O{dr}}{\ar@{}[#1]|(.675){\dopo}}
+
+\newcommand{\pb}{\arrow[dr,phantom,"\dopb",very near start]}
+\newcommand{\po}{\arrow[dr,phantom,"\dopo",very near end]}
+
+\newenvironment{xsmallmatrix}[1]%
+    {\renewcommand\thickspace{\kern#1}\smallmatrix}%
+    {\endsmallmatrix}
+
+\NewDocumentCommand{\prevar}{o m m}{%
+    \IfNoValueTF{#1}{%
+        \begin{smallmatrix}#2 \\ \downarrow \\ #3\end{smallmatrix}}{%
+        \begin{xsmallmatrix}{0em}& #2 \\ #1 & \downarrow \\ & #3\end{xsmallmatrix}}}
+
+\ExplSyntaxOn
+\NewDocumentCommand{\var}{o m O{s} m}{%
+    \str_case:nn { #3 } {%
+        {r}{\left(       \prevar[#1]{#2}{#4} \right)}%
+        {s}{\left[       \prevar[#1]{#2}{#4} \right]}%
+        {c}{\left\{      \prevar[#1]{#2}{#4} \right\}}%
+        {a}{\left\langle \prevar[#1]{#2}{#4} \right\rangle}%
+    }}
+\newcommand{\precop}[2]{%
+    \begin{smallmatrix}#1 \\ #2\end{smallmatrix}}
+\NewDocumentCommand{\cop}{O{r} m m}{%
+    \str_case:nn { #1 } {%
+        {r}{\left(       \precop{#2}{#3} \right)}%
+        {s}{\left[       \precop{#2}{#3} \right]}%
+        {c}{\left\{      \precop{#2}{#3} \right\}}%
+        {a}{\left\langle \precop{#2}{#3} \right\rangle}%
+    }}
+\NewDocumentCommand{\sm}{O{r} m}{%
+    \str_case:nn { #1 } {%
+        {r}{\left(       \bsmat #2 \esmat \right)}%
+        {s}{\left[       \bsmat #2 \esmat \right]}%
+        {c}{\left\{      \bsmat #2 \esmat \right\}}%
+        {a}{\left\langle \bsmat #2 \esmat \right\rangle}%
+    }}
+\ExplSyntaxOff
+
+\newenvironment{adju}[1][0.925]{%
+    \begin{center}\begin{adjustbox}{max height=0.5\textheight,max width=#1\textwidth}}{%
+    \end{adjustbox}\end{center}}
+
+\newenvironment{bareadju}[1][0.925]{%
+    \begin{adjustbox}{max height=0.5\textheight,max width=#1\textwidth}}{%
+    \end{adjustbox}}
+
+\def\emdash{\text{-}}
+\NewDocumentCommand{\VCat}{O{\clV}}{#1\emdash\Cat}
+\def\twoCat{\VCat[2]}
+
+\newcommand{\adja}[4]{%
+    #1 : \xymatrix{#2 \ar@<.5em>[r] \ar@{}[r]|\perp & \ar@<.5em>[l] #3} : #4}
+
+\NewDocumentCommand{\vxy}{o m}{%
+    \IfNoValueTF{#1}%
+        {\vcenter{\xymatrix{#2}}}%
+        {\vcenter{\xymatrix#1{#2}}}}
+
+\newcommand{\de}{\partial}
+\NewDocumentCommand{\FMly}{O{}}{%
+    \IfNoValueTF{#1}{F\emdash\Mly}{F^{#1}\emdash\Mly}}
+\NewDocumentCommand{\FMre}{O{}}{%
+    \IfNoValueTF{#1}{F\emdash\Mre}{F^{#1}\emdash\Mre}}
+\newcommand{\dMly}{\de\emdash\Mly}
+\newcommand{\dMre}{\de\emdash\Mre}
+
+\newcommand{\oo}[1]{#1^\op \times #1}
+
+\NewDocumentCommand{\adPair}{ m m m m }{
+    \vxy{
+       #3 : #1 \ar@<.4em>[r] \ar@{}[r]|\perp & \ar@<.4em>[l] #2 : #4
+    }
+}
+
+\DeclareDocumentEnvironment{enumtag}{m O{}}{%
+    \begin{enumerate}[label=\textsc{#1}\oldstylenums{\arabic*}),ref=\textsc{#1}\oldstylenums{\arabic*},#2]}{%
+    \end{enumerate}}
+
+%% ============================
+%%  PAPER-SPECIFIC MACROS
+%% ============================
+
+%% Draft helpers
+\newcommand{\red}{\color{red}}
+\newcommand{\anto}[1]{\todo[color=orange!30,inline,bordercolor=white,caption={}]{\color{gray}#1}}
+\newcommand{\fosco}[1]{\todo[color=green!30,inline,bordercolor=white,caption={}]{\color{gray}#1}}
+%% ---- Integrated editorial revisions -------------------------------------
+%% Text added/rewritten during the literature-and-exposition pass. It is meant
+%% to read as part of the paper; the colour is only so it can be reviewed.
+%%
+%%   \cnew{...}                inline, for words up to a few sentences
+%%   \begin{cnewpar}...\end    for whole paragraphs, lists and displayed material
+%%
+%% To typeset everything in the normal colour (final version), either flip the
+%% switch below to \claudehighlightfalse, or say \claudehighlightfalse in the
+%% preamble of the .tex after loading this package.
+\definecolor{revblue}{rgb}{0.05,0.25,0.62}
+\newif\ifclaudehighlight
+\claudehighlighttrue
+\newcommand{\cnew}[1]{\ifclaudehighlight\textcolor{revblue}{#1}\else#1\fi}
+\newenvironment{cnewpar}%
+  {\ifclaudehighlight\color{revblue}\fi\ignorespaces}%
+  {\ifhmode\unskip\fi}
+%% Kept so that any surviving \claude{...} note still compiles.
+\newcommand{\claude}[1]{\todo[color=blue!18,inline,bordercolor=white,caption={}]{\color{gray}\textbf{[C]}\ #1}}
+
+
+%% Basic notation
+\newcommand{\cstar}{$C^{\ast}$-algebra}
+\newcommand{\wstar}{$W^{\ast}$-algebra}
+\newcommand{\cstars}{$\sigma C^{\ast}$-algebra}
+\newcommand{\Cstars}{$\sigma C^{\ast}$-algebra}
+\newcommand{\state}{\mathsf{States}}
+\newcommand{\states}{\mathsf{States}_{\sigma}}
+\newcommand{\starshom}{${\sigma}$\text{-}ho\-mo\-mor\-phism}
+\newcommand{\starhom}{${\ast}$\text{-}ho\-mo\-mor\-phism}
+\newcommand{\stariso}{${\ast}$\text{-}iso\-mor\-phism}
+\newcommand{\starsiso}{${\sigma}$\text{-}iso\-mor\-phism}
+\newcommand{\bsigma}{Boo\-lean $\sigma$-al\-ge\-bra}
+\newcommand{\bsigmahom}{$\sigma$-ho\-mo\-mor\-phism}
+\newcommand{\bsigmaiso}{$\sigma$-iso\-mor\-phism}
+\newcommand{\cpu}{cpu\@\xspace}
+\newcommand{\scpu}{$\sigma$-\cpu\@\xspace}
+\newcommand{\scpus}{\sigma\!\operatorname{cpu}}
+\newcommand{\cpus}{\operatorname{cpu}}
+\newcommand{\shom}{\sigma}
+\newcommand{\sa}{\mathrm{sa}}
+\newcommand{\newterm}[1]{\emph{\textbf{#1}}}
+\newcommand{\spectrum}{\operatorname{spec}}
+\newcommand{\baire}{\mathsf{Baire}}
+\newcommand{\spec}{\mathsf{Gelfand}}
+\newcommand{\specs}{\mathsf{Gelfand}_{\sigma}}
+\newcommand{\Linf}{\mathscr{L}^{\infty}}
+\newcommand{\Linfbool}{\mathscr{L}_{\operatorname{abs}}^{\infty}}
+\newcommand{\stone}{\mathsf{Stone}}
+\newcommand{\stones}{\mathsf{Stone}_{\sigma}}
+\newcommand{\clopen}{\mathsf{Clopen}}
+\newcommand{\proj}{\mathsf{Proj}}
+\DeclareMathOperator{\olim}{ordlim}
+\DeclareMathOperator{\colim}{colim}
+
+% Some rewriting rules
+\newcommand{\natRule}[1]{\text{nat}\, #1}
+\newcommand{\compatRule}[2]{#1\,\text{comp}\, #2}
+
+\def\genObject#1{{#1}}
+\newcommand{\A}{\genObject{A}}
+\newcommand{\B}{\genObject{B}}
+\newcommand{\N}{\genObject{N}}
+\newcommand{\C}{\genObject{C}}
+\newcommand{\D}{\genObject{D}}
+\newcommand{\I}{\genObject{I}}
+\newcommand{\M}{\genObject{M}}
+
+%% Real and imaginary parts
+\renewcommand{\Re}{\operatorname{Re}}
+\renewcommand{\Im}{\operatorname{Im}}
+
+%% Hilbert space operators
+\newcommand{\hilb}{\mathcal{H}}
+\newcommand{\bhilb}[1][\mathcal{H}]{\mathcal{B}(#1)}
+\newcommand{\khilb}[1][\mathcal{H}]{\mathcal{K}(#1)}
+\newcommand{\ball}[2]{B_{#2}(#1)}
+\newcommand{\cball}[2]{\overline{B_{#2}(#1)}}
+
+%% Misc math
+\newcommand{\ev}{\operatorname{ev}}
+\newcommand{\ordlim}{\operatornamewithlimits{Lim}}
+\newcommand{\univ}[1]{{#1}^{\sigma}}
+\newcommand{\reg}[1]{{#1}^{r}}
+\newcommand{\unitensor}{\otimes^{\sigma}}
+\newcommand{\regtensor}{\otimes^r}
+\newcommand{\kocktensor}{\mathbin{\XBox}}
+\newcommand{\eps}{\varepsilon}
+\renewcommand{\emptyset}{\varnothing}
+\newcommand{\sigmaCP}{\sigma\operatorname{CP}}
+
+%% Categories — measurable spaces
+\newcommand{\meas}{\Meas}
+\newcommand{\stoch}{\Stoch}
+\newcommand{\sobmeas}{\mathsf{SobMeas}}
+\newcommand{\sobstoch}{\mathsf{SobStoch}}
+\newcommand{\borelmeas}{\mathsf{StBorelMeas}}
+\newcommand{\borelstoch}{\mathsf{StBorelStoch}}
+\newcommand{\bairemeas}{\mathsf{BaireMeas}}
+\newcommand{\bairestoch}{\mathsf{BaireStoch}}
+\newcommand{\cHaus}{\mathsf{cHaus}}
+\newcommand{\cHausstoch}{\mathsf{cHausStoch}}
+\newcommand{\Stone}{\mathsf{StoneSp}}
+
+%% Categories — Boolean algebras
+\newcommand{\Boolshom}{\Bool_{\shom}}
+\newcommand{\SigmaB}{\sigma\mathsf{Bool}_{\shom}}
+\newcommand{\csigmaB}{\mathsf{Conc}\sigma\mathsf{Bool}_{\shom}}
+
+\def\CC{\mathrm{C}^{\ast}}
+\def\WW{\bfW^{\ast}}
+%% Categories — C*-algebras
+\newcommand{\comm}{\mathbf{c}}
+\newcommand{\Calg}{\CC\kern-1pt\Alg}
+\newcommand{\Walg}{\WW\kern-1pt\Alg}
+\newcommand{\cCalg}{\comm\Calg}
+\newcommand{\Calgcpu}{\Calg_{\cpus}}
+\newcommand{\cCalgcpu}{\cCalg_{\cpus}}
+\newcommand{\Calgshom}{\Calg_{\shom}}
+\newcommand{\cCalgshom}{\cCalg_{\shom}}
+\newcommand{\Calgscpu}{\Calg_{\scpus}}
+\newcommand{\cCalgscpu}{\cCalg_{\scpus}}
+
+%% Categories — sigma-C*-algebras
+\newcommand{\SigmaC}{\shom\Calg_{\shom}}
+\newcommand{\cSigmaC}{\comm\shom\Calg_\shom}
+\newcommand{\SigmaCcpu}{\sigma\Calg_{\scpus}}
+\newcommand{\cSigmaCcpu}{\comm\sigma\Calg_{\scpus}}
+
+%% Categories — purely sigma-representable C*-algebras
+\newcommand{\msigmaC}{\mathsf{PureRep}\sigma\CC_{\shom}}
+\newcommand{\cmsigmaC}{\mathsf{cPureRep}\sigma\CC_{\shom}}
+\newcommand{\msigmaCcpu}{\mathsf{PureRep}\sigma\CC_{\scpus}}
+\newcommand{\cmsigmaCcpu}{\mathsf{cPureRep}\sigma\CC_{\scpus}}
+
+%% Categories — Pedersen–Baire envelopes
+\newcommand{\PBenv}{\PedBaireC^{\ast}_{\shom}}
+\newcommand{\cPBenv}{\comm\PedBaireC^{\ast}_{\shom}}
+\newcommand{\pbenvcpu}{\PedBaireC^{\ast}_{\scpus}}
+\newcommand{\cpbenvcpu}{\comm\PedBaireC^{\ast}_{\scpus}}
+\newcommand{\pbsep}{\mathsf{PedBaireSepC}^{\ast}_{\shom}}
+\newcommand{\cpbsep}{\mathsf{cPedBaireSepC}^{\ast}_{\shom}}
+\newcommand{\pbsepcpu}{\mathsf{PedBaireSepC}^{\ast}_{\scpus}}
+\newcommand{\cpbsepcpu}{\mathsf{cPedBaireSepC}^{\ast}_{\scpus}}
+
+%% Misc categories
+\newcommand{\repsigmaC}{\mathsf{Rep}\sigma\CC_{\shom}}
+
+%% ============================
+%%  HYPHENATION
+%% ============================
+\hyphenation{Bool-ean}
+
+\endinput

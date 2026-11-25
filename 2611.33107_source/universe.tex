@@ -1,0 +1,411 @@
+% =========================================================================
+% 1. DOCUMENT CLASS & BASIC LAYOUT CONFIGURATION
+% =========================================================================
+\usepackage[margin=1.0in]{geometry}
+\setlength{\marginparwidth}{2cm} % Explicitly sets width for margin notes (todonotes)
+\usepackage{multicol}            % Standard multi-column formatting
+\usepackage{adjustbox}           % Sizing utilities, cropping, and adjustments
+
+\numberwithin{equation}{section} 
+%\AtBeginDocument{\def\MR#1{}}   % Suppresses Mathematical Reviews (MR) indexing tags from citations
+
+% =========================================================================
+% 2. CORE TYPOGRAPHY & DOCUMENT FONT ENGINES
+% =========================================================================
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+%\usepackage{CormorantGaramond}
+\usepackage{lmodern}     % Latin Modern typography engine
+\usepackage{libertinus}  % Libertinus font family suite
+\usepackage{microtype}   % Automated spacing, justification, and micro-kerning adjustments
+\usepackage{xspace}      % Dynamic tracking spacing for inline macros
+
+% =========================================================================
+% 3. COMPREHENSIVE MATHEMATICAL TOOLKITS
+% =========================================================================
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{amsfonts}
+\usepackage{amsthm}
+\usepackage{faktor}
+\usepackage{mathtools}   % Adds extended utilities like \coloneqq
+\usepackage{mathrsfs}    % Script math formatting
+%\usepackage{mathptmx}    % Times-like font mapping
+\usepackage{newtxtext}
+\usepackage{newtxmath}   % Math layout fonts mirroring standard text types
+\usepackage{mathdots}    % Adds variant diagonal math dots
+\usepackage{stackrel}    % Multi-level positional stacked symbols
+\usepackage{bbm}         % Extra variant blackboard bold structures (e.g. \mathbbm{1})
+\usepackage{latexsym}    % Legacy math symbol parameters
+\usepackage{cases}
+\usepackage{csquotes}
+\usepackage{etoolbox}
+\usepackage{mathrsfs}
+\usepackage{anyfontsize}
+% =========================================================================
+% 4. INTERACTIVE REFERENCES & DOCUMENT UTILITIES
+% =========================================================================
+\usepackage{enumitem}    % Custom layout for lists
+\usepackage{graphicx}    % Graphics toolkit for loading imagery or utilizing \scalebox
+\usepackage{array}       % Advanced modifications for column dimensions
+\usepackage{comment}     % Enables block execution nesting via \begin{comment} ... \end{comment}
+\usepackage{xcolor}      % Explicit customized palette rendering tools
+
+% Color Mapping
+\definecolor{cherryred}{HTML}{D2042D}
+
+% Hyperlink Engine
+
+%\usepackage[colorlinks=true, linkcolor=cherryred, citecolor=cherryred, urlcolor=blue]{hyperref}
+% Clever Cross-Referencing
+\usepackage[nameinlink,capitalize]{cleveref}
+
+% =========================================================================
+% 5. ADVANCED TIKZ VECTOR GRAPHICS & COMMUTATIVE DIAGRAM ENVIRONMENTS
+% =========================================================================
+\usepackage{tikz}
+\usepackage{tikz-3dplot}
+\usepackage{quiver}      % Custom category framework engine matching online quiver utilities
+\usepackage{tikz-cd}
+
+% TikZ Libraries Import
+\usetikzlibrary{cd}
+\usetikzlibrary{nfold}
+\usetikzlibrary{math}
+\usetikzlibrary{fit}
+\usetikzlibrary{calc}
+\usetikzlibrary{arrows}
+\usetikzlibrary{patterns}
+\usetikzlibrary{positioning}
+\usetikzlibrary{intersections}
+\usetikzlibrary{matrix}
+\usetikzlibrary{decorations.pathmorphing}  % Squiggly arrows
+\usetikzlibrary{decorations.pathreplacing} % Curly brackets
+\usetikzlibrary{decorations.markings}      % Dual path marks and arrow parameters
+
+% Custom Higher-Category Arrow Configurations (2-cells, 3-cells, 4-cells)
+\tikzset{
+    Rightarrow/.style={double equal sign distance,>={Implies},->},
+    triple/.style={-,preaction={draw,Rightarrow}},
+    quadruple/.style={preaction={draw,Rightarrow,shorten >=0pt},shorten >=1pt,-,double,double distance=0.2pt}
+}
+
+% Adjoint Sign Positioning Tool (\bot sign generation inside paths without a visible line)
+\tikzset{
+    symbol/.style={
+        draw=none,
+        every to/.append style={
+            edge node={node [sloped, allow upside down, auto=false]{$#1$}}}
+    }
+}
+
+\newcommand{\adjunction}[4]{%
+  \begin{tikzcd}[
+    ampersand replacement=\&,
+    baseline=(current bounding box.center),
+    column sep=5em
+  ]
+  #1
+    \arrow[r, shift left=1.2ex, "#3"]
+    \arrow[r, phantom, "\bot" description]
+  \&
+  #2
+    \arrow[l, shift left=1.2ex, "#4"]
+  \end{tikzcd}%
+}
+
+% Scaled Arrow Configurations for 2-cells
+\tikzset{
+    scalearrow/.style n args={3}{
+        decoration={
+            markings,
+            mark=at position (1-#1)/2*\pgfdecoratedpathlength with {\coordinate (#2);},
+            mark=at position (1+#1)/2*\pgfdecoratedpathlength with {\coordinate (#3);},
+        },
+        postaction=decorate,
+    }
+}
+
+% =========================================================================
+% =========================================================================
+% 6. DYNAMIC LOOP COUNTER (SAFE AUTOMATIC FONT VARIABLE GENERATION)
+% =========================================================================
+\makeatletter
+% Automatically loops over all 26 Latin capital letters to generate macros safely.
+% Only creates \b[A-Z], \c[A-Z], and \bf[A-Z] if they don't already exist.
+\newcommand{\@bbify}[1]{
+  \ifcsname b#1\endcsname
+    \message{WARNING: Skipping b#1 to prevent infinite loop conflict!}
+  \else
+    \expandafter\edef\csname b#1\endcsname{\noexpand\ensuremath{\noexpand\mathbb #1}\noexpand\xspace}
+  \fi}
+
+\newcommand{\@calify}[1]{
+  \ifcsname c#1\endcsname
+    \message{WARNING: Skipping c#1 to prevent infinite loop conflict!}
+  \else
+    \expandafter\edef\csname c#1\endcsname{\noexpand\ensuremath{\noexpand\mathcal #1}\noexpand\xspace}
+  \fi}
+
+\newcommand{\@bfify}[1]{
+  \ifcsname bf#1\endcsname
+    \message{WARNING: Skipping bf#1 to prevent infinite loop conflict!}
+  \else
+    \expandafter\edef\csname bf#1\endcsname{\noexpand\ensuremath{\noexpand\mathbf #1}\noexpand\xspace}
+  \fi}
+
+\newcounter{@letter}\stepcounter{@letter}
+\loop\@bbify{\Alph{@letter}}\@calify{\Alph{@letter}}\@bfify{\Alph{@letter}}
+\ifnum\the@letter<26\stepcounter{@letter}\repeat
+\makeatother
+% =========================================================================
+% =========================================================================
+% 7. UNIFIED THEOREM ENVIRONMENTS & COUNTER RESET BLOCKS
+% =========================================================================
+% --- Theorem Style: Plain (Italics) ---
+\theoremstyle{plain}
+\newtheorem{theorem}{Theorem}[section]
+\newtheorem{proposition}[theorem]{Proposition}
+\newtheorem{lemma}[theorem]{Lemma}
+\newtheorem{corollary}[theorem]{Corollary}
+
+% Safely linking alternate shorthand forms to share the master 'theorem' counter sequence
+\newtheorem{thm}[theorem]{Theorem} 
+\newtheorem{cor}[theorem]{Corollary}
+\newtheorem{lem}[theorem]{Lemma}
+\newtheorem{prop}[theorem]{Proposition}
+\newtheorem{claim}[theorem]{Claim}
+\newtheorem{thrm}[theorem]{Theorem}
+\newtheorem{conjecture}[theorem]{Conjecture}
+\newtheorem{wconjecture}[theorem]{Wild Conjecture}
+
+% Alpha-Numbered Theorems (e.g., Theorem A, Theorem B)
+\newtheorem{thmalph}{Theorem}
+\renewcommand*{\thethmalph}{\Alph{thmalph}}
+\newtheorem{coralph}{Corollary}
+\renewcommand*{\thecoralph}{\Alph{coralph}}
+
+% Unnumbered Plain Statements
+\newtheorem*{unnumberedtheorem}{Theorem}
+\newtheorem*{unnumberedwannabetheorem}{Wannabe-Theorem}
+\newtheorem*{unnumberedcorollary}{Corollary}
+\newtheorem*{unnumberedlemma}{Lemma}
+\newtheorem*{unnumberedproposition}{Proposition}
+\newtheorem*{unnumberedclaim}{Claim}
+
+% --- Theorem Style: Definition (Upright Body text, Bold Header) ---
+\theoremstyle{definition}
+\newtheorem{definition}[theorem]{Definition}
+\newtheorem{construction}[theorem]{Construction}
+\newtheorem{notation}[theorem]{Notation}
+
+\newtheorem{defn}[theorem]{Definition}
+\newtheorem{const}[theorem]{Construction}
+\newtheorem{notn}[theorem]{Notation}
+\newtheorem{convention}[theorem]{Convention}
+\newtheorem{question}[theorem]{Question}
+\newtheorem{rmk}[theorem]{Remark}
+\newtheorem{ex}[theorem]{Example}
+
+\newtheorem*{unnumberedtheoremdefinition}{Definition}
+
+% --- Theorem Style: Remark (Upright Body text, Italic Header) ---
+\theoremstyle{remark}
+\newtheorem{remark}[theorem]{Remark}
+\newtheorem{hypothesis}[theorem]{Hypothesis}
+\newtheorem{recall}[theorem]{Recall}
+\newtheorem{nonex}[theorem]{Non-Example}
+\newtheorem{observation}[theorem]{Observation}
+\newtheorem{warning}[theorem]{Warning}
+\newtheorem{digression}[theorem]{Digression}
+\newtheorem{answ}[theorem]{Answer}
+\newtheorem{crzcond}[theorem]{Crazy Condition}
+\newtheorem{aside}[theorem]{Aside}
+
+\newtheorem*{unnumberedtheoremremark}{Remark}
+\newtheorem*{unnumberedtheoremexample}{Example}
+
+% Master Equations Counter Configurations (Tying equations to the theorem counter)
+\makeatletter
+\let\c@equation\c@theorem
+\numberwithin{equation}{section}
+\makeatother
+
+% =========================================================================
+% 8. INTELLIGENT CROSS-REFERENCING SETTINGS (cleveref)
+% =========================================================================
+\crefname{lem}{Lemma}{Lemmas}
+\crefname{thm}{Theorem}{Theorems}
+\crefname{defn}{Definition}{Definitions}
+\crefname{notn}{Notation}{Notations}
+\crefname{note}{Note}{Note}
+\crefname{const}{Construction}{Constructions}
+\crefname{prop}{Proposition}{Propositions}
+\crefname{rmk}{Remark}{Remarks}
+\crefname{goal}{Goal}{Goals}
+\crefname{cor}{Corollary}{Corollaries}
+\crefname{equation}{Display}{Displays}
+\crefname{ex}{Example}{Examples}
+\crefname{nonex}{Non-Example}{Non-Examples}
+\crefname{thmalph}{Theorem}{Theorems}
+\crefname{answ}{Answer}{Answers}
+\crefname{question}{Question}{Questions}
+
+% =========================================================================
+% 9. CATEGORY THEORY MACROS & ABSTRACT STRUCTURES
+% =========================================================================
+% Standard Bold Namespaces
+\newcommand{\Cat}{\mathbf{Cat}}
+\newcommand{\Strat}{\mathbf{Strat}}
+\newcommand{\qcat}{Q\mathbf{Cat}}
+\newcommand{\sqcat}{sQ\mathbf{Cat}}
+\newcommand{\sStrat}{s\mathbf{Strat}}
+\newcommand{\Sat}{\mathbf{Sat}}
+\newcommand{\mset}{\mathbf{Set}^{+}_{\Delta}}
+\newcommand{\sset}{\mathbf{sSet}}
+\newcommand{\ssset}{\mathbf{ssSet}}
+\newcommand{\rmap}{\mathbf{R}\mathrm{Map}}
+\newcommand{\reedyslice}{\bigl((\sset_{(\infty,1)})^{\Delta^{\mathrm{op}}}_{/\bisimFin}\bigr)}
+\newcommand{\genreedyslice}{\mathbf M^{\Delta^{\mathrm{op}}}_{/\mathbb B}}
+\newcommand{\cocart}{\bigl(\sset^+_{/(\simFin)^\sharp}\bigr)_{\mathrm{coCart}}}
+\newcommand{\cocartsp}{\bigl(\sset^+_{/(\simFin)^\sharp}\bigr)_{\mathrm{coCart}}^{\mathrm{sp}}}
+\newcommand{\genldblfib}{\bigl((\Minfn)^{\Delta^{\mathrm{op}}}_{/\bisimFin}\bigr)_{\mathrm{LDbl}}}
+\newcommand{\genldblfibsp}{\bigl((\Minfn)^{\Delta^{\mathrm{op}}}_{/\bisimFin}\bigr)_{\mathrm{LDbl}}^{\mathrm{sp}}}
+\newcommand{\ldblfib}{\bigl((\sset_{(\infty,1)})^{\Delta^{\mathrm{op}}}_{/\bisimFin}\bigr)_{\mathrm{LDbl}}}
+\newcommand{\ldblfibsp}{\bigl((\sset_{(\infty,1)})^{\Delta^{\mathrm{op}}}_{/\bisimFin}\bigr)_{\mathrm{LDbl}}^{\mathrm{sp}}}
+
+% Script Category Namespaces
+\newcommand{\cat}{\cC\!\mathit{at}}
+\newcommand{\set}{\cS\!\mathit{et}}
+\newcommand{\ch}{\mathcal C\mathit{h}}
+\newcommand{\ach}{\mathit{a}\ch}
+\newcommand{\adch}{\mathit{ad}\mathcal C\mathit{h}}
+\newcommand{\msset}{m\sset}
+\newcommand{\twocat}{2\cat}
+\newcommand{\omegacat}{\omega\cat}
+\newcommand{\vcat}[1]{\cat_{#1}}
+\newcommand{\Set}{\mathbf{Set}}
+\newcommand{\sSet}{\mathbf{sSet}}
+%\newcommand{\Cat}{\mathbf{Cat}}
+\newcommand{\TwoCat}{\mathbf{2Cat}}
+\newcommand{\Fin}{\mathrm{Fin}_*}
+\newcommand{\Dop}{\mathbf{\Delta}^{\mathrm{op}}}
+\newcommand{\CMon}{\mathrm{CMon}}
+\newcommand{\bbE}{\mathbb{E}}
+\newcommand{\Htwo}{\mathbb{H}_2}
+\newcommand{\Nh}{N^{\mathrm{h}}}
+\newcommand{\Iso}{\mathrm{Iso}}
+\newcommand{\Hor}{\mathrm{Hor}}
+\newcommand{\Pres}{\mathrm{Pres}}
+\newcommand{\Ex}{\mathrm{Ex}}
+\newcommand{\Seg}{\mathrm{Seg}}
+\newcommand{\PIso}{\mathrm{P}^{\cong}}
+\newcommand{\PEq}{\mathrm{P}^{\simeq}}
+\newcommand{\LL}{\mathbf{L}}
+\newcommand{\RR}{\mathbf{R}}
+\newcommand{\nat}{\mathrm{nat}}
+\newcommand{\Lk}{\mathrm{L}}
+\newcommand{\llp}{\mathrm{llp}}
+\newcommand{\rlp}{\mathrm{rlp}}
+\newcommand{\pt}[1]{\langle #1\rangle}
+\newcommand{\hto}{\rightsquigarrow}
+\newcommand{\hc}{\odot}
+\newcommand{\hid}[1]{1^{\mathrm{h}}_{#1}}
+
+
+% Specialized Script Elements
+\newcommand{\C}{\mathcal{C}}
+\newcommand{\B}{\mathcal{B}}
+\newcommand{\E}{\mathcal{E}}
+\newcommand{\M}{\mathcal{M}}
+\newcommand{\mrt}{\mathfrak M}
+\newcommand{\G}{\mathcal G}
+\newcommand{\I}{\mathcal I}
+\newcommand{\RMap}{\mathbf{R}\mathrm{Map}}
+\newcommand{\one}{\mathsf 1}
+
+% Structural Functor Mapping Shorthands
+\newcommand{\F}{\mathcal{F}_*}
+\newcommand{\simFin}{\mathcal{F}\mathrm{in}_*}
+\newcommand{\bisimFin}{\mathbb{F}\mathrm{in}_*}
+\newcommand{\psh}[1]{\set^{#1^{\op}}}
+\newcommand{\spsh}[1]{\sset^{#1^{\op}}}
+\newcommand{\comp}{\ast}
+\newcommand{\Fun}{\mathbf{Fun}} 
+\newcommand{\ihom}[2]{#2^{#1}}
+\newcommand{\vect}[1]{\vec{#1}}
+\newcommand{\cof}{\hookrightarrow}
+\newcommand{\fib}{\twoheadrightarrow}
+\newcommand{\trivcof}{\overset{\sim}{\hookrightarrow}}
+\newcommand{\trivfib}{\overset{\sim}{\twoheadrightarrow}}
+
+% =========================================================================
+% 10. MATH OPERATORS & SPECIALIZED TRUNCATION FUNCTIONS
+% =========================================================================
+% Standard Categories Definitions & Mappings
+\DeclareMathOperator{\Ho}{Ho}
+\DeclareMathOperator{\map}{map}
+\DeclareMathOperator{\Hom}{Hom}
+\DeclareMathOperator{\Map}{Map} 
+\DeclareMathOperator{\Mor}{Mor}
+\DeclareMathOperator{\Ob}{Ob}
+\DeclareMathOperator{\Cocart}{Cocart}
+
+
+% General Math Maps & Substructures
+\DeclareMathOperator{\incl}{incl}
+\DeclareMathOperator{\tr}{tr}
+\DeclareMathOperator{\core}{core}
+\DeclareMathOperator{\colim}{colim}
+\DeclareMathOperator{\holim}{holim}
+\DeclareMathOperator{\coeq}{coeq}
+\DeclareMathOperator{\id}{id}
+\DeclareMathOperator{\im}{im}
+\DeclareMathOperator{\op}{op}
+\DeclareMathOperator{\ev}{ev}
+\DeclareMathOperator{\pr}{pr}
+\DeclareMathOperator{\N}{N}
+\DeclareMathOperator{\diag}{diag}
+\DeclareMathOperator{\Sp}{Sp}
+
+% Custom Identity Spacings
+\newcommand{\ide}{\mathrm{id}\mathord{}}
+\newcommand{\idf}{\mathrm{id}\,}
+\newcommand{\idg}{\mathrm{id}\hspace{0.1111em}}
+
+% Simplicial Combinatorics Operators
+\newcommand{\aamalg}[1]{\underset{#1}{{\amalg}}} 
+\newcommand{\eqDelta}{\Delta[3]_{\mathrm{eq}}}
+\newcommand{\thin}[2]{t#1_{#2}}
+\newcommand{\maybethin}[2]{(t)#1_{#2}}
+\newcommand{\thn}{\mathrm{th}}
+
+% Specialized Indexing Shapes
+\newcommand{\Osim}[1]{\cO_2^\sim[{#1}]}
+\newcommand{\DelQuot}{\overline{\Delta}}
+\newcommand{\AdjEq}{\mathrm{AdjEq}}
+\newcommand{\Otilde}{\widetilde{\cO}}
+\newcommand{\ortl}[1]{\cO[#1]}
+
+% Truncation Operations
+\newcommand{\chaos}{\mathrm{ch}}
+\newcommand{\roughtrunc}[1]{\tau_{\leq #1}^{\mathrm{b}}}
+\newcommand{\inttrunc}[1]{\tau_{\leq #1}^{\mathrm{i}}}
+
+
+% ===== Macros for "Symmetric monoidal (infty,n)-categories" =====
+% These names avoid changing the shared meanings of \M, \G, \I and \LL.
+\newcommand{\Minfn}{\mathbf M_{(\infty,n)}}
+\newcommand{\HGen}{\mathsf G}
+\newcommand{\Stair}{\mathcal{S}\mathrm{tair}}
+\newcommand{\Int}{\mathbb{I}\mathrm{nt}}
+\newcommand{\Diag}{\mathcal{D}\mathrm{iag}}
+\newcommand{\diagset}{\mathrm{diag}}
+% Full environment names used by the manuscript.
+\crefname{construction}{Construction}{Constructions}
+\crefname{notation}{Notation}{Notations}
+\crefname{convention}{Convention}{Conventions}
+\crefname{definition}{Definition}{Definitions}
+\crefname{remark}{Remark}{Remarks}
+\crefname{hypothesis}{Hypothesis}{Hypotheses}
+% ===== End of paper-specific macros =====
