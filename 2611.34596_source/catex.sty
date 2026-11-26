@@ -1,0 +1,87 @@
+%% Identification
+\NeedsTeXFormat{LaTeX2e}[1995/12/01]
+\ProvidesPackage{catex}[2009/11/26 Catex Package]
+
+%% Required package
+\RequirePackage{tikz}
+
+%% Auxiliary files
+\newcommand{\catex@aux}{\jobname.catex}
+\newcommand{\catex@tex}{\jobname.catix}
+\newcount\catex@count
+\catex@count=0
+
+%% Definitions
+\newwrite\catexaux
+\newif\ifcatexundef\catexundeffalse
+\def\catex@strip{\expandafter\strip@prefix\meaning}
+\def\defcatex#1#2{%
+	\def\temp{#2}%
+	\@namedef{catex@#1@\catex@strip\temp}%
+}
+\newcommand{\missingfigure}[1]{\raisebox{-2.50pt}{%
+	\begin{tikzpicture}
+		\begin{scope} [ x = 10pt, y = 10pt, join = round, cap = round, thick ]
+		\draw [fill = lightgray] (0,0) rectangle (1,1) ;
+		\end{scope}
+	\end{tikzpicture}%
+}}
+
+%% Output auxiliary file
+\if@filesw
+	\immediate\openout\catexaux=\catex@aux
+\fi
+
+%% At begin document
+\AtBeginDocument{%
+	\if@filesw
+		\IfFileExists{\catex@tex}{%
+			\makeatletter
+			\input{\catex@tex}%
+			\makeatother
+		}{%
+		}%
+	\fi
+}
+
+%% At end document
+\AtEndDocument{%
+	\if@filesw
+		\immediate\closeout\catexaux
+	\fi
+	\ifcatexundef\PackageWarning{Catex}{%
+		Catex figures are undefined%
+	}%
+	\fi
+}
+
+%% Command: definition of generating 2-cells
+\newcommand{\deftwocell}[2][]{%
+	\global\advance\catex@count\@ne
+	\def\temp{[#1]{#2}}%
+	\if@filesw
+		\immediate\write\catexaux{%
+			\the\inputlineno\string:\string\deftwocell\catex@strip\temp
+		}%
+	\fi
+}
+
+%% Command: definition of 2-cells
+\newcommand{\twocell}[1]{%
+	\def\temp{#1}%
+	\expandafter\ifx\csname 
+			catex@\the\catex@count @\catex@strip\temp
+		\endcsname\relax
+		\PackageWarning{Catex}{%
+			Catex figure #1 undefined%
+		}%
+		\catexundeftrue
+		\missingfigure{\catex@strip\temp}%
+	\else
+		\@nameuse{catex@\the\catex@count @\catex@strip\temp}%
+	\fi
+	\if@filesw
+		\immediate\write\catexaux{%
+			\the\inputlineno\string:\string\twocell{\catex@strip\temp}}%
+	\fi
+}
